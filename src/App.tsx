@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  Bell,
+  CalendarDays,
+  Check,
   Clock3,
   Database,
   LayoutDashboard,
@@ -9,18 +10,26 @@ import {
   PackageCheck,
   PanelLeftClose,
   PanelLeftOpen,
-  RefreshCw,
   Search,
-  Sun,
   Moon,
+  ChevronDown,
+  Sun,
   TrendingUp,
   User,
   Users
 } from "lucide-react";
 import cpacLogo from "@/img/cpac-logo.jpg";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious
+} from "@/components/ui/pagination";
 import {
   fetchCustomerUsage,
   fetchDealerGroups,
@@ -32,6 +41,7 @@ import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUs
 import { cn, compactNumber, formatNumber } from "@/lib/utils";
 
 type PageKey = "dashboard" | "groups" | "details";
+type DatePreset = "all" | "7d" | "30d" | "90d" | "custom";
 type DataColumn<T> = {
   align?: "left" | "right" | "center";
   dataIndex?: keyof T;
@@ -45,20 +55,22 @@ function normalizeSearch(value: string) {
   return value.trim().toLowerCase();
 }
 
-function getApiStatusLabel(state: ApiState) {
-  if (state === "live") return "Live Data";
-  if (state === "loading") return "Syncing";
-  return "Data error";
+function getDealerStatusKey(statusValue: Dealer["status"] | unknown): "active" | "idle" | "new" {
+  if (typeof statusValue === "boolean") return statusValue ? "active" : "idle";
+
+  const value = String(statusValue ?? "").toLowerCase();
+  if (value === "active") return "active";
+  if (value === "new") return "new";
+  return "idle";
 }
 
 function isDealerActive(statusValue: Dealer["status"]) {
-  if (typeof statusValue === "boolean") return statusValue;
-  return String(statusValue ?? "").toLowerCase() === "active";
+  return getDealerStatusKey(statusValue) === "active";
 }
 
 function statusText(value: unknown) {
-  const text = String(value ?? "unknown");
-  return text.charAt(0).toUpperCase() + text.slice(1);
+  const key = getDealerStatusKey(value);
+  return key.charAt(0).toUpperCase() + key.slice(1);
 }
 
 function dateText(value?: string | null) {
@@ -69,6 +81,57 @@ function dateText(value?: string | null) {
     dateStyle: "medium",
     timeStyle: "short"
   }).format(date);
+}
+
+function parseDateValue(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getPresetDateRange(preset: DatePreset) {
+  if (preset === "all") return { from: "", to: "" };
+
+  const today = new Date();
+  const end = formatDateInputValue(today);
+  const start = new Date(today);
+  const offsetDays = preset === "7d" ? 6 : preset === "30d" ? 29 : 89;
+  start.setDate(today.getDate() - offsetDays);
+
+  return { from: formatDateInputValue(start), to: end };
+}
+
+function isWithinDateRange(value: string | null | undefined, from: string, to: string) {
+  if (!from && !to) return true;
+
+  const date = parseDateValue(value);
+  if (!date) return false;
+
+  if (from) {
+    const start = new Date(`${from}T00:00:00`);
+    if (date < start) return false;
+  }
+
+  if (to) {
+    const end = new Date(`${to}T23:59:59`);
+    if (date > end) return false;
+  }
+
+  return true;
+}
+
+function buildPaginationItems(currentPage: number, totalPages: number) {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
+  if (currentPage <= 3) return [1, 2, 3, 4, "ellipsis-right", totalPages];
+  if (currentPage >= totalPages - 2) return [1, "ellipsis-left", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  return [1, "ellipsis-left", currentPage - 1, currentPage, currentPage + 1, "ellipsis-right", totalPages];
 }
 
 function groupByRegion(rows: Dealer[]) {
@@ -88,21 +151,29 @@ function groupByRegion(rows: Dealer[]) {
 }
 
 function groupByStatus(rows: Dealer[]) {
-  const grouped = rows.reduce<Record<string, number>>((acc, dealer) => {
-    const key = statusText(dealer.status);
-    acc[key] = (acc[key] ?? 0) + 1;
-    return acc;
-  }, {});
+  const grouped = rows.reduce<Record<"active" | "idle" | "new", number>>(
+    (acc, dealer) => {
+      const key = getDealerStatusKey(dealer.status);
+      acc[key] += 1;
+      return acc;
+    },
+    { active: 0, idle: 0, new: 0 }
+  );
 
-  return Object.entries(grouped)
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value);
+  return [
+    { label: "Active", value: grouped.active },
+    { label: "Idle", value: grouped.idle },
+    { label: "New", value: grouped.new }
+  ];
 }
 
 function App() {
   const [collapsed, setCollapsed] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [page, setPage] = useState<PageKey>("dashboard");
+  const [datePreset, setDatePreset] = useState<DatePreset>("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [apiState, setApiState] = useState<ApiState>("loading");
   const [region, setRegion] = useState("all");
@@ -182,13 +253,14 @@ function App() {
       const matchRegion = region === "all" || dealer.region === region;
       const matchStatus =
         status === "all" ||
-        (status === "active" && isDealerActive(dealer.status)) ||
-        (status === "idle" && String(dealer.status).toLowerCase() === "idle") ||
-        (status === "new" && String(dealer.status).toLowerCase() === "new");
+        (status === "active" && getDealerStatusKey(dealer.status) === "active") ||
+        (status === "idle" && getDealerStatusKey(dealer.status) === "idle") ||
+        (status === "new" && getDealerStatusKey(dealer.status) === "new");
       const haystack = `${dealer.dealer_code} ${dealer.dealer_name} ${dealer.province} ${dealer.region}`.toLowerCase();
-      return matchRegion && matchStatus && (!q || haystack.includes(q));
+      const matchDate = isWithinDateRange(dealer.last_active_at ?? dealer.updated_at ?? dealer.created_at, dateFrom, dateTo);
+      return matchRegion && matchStatus && matchDate && (!q || haystack.includes(q));
     });
-  }, [dealers, region, search, status]);
+  }, [dateFrom, dateTo, dealers, region, search, status]);
 
   const totalVolume = filteredDealers.reduce((sum, dealer) => sum + dealer.volume, 0);
   const totalGroups = filteredDealers.reduce((sum, dealer) => sum + dealer.group_count, 0);
@@ -203,11 +275,33 @@ function App() {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
-  const refreshCurrent = () => {
-    void loadDealers();
-    void loadUsage();
-    if (selectedDealerId) void loadDealerChildren(selectedDealerId);
+  const handleDatePresetChange = (preset: DatePreset) => {
+    setDatePreset(preset);
+    if (preset === "custom") return;
+    const range = getPresetDateRange(preset);
+    setDateFrom(range.from);
+    setDateTo(range.to);
   };
+
+  const filteredGroups = useMemo(
+    () => groups.filter((group) => isWithinDateRange(group.created_at ?? group.updated_at, dateFrom, dateTo)),
+    [dateFrom, dateTo, groups]
+  );
+
+  const filteredUsageRows = useMemo(
+    () => usageRows.filter((row) => isWithinDateRange(row.updated_at, dateFrom, dateTo)),
+    [dateFrom, dateTo, usageRows]
+  );
+
+  const filteredCustomers = useMemo(
+    () => customers.filter((customer) => isWithinDateRange(customer.updated_at, dateFrom, dateTo)),
+    [customers, dateFrom, dateTo]
+  );
+
+  const filteredSites = useMemo(
+    () => sites.filter((site) => isWithinDateRange(site.last_pour_datetime ?? site.updated_at ?? site.created_at, dateFrom, dateTo)),
+    [dateFrom, dateTo, sites]
+  );
 
   return (
     <div className="min-h-screen app-shell">
@@ -249,20 +343,6 @@ function App() {
             />
           </nav>
 
-          <div className="mt-auto p-2.5">
-            <div className={cn("rounded-lg border border-[#d9e3e6] bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950", collapsed && "px-2")}>
-              <div className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                <Database size={15} className="text-[#16706f]" />
-                {!collapsed && <span>Data status</span>}
-              </div>
-              {!collapsed && (
-                <div className="mt-3 flex items-center justify-between">
-                  <Badge variant="neutral">{getApiStatusLabel(apiState)}</Badge>
-                  <span className="text-xs text-slate-500">{dealers.length} rows</span>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </aside>
 
@@ -296,12 +376,14 @@ function App() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="neutral" className="hidden h-8 items-center px-3 sm:inline-flex">
-                {getApiStatusLabel(apiState)}
-              </Badge>
-              <Button variant="outline" size="icon" aria-label="Notifications" className="bg-white shadow-sm">
-                <Bell size={16} />
-              </Button>
+              <DateRangeToolbar
+                dateFrom={dateFrom}
+                datePreset={datePreset}
+                dateTo={dateTo}
+                setDateFrom={setDateFrom}
+                setDatePreset={handleDatePresetChange}
+                setDateTo={setDateTo}
+              />
               <Button
                 variant="outline"
                 size="icon"
@@ -310,10 +392,6 @@ function App() {
                 onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
               >
                 {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-              </Button>
-              <Button variant="outline" className="shadow-sm" onClick={refreshCurrent}>
-                <RefreshCw size={16} />
-                Refresh
               </Button>
             </div>
           </div>
@@ -346,26 +424,26 @@ function App() {
           {page === "groups" && (
             <GroupsPage
               dealers={dealers}
-              groups={groups}
+              groups={filteredGroups}
               groupsState={groupsState}
               selectedDealer={selectedDealer}
               selectedDealerId={selectedDealerId}
               setSelectedDealerId={setSelectedDealerId}
-              usageRows={usageRows}
+              usageRows={filteredUsageRows}
             />
           )}
 
           {page === "details" && (
             <DetailsPage
-              customers={customers}
+              customers={filteredCustomers}
               customersState={customersState}
               dealers={dealers}
               selectedDealer={selectedDealer}
               selectedDealerId={selectedDealerId}
               setSelectedDealerId={setSelectedDealerId}
-              sites={sites}
+              sites={filteredSites}
               sitesState={sitesState}
-              usageRows={usageRows}
+              usageRows={filteredUsageRows}
               usageState={usageState}
             />
           )}
@@ -412,110 +490,16 @@ function SideNavItem({
   return (
     <button
       className={cn(
-        "flex h-9 w-full items-center gap-2.5 rounded-md px-2.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950",
+        "flex h-10 w-full items-center gap-2.5 rounded-xl px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950",
         selected && "bg-slate-100 text-slate-950"
       )}
       onClick={onClick}
       title={collapsed ? label : undefined}
       type="button"
     >
-      <span className={cn("shrink-0", selected ? "text-[#16706f]" : "text-slate-500")}>{icon}</span>
+      <span className={cn("shrink-0", selected ? "text-slate-950" : "text-slate-500")}>{icon}</span>
       {!collapsed && <span className="truncate">{label}</span>}
     </button>
-  );
-}
-
-function DashboardInsightPanel({
-  activeRate,
-  dealersCount,
-  onOpenTopDealer,
-  topDealer,
-  totalGroups,
-  totalVolume
-}: {
-  activeRate: number;
-  dealersCount: number;
-  onOpenTopDealer: () => void;
-  topDealer?: Dealer;
-  totalGroups: number;
-  totalVolume: number;
-}) {
-  return (
-    <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_330px]">
-      <Card className="soft-hero overflow-hidden border-0">
-        <CardContent className="relative min-h-[176px] p-5">
-          <div className="relative z-[1] max-w-[560px]">
-            <Badge variant="neutral" className="mb-3 bg-white/70">Dealer Performance</Badge>
-            <h2 className="max-w-xl text-2xl font-semibold leading-tight text-slate-950 dark:text-slate-100">
-              ตรวจภาพรวม dealer, volume และการใช้งานล่าสุดได้ในที่เดียว
-            </h2>
-            <p className="mt-3 max-w-lg text-sm font-medium text-slate-600 dark:text-slate-300">
-              ข้อมูลทั้งหมดดึงจากระบบจริง พร้อม drill down ไปยังกลุ่ม ลูกค้า และ site ของ dealer รายที่สนใจ
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                className="rounded-full bg-[#1f7a45] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-[#17633a]"
-                onClick={onOpenTopDealer}
-                type="button"
-              >
-                ดู Top dealer
-              </button>
-              <span className="rounded-full bg-white/70 px-4 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-900/70 dark:text-slate-200">
-                {formatNumber(dealersCount)} dealers
-              </span>
-            </div>
-          </div>
-          <div className="absolute right-5 top-5 hidden h-32 w-32 rounded-full bg-white/70 shadow-inner xl:block">
-            <div className="absolute inset-5 rounded-full border-[10px] border-[#f6c46b]" />
-            <div className="absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#1f7a45] text-white">
-              <TrendingUp size={22} />
-            </div>
-          </div>
-          <div className="absolute bottom-4 right-44 hidden h-16 w-16 rotate-12 rounded-2xl bg-[#f8d9e6] xl:block" />
-          <div className="absolute bottom-10 right-16 hidden h-12 w-12 -rotate-12 rounded-2xl bg-[#d8f1de] xl:block" />
-        </CardContent>
-      </Card>
-
-      <Card className="spotlight-card border-0">
-        <CardContent className="p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Dealer Focus</p>
-              <h3 className="mt-2 text-xl font-semibold text-slate-950 dark:text-slate-100">
-                {topDealer?.dealer_code ?? "-"}
-              </h3>
-              <p className="mt-1 truncate text-sm font-semibold text-slate-600 dark:text-slate-300">
-                {topDealer?.dealer_name ?? "ยังไม่มีข้อมูล"}
-              </p>
-            </div>
-            <div className="rounded-full bg-white/80 p-3 text-[#16706f] shadow-sm dark:bg-slate-950/70">
-              <PackageCheck size={20} />
-            </div>
-          </div>
-
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <MiniStat label="Volume" value={`${compactNumber(totalVolume)} m3`} />
-            <MiniStat label="Groups" value={formatNumber(totalGroups)} />
-          </div>
-          <div className="mt-4">
-            <div className="mb-2 flex justify-between text-xs font-semibold text-slate-600 dark:text-slate-300">
-              <span>Active rate</span>
-              <span>{activeRate}%</span>
-            </div>
-            <TinyProgress percent={activeRate} />
-          </div>
-        </CardContent>
-      </Card>
-    </section>
-  );
-}
-
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl bg-white/70 p-3 shadow-sm dark:bg-slate-950/70">
-      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{label}</p>
-      <p className="mt-1 truncate text-base font-semibold text-slate-950 dark:text-slate-100">{value}</p>
-    </div>
   );
 }
 
@@ -574,33 +558,16 @@ function DashboardPage(props: DashboardPageProps) {
         <MetricCard icon={<PackageCheck size={18} />} label="Total Volume" value={`${compactNumber(props.totalVolume)} m3`} detail={`${formatNumber(props.totalVolume)} m3 across selected dealers`} />
         <MetricCard icon={<Users size={18} />} label="Active Dealers" value={`${props.activeRate}%`} detail="Active dealer status from API" tone="green" />
         <MetricCard icon={<MapPinned size={18} />} label="Region Coverage" value={formatNumber(props.regionRows.length)} detail={`${props.regions.length} regions available`} tone="amber" />
-        <MetricCard icon={<Layers3 size={18} />} label="Total Groups" value={formatNumber(props.totalGroups)} detail={props.topDealer ? `Top dealer: ${props.topDealer.dealer_code}` : "No dealer selected"} tone="rose" />
+        <MetricCard icon={<Layers3 size={18} />} label="Total Groups" value={formatNumber(props.totalGroups)} detail="จำนวนกลุ่มรวมของ dealer ที่กำลังแสดง" tone="rose" />
       </section>
-
-      <DashboardInsightPanel
-        activeRate={props.activeRate}
-        dealersCount={props.filteredDealers.length}
-        onOpenTopDealer={() => {
-          if (!props.topDealer) return;
-          props.setSelectedDealerId(props.topDealer.dealer_id);
-          props.setPage("groups");
-        }}
-        topDealer={props.topDealer}
-        totalGroups={props.totalGroups}
-        totalVolume={props.totalVolume}
-      />
-
       <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(280px,.7fr)]">
         <Card className="dashboard-card">
           <CardHeader className="border-b border-[#d9e3e6]">
             <CardTitle className="text-lg">Volume by Region</CardTitle>
-            <p className="text-xs font-medium text-slate-500">เทียบปริมาณคอนกรีตส่งจริงรวมรายภูมิภาค</p>
+            <p className="text-xs font-medium text-slate-500">เทียบปริมาณคอนกรีตส่งจริงรวมรายภูมิภาค พร้อมดูรายละเอียดเมื่อชี้แต่ละแท่ง</p>
           </CardHeader>
           <CardContent>
-            <VerticalBarChart
-              data={props.regionRows.map((row) => ({ label: row.region, value: row.volume }))}
-              unit="m3"
-            />
+            <RegionVolumeExplorer regionRows={props.regionRows} />
           </CardContent>
         </Card>
 
@@ -615,7 +582,7 @@ function DashboardPage(props: DashboardPageProps) {
         </Card>
       </section>
 
-      <section className="grid grid-cols-1 gap-3 2xl:grid-cols-[minmax(0,1fr)_360px]">
+      <section className="grid grid-cols-1 gap-3">
         <Card className="dashboard-card overflow-hidden">
           <CardHeader className="border-b border-[#d9e3e6] bg-white">
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(400px,620px)] xl:items-center">
@@ -647,8 +614,6 @@ function DashboardPage(props: DashboardPageProps) {
             />
           </CardContent>
         </Card>
-
-        <RegionPanel maxRegionVolume={props.maxRegionVolume} regionRows={props.regionRows} />
       </section>
     </>
   );
@@ -669,6 +634,16 @@ function GroupsPage({ dealers, groups, groupsState, selectedDealer, selectedDeal
   const totalBooked = groups.reduce((sum, group) => sum + group.booked_volume, 0);
   const totalPriceChecks = groups.reduce((sum, group) => sum + group.price_check_count, 0);
   const totalBookings = groups.reduce((sum, group) => sum + group.booking_count, 0);
+  const topGroups = useMemo(
+    () =>
+      [...groups]
+        .sort(
+          (a, b) =>
+            Math.max(b.delivered_volume, b.booked_volume) - Math.max(a.delivered_volume, a.booked_volume)
+        )
+        .slice(0, 8),
+    [groups]
+  );
 
   const columns: DataColumn<DealerGroup>[] = [
     {
@@ -705,11 +680,13 @@ function GroupsPage({ dealers, groups, groupsState, selectedDealer, selectedDeal
         <Card className="dashboard-card">
           <CardHeader className="border-b border-[#d9e3e6]">
             <CardTitle className="text-lg">Delivered vs Booked by Group</CardTitle>
-            <p className="text-xs font-medium text-slate-500">วิเคราะห์ว่ากลุ่มไหนมีจองมากกว่าส่งจริง</p>
+            <p className="text-xs font-medium text-slate-500">
+              แสดงเฉพาะ {formatNumber(topGroups.length)} กลุ่มที่มี volume สูงสุดจากทั้งหมด {formatNumber(groups.length)} กลุ่ม เพื่อดูว่ากลุ่มไหนจองนำหรือส่งจริงนำ
+            </p>
           </CardHeader>
           <CardContent>
             <DualBarChart
-              data={groups.slice(0, 8).map((group) => ({
+              data={topGroups.map((group) => ({
                 label: group.group_name,
                 primary: group.delivered_volume,
                 secondary: group.booked_volume
@@ -889,6 +866,60 @@ function UsageTable({ rows, state }: { rows: DealerUsage[]; state: ApiState }) {
   );
 }
 
+function DateRangeToolbar({
+  dateFrom,
+  datePreset,
+  dateTo,
+  setDateFrom,
+  setDatePreset,
+  setDateTo
+}: {
+  dateFrom: string;
+  datePreset: DatePreset;
+  dateTo: string;
+  setDateFrom: (value: string) => void;
+  setDatePreset: (value: DatePreset) => void;
+  setDateTo: (value: string) => void;
+}) {
+  return (
+    <div className="hidden items-center gap-2 lg:flex">
+      <div className="flex h-10 items-center gap-2 rounded-xl border border-[#d5e0e3] bg-white px-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <CalendarDays size={15} className="text-slate-500" />
+        <select
+          className="bg-transparent text-sm font-medium text-slate-700 outline-none dark:text-slate-200"
+          value={datePreset}
+          onChange={(event) => setDatePreset(event.target.value as DatePreset)}
+        >
+          <option value="all">ทุกช่วงเวลา</option>
+          <option value="7d">7 วันล่าสุด</option>
+          <option value="30d">30 วันล่าสุด</option>
+          <option value="90d">90 วันล่าสุด</option>
+          <option value="custom">กำหนดเอง</option>
+        </select>
+      </div>
+      <input
+        className="h-10 w-[150px] rounded-xl border border-[#d5e0e3] bg-white px-3.5 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+        type="date"
+        value={dateFrom}
+        onChange={(event) => {
+          setDatePreset("custom");
+          setDateFrom(event.target.value);
+        }}
+      />
+      <span className="text-sm text-slate-400">-</span>
+      <input
+        className="h-10 w-[150px] rounded-xl border border-[#d5e0e3] bg-white px-3.5 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+        type="date"
+        value={dateTo}
+        onChange={(event) => {
+          setDatePreset("custom");
+          setDateTo(event.target.value);
+        }}
+      />
+    </div>
+  );
+}
+
 function DataTable<T>({
   columns,
   data,
@@ -907,6 +938,7 @@ function DataTable<T>({
   const [page, setPage] = useState(1);
   const totalPages = Math.max(Math.ceil(data.length / (pageSize ?? (data.length || 1))), 1);
   const rows = pageSize ? data.slice((page - 1) * pageSize, page * pageSize) : data;
+  const fillerRowCount = !loading && pageSize && rows.length > 0 ? Math.max(pageSize - rows.length, 0) : 0;
 
   useEffect(() => {
     const resetId = window.setTimeout(() => {
@@ -978,6 +1010,19 @@ function DataTable<T>({
                   })}
                 </tr>
               ))}
+            {Array.from({ length: fillerRowCount }).map((_, index) => (
+              <tr
+                key={`filler-${index}`}
+                aria-hidden="true"
+                className="border-b border-[#edf1f2] dark:border-slate-800"
+              >
+                {columns.map((column) => (
+                  <td key={`${column.key}-filler-${index}`} className="px-3 py-2.5">
+                    <div className="h-[45px]" />
+                  </td>
+                ))}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -1043,46 +1088,40 @@ function ShadcnPagination({
 }) {
   const start = totalItems ? (currentPage - 1) * pageSize + 1 : 0;
   const end = Math.min(currentPage * pageSize, totalItems);
-  const pages = Array.from({ length: totalPages }, (_, index) => index + 1);
+  const pages = buildPaginationItems(currentPage, totalPages);
 
   return (
     <div className="flex flex-col gap-2 border-t border-[#d9e3e6] bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
         แสดง {formatNumber(start)}-{formatNumber(end)} จาก {formatNumber(totalItems)} รายการ
       </div>
-      <div className="flex items-center gap-1">
-        <button
-          className="flex h-8 min-w-8 items-center justify-center rounded-md border border-[#d5e0e3] bg-white px-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-          disabled={currentPage === 1}
-          onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
-          type="button"
-        >
-          ‹
-        </button>
-        {pages.map((page) => (
-          <button
-            key={page}
-            className={cn(
-              "flex h-8 min-w-8 items-center justify-center rounded-md border px-2 text-sm font-semibold transition-colors",
-              currentPage === page
-                ? "border-[#16706f] bg-[#e8f6f3] text-[#16706f] dark:border-[#5eead4] dark:bg-[#123a3a] dark:text-[#99f6e4]"
-                : "border-[#d5e0e3] bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-            )}
-            onClick={() => onPageChange(page)}
-            type="button"
-          >
-            {page}
-          </button>
-        ))}
-        <button
-          className="flex h-8 min-w-8 items-center justify-center rounded-md border border-[#d5e0e3] bg-white px-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-          disabled={currentPage === totalPages}
-          onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
-          type="button"
-        >
-          ›
-        </button>
-      </div>
+      <Pagination className="mx-0 w-auto justify-start sm:justify-end">
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              disabled={currentPage === 1}
+              onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
+            />
+          </PaginationItem>
+          {pages.map((page, index) => (
+            <PaginationItem key={`${page}-${index}`}>
+              {typeof page === "number" ? (
+                <PaginationLink isActive={currentPage === page} onClick={() => onPageChange(page)}>
+                  {page}
+                </PaginationLink>
+              ) : (
+                <PaginationEllipsis />
+              )}
+            </PaginationItem>
+          ))}
+          <PaginationItem>
+            <PaginationNext
+              disabled={currentPage === totalPages}
+              onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
     </div>
   );
 }
@@ -1098,24 +1137,169 @@ function DealerPicker({
   setSelectedDealerId: (id: number) => void;
   title: string;
 }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedDealer = dealers.find((dealer) => dealer.dealer_id === selectedDealerId) ?? dealers[0] ?? null;
+  const filteredDealers = useMemo(() => {
+    const searchValue = normalizeSearch(query);
+    if (!searchValue) return dealers;
+
+    return dealers.filter((dealer) => {
+      const haystack = normalizeSearch(`${dealer.dealer_id} ${dealer.dealer_code} ${dealer.dealer_name}`);
+      return haystack.includes(searchValue);
+    });
+  }, [dealers, query]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!wrapperRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      return;
+    }
+
+    const timerId = window.setTimeout(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [open]);
+
   return (
     <Card className="dashboard-card">
-      <CardContent className="grid gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
+      <CardContent className="grid gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center">
         <div>
           <CardTitle className="text-lg">{title}</CardTitle>
           <p className="mt-1 text-xs font-medium text-slate-500">เลือก dealer หนึ่งรายเพื่อเรียก endpoint รายละเอียดของ dealer นั้น</p>
         </div>
-        <select
-          className="h-9 rounded-md border border-[#d5e0e3] bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none transition-colors focus:border-[#16706f] focus:ring-2 focus:ring-[#16706f]/15"
-          value={selectedDealerId ?? ""}
-          onChange={(event) => setSelectedDealerId(Number(event.target.value))}
-        >
-          {dealers.map((dealer) => (
-            <option key={dealer.dealer_id} value={dealer.dealer_id}>
-              {dealer.dealer_code} - {dealer.dealer_name}
-            </option>
-          ))}
-        </select>
+        <div className="relative" ref={wrapperRef}>
+          <button
+            type="button"
+            className="flex min-h-[4rem] w-full items-center justify-between gap-3 rounded-2xl border border-[#d5e0e3] bg-white px-3.5 py-2.5 text-left text-sm text-slate-800 shadow-sm outline-none transition-colors hover:border-[#bfd0d4] focus:border-[#16706f] focus:ring-2 focus:ring-[#16706f]/15"
+            onClick={() => setOpen((current) => !current)}
+            aria-expanded={open}
+            aria-haspopup="listbox"
+          >
+            <span className="min-w-0">
+              {selectedDealer ? (
+                <span className="block">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-700 ring-1 ring-sky-100">
+                      ID {selectedDealer.dealer_id}
+                    </span>
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-100">
+                      {selectedDealer.dealer_code}
+                    </span>
+                  </span>
+                  <span className="mt-1 block truncate text-sm font-semibold text-slate-900">
+                    {selectedDealer.dealer_name}
+                  </span>
+                </span>
+              ) : (
+                <span className="text-sm font-semibold text-slate-500">เลือก Dealer</span>
+              )}
+            </span>
+            <ChevronDown
+              size={18}
+              className={cn("shrink-0 text-slate-400 transition-transform", open && "rotate-180 text-[#16706f]")}
+            />
+          </button>
+
+          {open ? (
+            <div className="absolute right-0 z-30 mt-2 w-full overflow-hidden rounded-2xl border border-[#d5e0e3] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.14)]">
+              <div className="border-b border-slate-100 p-2.5">
+                <div className="flex items-center gap-2 rounded-xl border border-[#d5e0e3] bg-white px-3">
+                  <Search size={16} className="shrink-0 text-slate-400" />
+                  <input
+                    ref={searchInputRef}
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="ค้นหาด้วย ID, code หรือชื่อ dealer"
+                    className="h-10 w-full border-0 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+
+              <div className="max-h-[22rem] overflow-y-auto p-2">
+                {filteredDealers.length ? filteredDealers.map((dealer) => {
+                  const isSelected = dealer.dealer_id === selectedDealer?.dealer_id;
+
+                  return (
+                    <button
+                      key={dealer.dealer_id}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      className={cn(
+                        "grid w-full grid-cols-[18px_minmax(0,1fr)] items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+                        isSelected ? "bg-[#e8f3f2] text-[#145c5b] ring-1 ring-[#b8e1dc]" : "text-slate-700 hover:bg-slate-50"
+                      )}
+                      onClick={() => {
+                        setSelectedDealerId(dealer.dealer_id);
+                        setOpen(false);
+                      }}
+                    >
+                      <span className="flex h-5 items-center justify-center">
+                        {isSelected ? <Check size={16} className="text-[#16706f]" /> : null}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span className={cn(
+                            "rounded-full px-2 py-0.5 text-[11px] font-bold ring-1",
+                            isSelected ? "bg-white/80 text-sky-700 ring-sky-100" : "bg-sky-50 text-sky-700 ring-sky-100"
+                          )}>
+                            ID {dealer.dealer_id}
+                          </span>
+                          <span className={cn(
+                            "rounded-full px-2 py-0.5 text-[11px] font-bold ring-1",
+                            isSelected ? "bg-white/80 text-emerald-700 ring-emerald-100" : "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                          )}>
+                            {dealer.dealer_code}
+                          </span>
+                        </span>
+                        <span className={cn(
+                          "mt-1 block line-clamp-2 text-sm font-semibold leading-5",
+                          isSelected ? "text-[#145c5b]" : "text-slate-800"
+                        )}>
+                          {dealer.dealer_name}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                }) : (
+                  <div className="px-3 py-6 text-center text-sm font-medium text-slate-500">
+                    ไม่พบ dealer ที่ตรงกับ &quot;{query}&quot;
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );
@@ -1140,7 +1324,7 @@ function FilterBar({
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-[minmax(220px,1fr)_180px_150px]">
-      <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-[#16706f] focus-within:ring-2 focus-within:ring-[#16706f]/15">
+      <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
         <Search size={15} className="shrink-0 text-slate-500" />
         <input
           className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
@@ -1150,7 +1334,7 @@ function FilterBar({
         />
       </label>
       <select
-        className="h-9 rounded-md border border-[#d5e0e3] bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-[#16706f] focus:ring-2 focus:ring-[#16706f]/15"
+        className="h-9 rounded-md border border-[#d5e0e3] bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
         value={region}
         onChange={(event) => setRegion(event.target.value)}
       >
@@ -1162,7 +1346,7 @@ function FilterBar({
         ))}
       </select>
       <select
-        className="h-9 rounded-md border border-[#d5e0e3] bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-[#16706f] focus:ring-2 focus:ring-[#16706f]/15"
+        className="h-9 rounded-md border border-[#d5e0e3] bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
         value={status}
         onChange={(event) => setStatus(event.target.value)}
       >
@@ -1175,33 +1359,6 @@ function FilterBar({
   );
 }
 
-function RegionPanel({ maxRegionVolume, regionRows }: { maxRegionVolume: number; regionRows: ReturnType<typeof groupByRegion> }) {
-  return (
-    <Card className="dashboard-card">
-      <CardHeader>
-        <CardTitle className="text-lg">Region Volume</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {regionRows.map((item) => (
-          <div key={item.region} className="rounded-lg border border-[#e1e8ea] bg-[#fbfcfc] p-2.5">
-            <div className="flex items-center justify-between gap-3 text-sm">
-              <span className="truncate font-medium text-slate-800">{item.region}</span>
-              <span className="shrink-0 font-semibold text-slate-950">{compactNumber(item.volume)} m3</span>
-            </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-[#16706f]" style={{ width: `${Math.max((item.volume / maxRegionVolume) * 100, 6)}%` }} />
-            </div>
-            <div className="mt-2 flex justify-between text-xs font-medium text-slate-500">
-              <span>{formatNumber(item.dealers)} dealers</span>
-              <span>{formatNumber(item.groups)} groups</span>
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
-  );
-}
-
 function dealerColumn<T extends Dealer>(onOpen?: (dealer: T) => void): DataColumn<T> {
   return {
     title: "Dealer",
@@ -1210,7 +1367,7 @@ function dealerColumn<T extends Dealer>(onOpen?: (dealer: T) => void): DataColum
     width: 300,
     render: (_, record) => (
       <button className="flex min-w-0 items-center gap-3 text-left" onClick={() => onOpen?.(record)} type="button">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#eaf5f3] text-sm font-semibold text-[#0e6f6d]">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-slate-100 text-sm font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
           {record.dealer_name.slice(0, 1)}
         </div>
         <div className="min-w-0">
@@ -1232,7 +1389,9 @@ function statusColumn<T extends { status?: unknown }>(): DataColumn<T> {
       <span
         className={cn(
           "inline-flex rounded-md px-2.5 py-0.5 text-xs font-semibold",
-          String(value).toLowerCase() === "active" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+          getDealerStatusKey(value) === "active" && "bg-emerald-100 text-emerald-700",
+          getDealerStatusKey(value) === "idle" && "bg-amber-100 text-amber-700",
+          getDealerStatusKey(value) === "new" && "bg-sky-100 text-sky-700"
         )}
       >
         {statusText(value)}
@@ -1242,7 +1401,7 @@ function statusColumn<T extends { status?: unknown }>(): DataColumn<T> {
 }
 
 function regionPill(value: string) {
-  return <span className="rounded-md bg-[#e8f6f3] px-2.5 py-1 text-xs font-semibold text-[#0e6f6d]">{value}</span>;
+  return <span className="rounded-md border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">{value}</span>;
 }
 
 function VolumeCell({ max, unit, value }: { max: number; unit: string; value: number }) {
@@ -1256,9 +1415,17 @@ function VolumeCell({ max, unit, value }: { max: number; unit: string; value: nu
   );
 }
 
-function VerticalBarChart({ data, unit }: { data: Array<{ label: string; value: number }>; unit?: string }) {
+function VerticalBarChart({
+  data,
+  onHover,
+  unit
+}: {
+  data: Array<{ active?: boolean; label: string; value: number }>;
+  onHover?: (label: string) => void;
+  unit?: string;
+}) {
   const max = Math.max(...data.map((item) => item.value), 1);
-  const palette = ["#16706f", "#2563eb", "#f0b84d", "#c54461", "#7c3aed", "#0ea5e9", "#16a34a"];
+  const palette = ["#0f766e", "#2563eb", "#f59e0b", "#14b8a6", "#6366f1", "#f97316", "#22c55e"];
 
   if (!data.length) return <EmptyChart />;
 
@@ -1266,18 +1433,24 @@ function VerticalBarChart({ data, unit }: { data: Array<{ label: string; value: 
     <div className="h-[190px]">
       <div className="flex h-[158px] items-end gap-2.5 border-b border-[#d9e3e6] px-1">
         {data.map((item) => (
-          <div key={item.label} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+          <button
+            key={item.label}
+            className="flex min-w-0 flex-1 flex-col items-center gap-2"
+            onClick={() => onHover?.(item.label)}
+            onMouseEnter={() => onHover?.(item.label)}
+            type="button"
+          >
             <div className="text-xs font-semibold text-slate-700">{compactNumber(item.value)}{unit ? ` ${unit}` : ""}</div>
-            <div className="flex h-[116px] w-full items-end rounded-md bg-slate-100">
+            <div className={cn("flex h-[116px] w-full items-end rounded-xl bg-slate-100 transition-all", item.active && "ring-2 ring-slate-300")}>
               <div
-                className="w-full rounded-md"
+                className="w-full rounded-xl transition-all"
                 style={{
                   height: `${Math.max((item.value / max) * 100, 4)}%`,
                   backgroundColor: palette[data.indexOf(item) % palette.length]
                 }}
               />
             </div>
-          </div>
+          </button>
         ))}
       </div>
       <div className="mt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.max(data.length, 1)}, minmax(0, 1fr))` }}>
@@ -1291,9 +1464,63 @@ function VerticalBarChart({ data, unit }: { data: Array<{ label: string; value: 
   );
 }
 
+function RegionVolumeExplorer({ regionRows }: { regionRows: ReturnType<typeof groupByRegion> }) {
+  const [activeRegion, setActiveRegion] = useState(regionRows[0]?.region ?? "");
+  const activeItem = regionRows.find((item) => item.region === activeRegion) ?? regionRows[0];
+
+  useEffect(() => {
+    if (!regionRows.length) return;
+    if (!regionRows.some((item) => item.region === activeRegion)) {
+      const resetId = window.setTimeout(() => {
+        setActiveRegion(regionRows[0].region);
+      }, 0);
+      return () => window.clearTimeout(resetId);
+    }
+    return undefined;
+  }, [activeRegion, regionRows]);
+
+  if (!regionRows.length) return <EmptyChart />;
+
+  return (
+    <div className="space-y-5">
+      <VerticalBarChart
+        data={regionRows.map((row) => ({
+          label: row.region,
+          value: row.volume,
+          active: row.region === activeItem?.region
+        }))}
+        unit="m3"
+        onHover={setActiveRegion}
+      />
+
+      {activeItem && (
+        <div className="grid gap-3 rounded-[18px] border border-[#e5e7eb] bg-[#fbfcfd] p-4 dark:border-slate-800 dark:bg-slate-950/70 lg:grid-cols-[minmax(0,1fr)_140px_140px_140px]">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected Region</p>
+            <h4 className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-100">{activeItem.region}</h4>
+            <p className="mt-1 text-sm text-slate-500">ชี้ที่แท่งกราฟเพื่อดูจำนวน dealer, groups และ volume ของแต่ละภูมิภาค</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+            <p className="text-xs font-semibold text-slate-500">Volume</p>
+            <p className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-100">{compactNumber(activeItem.volume)} m3</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+            <p className="text-xs font-semibold text-slate-500">Dealers</p>
+            <p className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-100">{formatNumber(activeItem.dealers)}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-950">
+            <p className="text-xs font-semibold text-slate-500">Groups</p>
+            <p className="mt-1 text-lg font-semibold text-slate-950 dark:text-slate-100">{formatNumber(activeItem.groups)}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DonutChart({ data }: { data: Array<{ label: string; value: number }> }) {
   const total = data.reduce((sum, item) => sum + item.value, 0);
-  const palette = ["#16706f", "#f0b84d", "#c54461", "#64748b"];
+  const palette = ["#0f766e", "#2563eb", "#f59e0b", "#94a3b8"];
   const segments = data.reduce<Array<{ item: { label: string; value: number }; percent: number; offset: number }>>(
     (acc, item) => {
       const percent = (item.value / total) * 100;
@@ -1360,12 +1587,14 @@ function DualBarChart({
   const max = Math.max(...data.flatMap((item) => [item.primary, item.secondary]), 1);
 
   if (!data.length) return <EmptyChart />;
+  const primaryColor = "#0f766e";
+  const secondaryColor = "#2563eb";
 
   return (
     <div className="space-y-4">
       <div className="flex gap-4 text-xs font-semibold text-slate-500">
-        <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm bg-[#16706f]" />{primaryLabel}</span>
-        <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm bg-[#f0b84d]" />{secondaryLabel}</span>
+        <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: primaryColor }} />{primaryLabel}</span>
+        <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: secondaryColor }} />{secondaryLabel}</span>
       </div>
       {data.map((item) => (
         <div key={item.label} className="grid gap-2">
@@ -1375,10 +1604,10 @@ function DualBarChart({
           </div>
           <div className="grid gap-1">
             <div className="h-2 rounded-full bg-slate-100">
-              <div className="h-2 rounded-full bg-[#16706f]" style={{ width: `${Math.max((item.primary / max) * 100, 2)}%` }} />
+              <div className="h-2 rounded-full" style={{ width: `${Math.max((item.primary / max) * 100, 2)}%`, backgroundColor: primaryColor }} />
             </div>
             <div className="h-2 rounded-full bg-slate-100">
-              <div className="h-2 rounded-full bg-[#f0b84d]" style={{ width: `${Math.max((item.secondary / max) * 100, 2)}%` }} />
+              <div className="h-2 rounded-full" style={{ width: `${Math.max((item.secondary / max) * 100, 2)}%`, backgroundColor: secondaryColor }} />
             </div>
           </div>
         </div>
@@ -1403,7 +1632,7 @@ function FunnelBars({ rows }: { rows: Array<{ label: string; value: number }> })
               className="flex h-full items-center rounded-md px-3 text-xs font-semibold text-white"
               style={{
                 width: `${Math.max((row.value / max) * (100 - index * 8), 10)}%`,
-                backgroundColor: index === 0 ? "#16706f" : index === 1 ? "#3d8f8d" : "#f0b84d"
+                backgroundColor: index === 0 ? "#0f766e" : index === 1 ? "#2563eb" : "#f59e0b"
               }}
             >
               {Math.round((row.value / max) * 100)}%
@@ -1442,7 +1671,7 @@ function ProgressList({ rows }: { rows: Array<{ label: string; total: number; un
 function TinyProgress({ percent }: { percent: number }) {
   return (
     <div className="h-1.5 overflow-hidden rounded-full bg-[#edf2f4]">
-      <div className="h-full rounded-full bg-[#16706f]" style={{ width: `${Math.max(Math.min(percent, 100), 0)}%` }} />
+      <div className="h-full rounded-full bg-[#0f766e] dark:bg-[#5eead4]" style={{ width: `${Math.max(Math.min(percent, 100), 0)}%` }} />
     </div>
   );
 }
@@ -1466,26 +1695,26 @@ type MetricCardProps = {
 function MetricCard({ icon, label, value, detail, tone = "teal" }: MetricCardProps) {
   const tones = {
     teal: {
-      card: "bg-[#dcf4e8]",
-      icon: "bg-white/75 text-[#16706f]"
+      card: "border border-[#e5e7eb] bg-white dark:border-slate-800 dark:bg-slate-950",
+      icon: "border border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
     },
     green: {
-      card: "bg-[#def8e6]",
-      icon: "bg-white/75 text-emerald-700"
+      card: "border border-[#e5e7eb] bg-white dark:border-slate-800 dark:bg-slate-950",
+      icon: "border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
     },
     amber: {
-      card: "bg-[#fff2c9]",
-      icon: "bg-white/75 text-amber-700"
+      card: "border border-[#e5e7eb] bg-white dark:border-slate-800 dark:bg-slate-950",
+      icon: "border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
     },
     rose: {
-      card: "bg-[#ffe3eb]",
-      icon: "bg-white/75 text-rose-700"
+      card: "border border-[#e5e7eb] bg-white dark:border-slate-800 dark:bg-slate-950",
+      icon: "border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-300"
     }
   };
   const toneClass = tones[tone];
 
   return (
-    <Card className={cn("metric-card border-0", toneClass.card)}>
+    <Card className={cn("metric-card", toneClass.card)}>
       <CardContent className="p-3.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
