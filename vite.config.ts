@@ -29,6 +29,17 @@ export default defineConfig(({ mode }) => {
               if (auth) proxyReq.setHeader("Authorization", auth);
             });
           }
+        },
+        "/api/order": {
+          target,
+          changeOrigin: true,
+          secure: true,
+          rewrite: (requestPath) => requestPath.replace(/^\/api\/order/, "/api/ai-wangjai/order"),
+          configure: (proxy) => {
+            proxy.on("proxyReq", (proxyReq) => {
+              if (auth) proxyReq.setHeader("Authorization", auth);
+            });
+          }
         }
       }
     }

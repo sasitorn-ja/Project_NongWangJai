@@ -1,4 +1,4 @@
-import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUsage } from "@/types/dealer";
+import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUsage, OrderItem } from "@/types/dealer";
 
 type DealerApiResponse =
   | Dealer[]
@@ -84,6 +84,42 @@ function normalizeSite(row: DealerSite): DealerSite {
     total_ordered: toNumber(row.total_ordered),
     total_delivered: toNumber(row.total_delivered),
     unit: row.unit || "m3"
+  };
+}
+
+function normalizeOrder(row: OrderItem): OrderItem {
+  return {
+    ...row,
+    dealer_id: toNumber(row.dealer_id),
+    customer: row.customer
+      ? {
+          ...row.customer,
+          id: row.customer.id == null ? undefined : toNumber(row.customer.id)
+        }
+      : null,
+    site: row.site
+      ? {
+          ...row.site
+        }
+      : null,
+    order: row.order
+      ? {
+          ...row.order
+        }
+      : null,
+    quantity: row.quantity
+      ? {
+          ...row.quantity,
+          ordered: toNumber(row.quantity.ordered),
+          delivered: toNumber(row.quantity.delivered),
+          unit: row.quantity.unit || "คิว"
+        }
+      : { ordered: 0, delivered: 0, unit: "คิว" },
+    status: row.status
+      ? {
+          ...row.status
+        }
+      : null
   };
 }
 
@@ -174,6 +210,21 @@ export async function fetchDealerSites(dealerId: number): Promise<{ rows: Dealer
 
     const payload = (await response.json()) as ListResponse<DealerSite>;
     return { rows: normalizeList(payload).map(normalizeSite), state: "live", message: "message" in payload ? payload.message : undefined };
+  } catch {
+    return { rows: [], state: "error" };
+  }
+}
+
+export async function fetchOrders(): Promise<{ rows: OrderItem[]; state: ApiState; message?: string }> {
+  try {
+    const response = await fetch("/api/order", {
+      headers: { Accept: "application/json" }
+    });
+
+    if (!response.ok) throw new Error(`API responded ${response.status}`);
+
+    const payload = (await response.json()) as ListResponse<OrderItem>;
+    return { rows: normalizeList(payload).map(normalizeOrder), state: "live", message: "message" in payload ? payload.message : undefined };
   } catch {
     return { rows: [], state: "error" };
   }

@@ -6,7 +6,6 @@ import {
   Database,
   LayoutDashboard,
   Layers3,
-  MapPinned,
   PackageCheck,
   PanelLeftClose,
   PanelLeftOpen,
@@ -33,14 +32,15 @@ import {
 import {
   fetchCustomerUsage,
   fetchDealerGroups,
+  fetchOrders,
   fetchDealerSites,
   fetchDealerUsage,
   fetchDealers
 } from "@/services/dealers";
-import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUsage } from "@/types/dealer";
+import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUsage, OrderItem } from "@/types/dealer";
 import { cn, compactNumber, formatNumber } from "@/lib/utils";
 
-type PageKey = "dashboard" | "groups" | "details";
+type PageKey = "dashboard" | "groups" | "details" | "orders";
 type DatePreset = "all" | "7d" | "30d" | "90d" | "custom";
 type DataColumn<T> = {
   align?: "left" | "right" | "center";
@@ -71,6 +71,14 @@ function isDealerActive(statusValue: Dealer["status"]) {
 function statusText(value: unknown) {
   const key = getDealerStatusKey(value);
   return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function orderStatusText(value?: string | null) {
+  if (!value) return "-";
+  return value
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function dateText(value?: string | null) {
@@ -150,23 +158,6 @@ function groupByRegion(rows: Dealer[]) {
   return Object.values(grouped).sort((a, b) => b.volume - a.volume);
 }
 
-function groupByStatus(rows: Dealer[]) {
-  const grouped = rows.reduce<Record<"active" | "idle" | "new", number>>(
-    (acc, dealer) => {
-      const key = getDealerStatusKey(dealer.status);
-      acc[key] += 1;
-      return acc;
-    },
-    { active: 0, idle: 0, new: 0 }
-  );
-
-  return [
-    { label: "Active", value: grouped.active },
-    { label: "Idle", value: grouped.idle },
-    { label: "New", value: grouped.new }
-  ];
-}
-
 function App() {
   const [collapsed, setCollapsed] = useState(false);
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -179,15 +170,17 @@ function App() {
   const [region, setRegion] = useState("all");
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
+  const [orderSearch, setOrderSearch] = useState("");
   const [selectedDealerId, setSelectedDealerId] = useState<number | null>(null);
   const [groups, setGroups] = useState<DealerGroup[]>([]);
   const [groupsState, setGroupsState] = useState<ApiState>("loading");
   const [usageRows, setUsageRows] = useState<DealerUsage[]>([]);
-  const [usageState, setUsageState] = useState<ApiState>("loading");
   const [customers, setCustomers] = useState<CustomerUsage[]>([]);
   const [customersState, setCustomersState] = useState<ApiState>("loading");
   const [sites, setSites] = useState<DealerSite[]>([]);
   const [sitesState, setSitesState] = useState<ApiState>("loading");
+  const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [ordersState, setOrdersState] = useState<ApiState>("loading");
 
   const loadDealers = useCallback(async () => {
     setApiState("loading");
@@ -198,10 +191,15 @@ function App() {
   }, []);
 
   const loadUsage = useCallback(async () => {
-    setUsageState("loading");
     const result = await fetchDealerUsage();
     setUsageRows(result.rows);
-    setUsageState(result.state);
+  }, []);
+
+  const loadOrders = useCallback(async () => {
+    setOrdersState("loading");
+    const result = await fetchOrders();
+    setOrders(result.rows);
+    setOrdersState(result.state);
   }, []);
 
   const loadDealerChildren = useCallback(async (dealerId: number) => {
@@ -225,10 +223,11 @@ function App() {
     const requestId = window.setTimeout(() => {
       void loadDealers();
       void loadUsage();
+      void loadOrders();
     }, 0);
 
     return () => window.clearTimeout(requestId);
-  }, [loadDealers, loadUsage]);
+  }, [loadDealers, loadOrders, loadUsage]);
 
   useEffect(() => {
     if (!selectedDealerId) return undefined;
@@ -267,9 +266,7 @@ function App() {
   const activeDealers = filteredDealers.filter((dealer) => isDealerActive(dealer.status)).length;
   const topDealer = [...filteredDealers].sort((a, b) => b.volume - a.volume)[0];
   const regionRows = groupByRegion(filteredDealers);
-  const maxRegionVolume = Math.max(...regionRows.map((row) => row.volume), 1);
   const activeRate = filteredDealers.length ? Math.round((activeDealers / filteredDealers.length) * 100) : 0;
-  const statusRows = useMemo(() => groupByStatus(filteredDealers), [filteredDealers]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -302,6 +299,34 @@ function App() {
     () => sites.filter((site) => isWithinDateRange(site.last_pour_datetime ?? site.updated_at ?? site.created_at, dateFrom, dateTo)),
     [dateFrom, dateTo, sites]
   );
+
+  const filteredOrders = useMemo(() => {
+    const q = normalizeSearch(orderSearch);
+    return orders.filter((order) => {
+      const matchDate = isWithinDateRange(order.pour_datetime ?? order.updated_at ?? order.created_at, dateFrom, dateTo);
+      if (!matchDate) return false;
+      if (!q) return true;
+
+      const haystack = normalizeSearch(
+        [
+          order.dealer_code,
+          order.dealer_name,
+          order.customer?.code,
+          order.customer?.name,
+          order.site?.site_code,
+          order.site?.site_name,
+          order.order?.order_no,
+          order.order?.product_sku,
+          order.order?.product_name,
+          order.status?.order
+        ]
+          .filter(Boolean)
+          .join(" ")
+      );
+
+      return haystack.includes(q);
+    });
+  }, [dateFrom, dateTo, orderSearch, orders]);
 
   return (
     <div className="min-h-screen app-shell">
@@ -341,6 +366,13 @@ function App() {
               selected={page === "details"}
               onClick={() => setPage("details")}
             />
+            <SideNavItem
+              collapsed={collapsed}
+              icon={<PackageCheck size={16} />}
+              label="Orders"
+              selected={page === "orders"}
+              onClick={() => setPage("orders")}
+            />
           </nav>
 
         </div>
@@ -364,14 +396,18 @@ function App() {
                     ? "Dashboard"
                     : page === "groups"
                       ? "Dealer Groups"
-                      : "Dealer Details"}
+                      : page === "details"
+                        ? "Dealer Details"
+                        : "Orders"}
                 </h1>
                 <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">
                   {page === "dashboard"
                     ? "ภาพรวมทุก Dealer"
                     : page === "groups"
                       ? "เจาะ Dealer ทีละรายเพื่อดูรายการกลุ่ม"
-                      : "Usage, customers และ sites ของแต่ละ Dealer"}
+                      : page === "details"
+                        ? "Usage, customers และ sites ของแต่ละ Dealer"
+                        : "รายการ order จากเส้น API จริง"}
                 </p>
               </div>
             </div>
@@ -403,7 +439,6 @@ function App() {
               activeRate={activeRate}
               apiState={apiState}
               filteredDealers={filteredDealers}
-              maxRegionVolume={maxRegionVolume}
               region={region}
               regionRows={regionRows}
               regions={regions}
@@ -417,7 +452,6 @@ function App() {
               topDealer={topDealer}
               totalGroups={totalGroups}
               totalVolume={totalVolume}
-              statusRows={statusRows}
             />
           )}
 
@@ -444,7 +478,19 @@ function App() {
               sites={filteredSites}
               sitesState={sitesState}
               usageRows={filteredUsageRows}
-              usageState={usageState}
+            />
+          )}
+
+          {page === "orders" && (
+            <OrdersPage
+              dealers={dealers}
+              orders={filteredOrders}
+              ordersState={ordersState}
+              orderSearch={orderSearch}
+              selectedDealer={selectedDealer}
+              selectedDealerId={selectedDealerId}
+              setOrderSearch={setOrderSearch}
+              setSelectedDealerId={setSelectedDealerId}
             />
           )}
         </main>
@@ -457,7 +503,6 @@ type DashboardPageProps = {
   activeRate: number;
   apiState: ApiState;
   filteredDealers: Dealer[];
-  maxRegionVolume: number;
   region: string;
   regionRows: ReturnType<typeof groupByRegion>;
   regions: string[];
@@ -471,7 +516,6 @@ type DashboardPageProps = {
   topDealer?: Dealer;
   totalGroups: number;
   totalVolume: number;
-  statusRows: Array<{ label: string; value: number }>;
 };
 
 function SideNavItem({
@@ -554,13 +598,12 @@ function DashboardPage(props: DashboardPageProps) {
 
   return (
     <>
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard icon={<PackageCheck size={18} />} label="Total Volume" value={`${compactNumber(props.totalVolume)} m3`} detail={`${formatNumber(props.totalVolume)} m3 across selected dealers`} />
         <MetricCard icon={<Users size={18} />} label="Active Dealers" value={`${props.activeRate}%`} detail="Active dealer status from API" tone="green" />
-        <MetricCard icon={<MapPinned size={18} />} label="Region Coverage" value={formatNumber(props.regionRows.length)} detail={`${props.regions.length} regions available`} tone="amber" />
         <MetricCard icon={<Layers3 size={18} />} label="Total Groups" value={formatNumber(props.totalGroups)} detail="จำนวนกลุ่มรวมของ dealer ที่กำลังแสดง" tone="rose" />
       </section>
-      <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.3fr)_minmax(280px,.7fr)]">
+      <section className="grid grid-cols-1 gap-3">
         <Card className="dashboard-card">
           <CardHeader className="border-b border-[#d9e3e6]">
             <CardTitle className="text-lg">Volume by Region</CardTitle>
@@ -568,16 +611,6 @@ function DashboardPage(props: DashboardPageProps) {
           </CardHeader>
           <CardContent>
             <RegionVolumeExplorer regionRows={props.regionRows} />
-          </CardContent>
-        </Card>
-
-        <Card className="dashboard-card">
-          <CardHeader className="border-b border-[#d9e3e6]">
-            <CardTitle className="text-lg">Dealer Status Mix</CardTitle>
-            <p className="text-xs font-medium text-slate-500">สัดส่วนสถานะ dealer จาก API จริง</p>
-          </CardHeader>
-          <CardContent>
-            <DonutChart data={props.statusRows} />
           </CardContent>
         </Card>
       </section>
@@ -736,7 +769,6 @@ type DetailsPageProps = {
   sites: DealerSite[];
   sitesState: ApiState;
   usageRows: DealerUsage[];
-  usageState: ApiState;
 };
 
 function DetailsPage(props: DetailsPageProps) {
@@ -815,7 +847,7 @@ function DetailsPage(props: DetailsPageProps) {
         items={[
           {
             key: "customers",
-            label: "Customer Usage",
+            label: "Customers",
             content: (
               <Card className="dashboard-card overflow-hidden">
                 <CardContent className="p-0">
@@ -834,11 +866,6 @@ function DetailsPage(props: DetailsPageProps) {
                 </CardContent>
               </Card>
             )
-          },
-          {
-            key: "usage",
-            label: "All Dealer Usage",
-            content: <UsageTable rows={props.usageRows} state={props.usageState} />
           }
         ]}
       />
@@ -846,23 +873,164 @@ function DetailsPage(props: DetailsPageProps) {
   );
 }
 
-function UsageTable({ rows, state }: { rows: DealerUsage[]; state: ApiState }) {
-  const columns: DataColumn<DealerUsage>[] = [
-    { title: "Dealer", dataIndex: "dealer_name", key: "dealer_name", width: 280, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.dealer_name}</div><div className="text-xs font-medium text-slate-500">{record.dealer_code}</div></div> },
-    { title: "ภูมิภาค", dataIndex: "region", key: "region", width: 160, render: regionPill },
-    { title: "จังหวัด", dataIndex: "province", key: "province", width: 140 },
-    { title: "เช็คราคา", dataIndex: "price_concrete_count", key: "price_concrete_count", align: "right", width: 140, render: formatNumber },
-    { title: "จองคิว", dataIndex: "booking_create_count", key: "booking_create_count", align: "right", width: 130, render: formatNumber },
-    { title: "สร้างลูกค้า", dataIndex: "customer_create_count", key: "customer_create_count", align: "right", width: 140, render: formatNumber },
-    { title: "อัปเดตล่าสุด", dataIndex: "updated_at", key: "updated_at", width: 190, render: dateText }
+function OrdersPage({
+  dealers,
+  orders,
+  ordersState,
+  orderSearch,
+  selectedDealer,
+  selectedDealerId,
+  setOrderSearch,
+  setSelectedDealerId
+}: {
+  dealers: Dealer[];
+  orders: OrderItem[];
+  ordersState: ApiState;
+  orderSearch: string;
+  selectedDealer?: Dealer;
+  selectedDealerId: number | null;
+  setOrderSearch: (value: string) => void;
+  setSelectedDealerId: (id: number) => void;
+}) {
+  const dealerOrders = useMemo(
+    () => orders.filter((row) => selectedDealerId == null || row.dealer_id === selectedDealerId),
+    [orders, selectedDealerId]
+  );
+  const totalOrdered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0);
+  const totalDelivered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
+  const uniqueSites = new Set(dealerOrders.map((row) => row.site?.site_code).filter(Boolean)).size;
+  const inProgressOrders = dealerOrders.filter((row) => row.status?.order === "in_progress").length;
+
+  const columns: DataColumn<OrderItem>[] = [
+    {
+      title: "Order",
+      key: "order",
+      width: 300,
+      render: (_, record) => (
+        <div>
+          <div className="font-semibold text-slate-950">{record.order?.product_name ?? "-"}</div>
+          <div className="text-xs font-medium text-slate-500">
+            {record.order?.order_no ?? "-"} | {record.order?.product_sku ?? "-"}
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Dealer",
+      key: "dealer",
+      width: 240,
+      render: (_, record) => (
+        <div>
+          <div className="font-semibold text-slate-950">{record.dealer_name}</div>
+          <div className="text-xs font-medium text-slate-500">{record.dealer_code}</div>
+        </div>
+      )
+    },
+    {
+      title: "Customer / Site",
+      key: "customer-site",
+      width: 280,
+      render: (_, record) => (
+        <div>
+          <div className="font-semibold text-slate-950">{record.customer?.name ?? "-"}</div>
+          <div className="text-xs font-medium text-slate-500">
+            {(record.site?.site_name ?? "-")} | {(record.site?.site_code ?? "-")}
+          </div>
+        </div>
+      )
+    },
+    {
+      title: "Ordered",
+      key: "ordered",
+      align: "right",
+      width: 130,
+      render: (_, record) => `${formatNumber(record.quantity?.ordered ?? 0)} ${record.quantity?.unit ?? "-"}`
+    },
+    {
+      title: "Delivered",
+      key: "delivered",
+      align: "right",
+      width: 130,
+      render: (_, record) => `${formatNumber(record.quantity?.delivered ?? 0)} ${record.quantity?.unit ?? "-"}`
+    },
+    {
+      title: "Pour Time",
+      dataIndex: "pour_datetime",
+      key: "pour_datetime",
+      width: 190,
+      render: dateText
+    },
+    {
+      title: "สถานะ",
+      key: "status",
+      width: 140,
+      render: (_, record) => (
+        <span className="inline-flex rounded-md bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-700">
+          {orderStatusText(record.status?.order)}
+        </span>
+      )
+    }
   ];
 
   return (
-    <Card className="dashboard-card overflow-hidden">
-      <CardContent className="p-0">
-        <DataTable columns={columns} data={rows} loading={state === "loading"} rowKey="dealer_id" minWidth={1180} pageSize={10} />
-      </CardContent>
-    </Card>
+    <>
+      <DealerPicker
+        dealers={dealers}
+        selectedDealerId={selectedDealerId}
+        setSelectedDealerId={setSelectedDealerId}
+        title="เลือก Dealer เพื่อดู Orders"
+      />
+
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard icon={<PackageCheck size={18} />} label="Orders" value={formatNumber(dealerOrders.length)} detail={selectedDealer?.dealer_name ?? "จำนวน order ของ dealer ที่เลือก"} />
+        <MetricCard icon={<TrendingUp size={18} />} label="Ordered Qty" value={compactNumber(totalOrdered)} detail="ยอดสั่งรวมจาก order ทั้งหมด" tone="amber" />
+        <MetricCard icon={<PackageCheck size={18} />} label="Delivered Qty" value={compactNumber(totalDelivered)} detail="ยอดส่งจริงรวมจาก order ทั้งหมด" tone="green" />
+        <MetricCard icon={<Users size={18} />} label="Unique Sites" value={formatNumber(uniqueSites)} detail={`นับจาก site code ที่ไม่ซ้ำใน ${formatNumber(dealerOrders.length)} orders ของ dealer นี้`} tone="rose" />
+      </section>
+
+      <Card className="dashboard-card overflow-hidden">
+        <CardHeader className="border-b border-[#d9e3e6] bg-white">
+          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-center">
+            <div>
+              <CardTitle className="text-lg">Orders ของ Dealer</CardTitle>
+              <p className="mt-1 text-xs font-medium text-slate-500">
+                {selectedDealer
+                  ? `แสดงรายการ order ของ ${selectedDealer.dealer_name} จากเส้น API จริง`
+                  : "แสดงรายการ order ของ dealer ที่เลือกจากเส้น API จริง"}
+              </p>
+            </div>
+            <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
+              <Search size={15} className="shrink-0 text-slate-500" />
+              <input
+                className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
+                placeholder="ค้นหา dealer / customer / site / order no / product"
+                value={orderSearch}
+                onChange={(event) => setOrderSearch(event.target.value)}
+              />
+            </label>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <DataTable
+            columns={columns}
+            data={dealerOrders}
+            loading={ordersState === "loading"}
+            rowKey={(record) =>
+              [
+                record.order?.order_no,
+                record.dealer_id,
+                record.site?.site_code,
+                record.created_at ?? record.updated_at ?? record.pour_datetime
+              ]
+                .filter(Boolean)
+                .join("-")
+            }
+            minWidth={1410}
+            pageSize={10}
+          />
+        </CardContent>
+      </Card>
+    </>
   );
 }
 
@@ -1192,15 +1360,15 @@ function DealerPicker({
 
   return (
     <Card className="dashboard-card">
-      <CardContent className="grid gap-3 p-3 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-center">
+      <CardContent className="grid gap-2 p-2 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-center">
         <div>
-          <CardTitle className="text-lg">{title}</CardTitle>
-          <p className="mt-1 text-xs font-medium text-slate-500">เลือก dealer หนึ่งรายเพื่อเรียก endpoint รายละเอียดของ dealer นั้น</p>
+          <CardTitle className="text-[15px] lg:text-base">{title}</CardTitle>
+          <p className="mt-0.5 text-[10px] font-medium leading-4 text-slate-500">เลือก dealer หนึ่งรายเพื่อเรียก endpoint รายละเอียดของ dealer นั้น</p>
         </div>
         <div className="relative" ref={wrapperRef}>
           <button
             type="button"
-            className="flex min-h-[4rem] w-full items-center justify-between gap-3 rounded-2xl border border-[#d5e0e3] bg-white px-3.5 py-2.5 text-left text-sm text-slate-800 shadow-sm outline-none transition-colors hover:border-[#bfd0d4] focus:border-[#16706f] focus:ring-2 focus:ring-[#16706f]/15"
+            className="flex min-h-[3rem] w-full items-center justify-between gap-3 rounded-2xl border border-[#d5e0e3] bg-white px-3 py-1.5 text-left text-sm text-slate-800 shadow-sm outline-none transition-colors hover:border-[#bfd0d4] focus:border-[#16706f] focus:ring-2 focus:ring-[#16706f]/15"
             onClick={() => setOpen((current) => !current)}
             aria-expanded={open}
             aria-haspopup="listbox"
@@ -1209,14 +1377,14 @@ function DealerPicker({
               {selectedDealer ? (
                 <span className="block">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-700 ring-1 ring-sky-100">
+                    <span className="rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700 ring-1 ring-sky-100">
                       ID {selectedDealer.dealer_id}
                     </span>
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-100">
+                    <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">
                       {selectedDealer.dealer_code}
                     </span>
                   </span>
-                  <span className="mt-1 block truncate text-sm font-semibold text-slate-900">
+                  <span className="mt-0.5 block truncate text-[12px] font-semibold text-slate-900">
                     {selectedDealer.dealer_name}
                   </span>
                 </span>
@@ -1514,63 +1682,6 @@ function RegionVolumeExplorer({ regionRows }: { regionRows: ReturnType<typeof gr
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function DonutChart({ data }: { data: Array<{ label: string; value: number }> }) {
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-  const palette = ["#0f766e", "#2563eb", "#f59e0b", "#94a3b8"];
-  const segments = data.reduce<Array<{ item: { label: string; value: number }; percent: number; offset: number }>>(
-    (acc, item) => {
-      const percent = (item.value / total) * 100;
-      const previousOffset = acc.length ? acc[acc.length - 1].offset - acc[acc.length - 1].percent : 25;
-      acc.push({ item, percent, offset: previousOffset });
-      return acc;
-    },
-    []
-  );
-
-  if (!total) return <EmptyChart />;
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-[138px_minmax(0,1fr)] sm:items-center">
-      <svg className="h-[138px] w-[138px]" viewBox="0 0 42 42" role="img" aria-label="Dealer status chart">
-        <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#edf2f4" strokeWidth="7" />
-        {segments.map(({ item, offset, percent }, index) => {
-          const strokeDasharray = `${percent} ${100 - percent}`;
-          return (
-            <circle
-              key={item.label}
-              cx="21"
-              cy="21"
-              r="15.915"
-              fill="transparent"
-              stroke={palette[index % palette.length]}
-              strokeDasharray={strokeDasharray}
-              strokeDashoffset={offset}
-              strokeWidth="7"
-            />
-          );
-        })}
-        <text x="21" y="20" textAnchor="middle" className="fill-slate-950 text-[7px] font-semibold">
-          {total}
-        </text>
-        <text x="21" y="26" textAnchor="middle" className="fill-slate-500 text-[3.5px] font-semibold">
-          dealers
-        </text>
-      </svg>
-      <div className="space-y-3">
-        {data.map((item, index) => (
-          <div key={item.label} className="flex items-center justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="h-3 w-3 rounded-sm" style={{ backgroundColor: palette[index % palette.length] }} />
-              <span className="truncate text-sm font-semibold text-slate-700">{item.label}</span>
-            </div>
-            <span className="text-sm font-semibold text-slate-950">{formatNumber(item.value)}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

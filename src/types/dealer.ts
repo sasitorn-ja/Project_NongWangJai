@@ -82,4 +82,38 @@ export type DealerSite = {
   message?: string | null;
 };
 
+export type OrderItem = {
+  updated_at: string | null;
+  dealer_id: number;
+  dealer_code: string;
+  dealer_name: string;
+  customer?: {
+    id?: number | string;
+    code?: string;
+    name?: string;
+    phone?: string;
+  } | null;
+  site?: {
+    site_id?: number | string;
+    site_code?: string;
+    site_name?: string;
+  } | null;
+  order?: {
+    order_no?: string;
+    product_sku?: string;
+    product_name?: string;
+  } | null;
+  quantity?: {
+    ordered?: number;
+    delivered?: number;
+    unit?: string;
+  } | null;
+  pour_datetime: string | null;
+  status?: {
+    order?: string;
+  } | null;
+  created_at: string | null;
+  message?: string | null;
+};
+
 export type ApiState = "loading" | "live" | "error";
