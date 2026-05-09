@@ -1,16 +1,3 @@
-const HOP_BY_HOP_HEADERS = new Set([
-  "connection",
-  "content-length",
-  "host",
-  "keep-alive",
-  "proxy-authenticate",
-  "proxy-authorization",
-  "te",
-  "trailer",
-  "transfer-encoding",
-  "upgrade"
-]);
-
 function cleanEnv(value?: string) {
   if (!value) return "";
   const trimmed = value.trim();
@@ -40,15 +27,13 @@ function encodeBasicAuth(user: string, password: string) {
 function buildForwardHeaders(request: Request, authHeader: string) {
   const headers = new Headers();
 
-  request.headers.forEach((value, key) => {
-    const lower = key.toLowerCase();
-    if (HOP_BY_HOP_HEADERS.has(lower)) return;
-    if (lower === "authorization") return;
-    headers.set(key, value);
-  });
-
   headers.set("authorization", authHeader);
   headers.set("accept", "application/json");
+
+  const contentType = request.headers.get("content-type");
+  if (contentType) {
+    headers.set("content-type", contentType);
+  }
 
   return headers;
 }
@@ -57,7 +42,6 @@ function buildResponseHeaders(source: Headers) {
   const headers = new Headers();
 
   source.forEach((value, key) => {
-    if (HOP_BY_HOP_HEADERS.has(key.toLowerCase())) return;
     headers.set(key, value);
   });
 
@@ -83,9 +67,11 @@ export async function proxyToCpac(request: Request, upstreamPath: string) {
     upstreamUrl.search = incomingUrl.search;
 
     const authHeader = encodeBasicAuth(user, password);
+    const method = request.method.toUpperCase();
     const response = await fetch(upstreamUrl, {
       method: request.method,
-      headers: buildForwardHeaders(request, authHeader)
+      headers: buildForwardHeaders(request, authHeader),
+      body: method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer()
     });
 
     return new Response(response.body, {
