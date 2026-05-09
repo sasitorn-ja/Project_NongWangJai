@@ -1,4 +1,4 @@
-import { proxyToCpac } from "../_lib/proxy";
+import { proxyToCpac } from "../../lib/cpac-proxy";
 
 function resolveUpstreamPath(request: Request) {
   const url = new URL(request.url);

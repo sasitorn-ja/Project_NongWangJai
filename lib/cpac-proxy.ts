@@ -26,7 +26,6 @@ function encodeBasicAuth(user: string, password: string) {
 
 function buildForwardHeaders(request: Request, authHeader: string) {
   const headers = new Headers();
-
   headers.set("authorization", authHeader);
   headers.set("accept", "application/json");
 
@@ -66,11 +65,10 @@ export async function proxyToCpac(request: Request, upstreamPath: string) {
     const upstreamUrl = new URL(upstreamPath, target);
     upstreamUrl.search = incomingUrl.search;
 
-    const authHeader = encodeBasicAuth(user, password);
     const method = request.method.toUpperCase();
     const response = await fetch(upstreamUrl, {
       method: request.method,
-      headers: buildForwardHeaders(request, authHeader),
+      headers: buildForwardHeaders(request, encodeBasicAuth(user, password)),
       body: method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer()
     });
 
