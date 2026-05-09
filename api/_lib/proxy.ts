@@ -1,3 +1,5 @@
+import { Buffer } from "node:buffer";
+
 const HOP_BY_HOP_HEADERS = new Set([
   "connection",
   "content-length",
@@ -61,32 +63,54 @@ function buildResponseHeaders(source: Headers) {
 }
 
 export async function proxyToCpac(request: Request, upstreamPath: string) {
-  const { password, target, user } = getProxyConfig();
+  try {
+    const { password, target, user } = getProxyConfig();
 
-  if (!user || !password) {
+    if (!user || !password) {
+      return Response.json(
+        {
+          error: "Missing CPAC API credentials",
+          required: ["CPAC_API_USER", "CPAC_API_PASSWORD"]
+        },
+        { status: 500 }
+      );
+    }
+
+    const incomingUrl = new URL(request.url);
+    const upstreamUrl = new URL(upstreamPath, target);
+    upstreamUrl.search = incomingUrl.search;
+
+    const authHeader = `Basic ${Buffer.from(`${user}:${password}`).toString("base64")}`;
+    const response = await fetch(upstreamUrl, {
+      method: request.method,
+      headers: buildForwardHeaders(request, authHeader)
+    });
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: buildResponseHeaders(response.headers)
+    });
+  } catch (error) {
+    console.error("CPAC proxy failed", {
+      error,
+      requestUrl: request.url,
+      upstreamPath
+    });
+
+    const message = error instanceof Error ? error.message : "Unknown proxy error";
+    const name = error instanceof Error ? error.name : "Error";
+
     return Response.json(
       {
-        error: "Missing CPAC API credentials",
-        required: ["CPAC_API_USER", "CPAC_API_PASSWORD"]
+        error: "CPAC proxy invocation failed",
+        details: {
+          message,
+          name,
+          upstreamPath
+        }
       },
       { status: 500 }
     );
   }
-
-  const incomingUrl = new URL(request.url);
-  const upstreamUrl = new URL(upstreamPath, target);
-  upstreamUrl.search = incomingUrl.search;
-
-  const authHeader = `Basic ${Buffer.from(`${user}:${password}`).toString("base64")}`;
-  const response = await fetch(upstreamUrl, {
-    method: request.method,
-    headers: buildForwardHeaders(request, authHeader)
-  });
-
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers: buildResponseHeaders(response.headers)
-  });
 }
-import { Buffer } from "node:buffer";
