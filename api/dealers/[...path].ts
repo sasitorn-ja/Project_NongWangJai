@@ -6,8 +6,8 @@ function resolveUpstreamPath(request: Request) {
   return `/api/ai-wangjai/dealers/${suffix}`;
 }
 
-export default {
-  async fetch(request: Request) {
-    return proxyToCpac(request, resolveUpstreamPath(request));
-  }
-};
+export const runtime = "edge";
+
+export default async function handler(request: Request) {
+  return proxyToCpac(request, resolveUpstreamPath(request));
+}

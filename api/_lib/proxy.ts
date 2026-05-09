@@ -1,5 +1,3 @@
-import { Buffer } from "node:buffer";
-
 const HOP_BY_HOP_HEADERS = new Set([
   "connection",
   "content-length",
@@ -33,6 +31,10 @@ function getProxyConfig() {
   const password = cleanEnv(process.env.CPAC_API_PASSWORD);
 
   return { password, target, user };
+}
+
+function encodeBasicAuth(user: string, password: string) {
+  return `Basic ${btoa(`${user}:${password}`)}`;
 }
 
 function buildForwardHeaders(request: Request, authHeader: string) {
@@ -80,7 +82,7 @@ export async function proxyToCpac(request: Request, upstreamPath: string) {
     const upstreamUrl = new URL(upstreamPath, target);
     upstreamUrl.search = incomingUrl.search;
 
-    const authHeader = `Basic ${Buffer.from(`${user}:${password}`).toString("base64")}`;
+    const authHeader = encodeBasicAuth(user, password);
     const response = await fetch(upstreamUrl, {
       method: request.method,
       headers: buildForwardHeaders(request, authHeader)
