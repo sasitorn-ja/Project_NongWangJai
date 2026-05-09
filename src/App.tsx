@@ -167,6 +167,7 @@ function App() {
   const [dateTo, setDateTo] = useState("");
   const [dealers, setDealers] = useState<Dealer[]>([]);
   const [apiState, setApiState] = useState<ApiState>("loading");
+  const [apiMessage, setApiMessage] = useState<string | undefined>();
   const [region, setRegion] = useState("all");
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
@@ -184,9 +185,11 @@ function App() {
 
   const loadDealers = useCallback(async () => {
     setApiState("loading");
+    setApiMessage(undefined);
     const result = await fetchDealers();
     setDealers(result.rows);
     setApiState(result.state);
+    setApiMessage(result.message);
     setSelectedDealerId((current) => current ?? result.rows[0]?.dealer_id ?? null);
   }, []);
 
@@ -437,6 +440,7 @@ function App() {
           {page === "dashboard" && (
             <DashboardPage
               activeRate={activeRate}
+              apiMessage={apiMessage}
               apiState={apiState}
               filteredDealers={filteredDealers}
               region={region}
@@ -501,6 +505,7 @@ function App() {
 
 type DashboardPageProps = {
   activeRate: number;
+  apiMessage?: string;
   apiState: ApiState;
   filteredDealers: Dealer[];
   region: string;
@@ -598,6 +603,11 @@ function DashboardPage(props: DashboardPageProps) {
 
   return (
     <>
+      {props.apiState === "error" && (
+        <section className="grid grid-cols-1">
+          <ApiErrorBanner message={props.apiMessage} />
+        </section>
+      )}
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard icon={<PackageCheck size={18} />} label="Total Volume" value={`${compactNumber(props.totalVolume)} m3`} detail={`${formatNumber(props.totalVolume)} m3 across selected dealers`} />
         <MetricCard icon={<Users size={18} />} label="Active Dealers" value={`${props.activeRate}%`} detail="Active dealer status from API" tone="green" />
@@ -649,6 +659,25 @@ function DashboardPage(props: DashboardPageProps) {
         </Card>
       </section>
     </>
+  );
+}
+
+function ApiErrorBanner({ message }: { message?: string }) {
+  const missingCredentials = message?.includes("Missing CPAC API credentials");
+
+  return (
+    <Card className="border-amber-200 bg-amber-50/90 shadow-sm">
+      <CardContent className="space-y-1 p-4">
+        <div className="text-sm font-semibold text-amber-900">โหลดข้อมูลจาก API ไม่สำเร็จ</div>
+        <p className="text-sm text-amber-800">{message ?? "เกิดข้อผิดพลาดระหว่างโหลดข้อมูลจาก backend"}</p>
+        {missingCredentials && (
+          <p className="text-xs font-medium text-amber-700">
+            ตรวจสอบ Environment Variables บน Vercel ให้มี `CPAC_API_USER` และ `CPAC_API_PASSWORD`
+            รวมถึง `CPAC_API_TARGET` ถ้าต้องการเปลี่ยนปลายทาง API
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -899,7 +928,6 @@ function OrdersPage({
   const totalOrdered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0);
   const totalDelivered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
   const uniqueSites = new Set(dealerOrders.map((row) => row.site?.site_code).filter(Boolean)).size;
-  const inProgressOrders = dealerOrders.filter((row) => row.status?.order === "in_progress").length;
 
   const columns: DataColumn<OrderItem>[] = [
     {
@@ -1320,18 +1348,23 @@ function DealerPicker({
     });
   }, [dealers, query]);
 
+  const closePicker = useCallback(() => {
+    setOpen(false);
+    setQuery("");
+  }, []);
+
   useEffect(() => {
     if (!open) return;
 
     function handlePointerDown(event: MouseEvent) {
       if (!wrapperRef.current?.contains(event.target as Node)) {
-        setOpen(false);
+        closePicker();
       }
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setOpen(false);
+        closePicker();
       }
     }
 
@@ -1342,13 +1375,10 @@ function DealerPicker({
       window.removeEventListener("mousedown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open]);
+  }, [closePicker, open]);
 
   useEffect(() => {
-    if (!open) {
-      setQuery("");
-      return;
-    }
+    if (!open) return;
 
     const timerId = window.setTimeout(() => {
       searchInputRef.current?.focus();
@@ -1369,7 +1399,14 @@ function DealerPicker({
           <button
             type="button"
             className="flex min-h-[3rem] w-full items-center justify-between gap-3 rounded-2xl border border-[#d5e0e3] bg-white px-3 py-1.5 text-left text-sm text-slate-800 shadow-sm outline-none transition-colors hover:border-[#bfd0d4] focus:border-[#16706f] focus:ring-2 focus:ring-[#16706f]/15"
-            onClick={() => setOpen((current) => !current)}
+            onClick={() => {
+              if (open) {
+                closePicker();
+                return;
+              }
+
+              setOpen(true);
+            }}
             aria-expanded={open}
             aria-haspopup="listbox"
           >

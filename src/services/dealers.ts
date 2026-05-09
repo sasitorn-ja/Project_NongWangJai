@@ -20,6 +20,43 @@ type DealerGroupsResponse = {
 
 type ListResponse<T> = T[] | { items?: T[]; data?: T[]; result?: T[]; rows?: T[]; message?: string };
 
+type ApiListResult<T> = {
+  rows: T[];
+  state: ApiState;
+  message?: string;
+};
+
+async function extractErrorMessage(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+
+  try {
+    if (contentType.includes("application/json")) {
+      const payload = (await response.json()) as { error?: string; message?: string };
+      if (payload.error) return payload.error;
+      if (payload.message) return payload.message;
+    } else {
+      const text = (await response.text()).trim();
+      if (text) return text;
+    }
+  } catch {
+    // Ignore body parsing issues and fall back to status-based messaging.
+  }
+
+  return `API responded ${response.status}`;
+}
+
+async function requestJson<T>(input: string): Promise<T> {
+  const response = await fetch(input, {
+    headers: { Accept: "application/json" }
+  });
+
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response));
+  }
+
+  return (await response.json()) as T;
+}
+
 function toNumber(value: unknown): number {
   if (typeof value === "number") return value;
   if (typeof value === "string") {
@@ -131,20 +168,16 @@ function normalizeDealers(payload: DealerApiResponse): Dealer[] {
   return rows.map(normalizeDealer);
 }
 
-export async function fetchDealers(): Promise<{ rows: Dealer[]; state: ApiState }> {
+export async function fetchDealers(): Promise<ApiListResult<Dealer>> {
   try {
-    const response = await fetch("/api/dealers", {
-      headers: { Accept: "application/json" }
-    });
-
-    if (!response.ok) throw new Error(`API responded ${response.status}`);
-
-    const payload = (await response.json()) as DealerApiResponse;
+    const payload = await requestJson<DealerApiResponse>("/api/dealers");
     const rows = normalizeDealers(payload);
 
     return { rows, state: "live" };
-  } catch {
-    return { rows: [], state: "error" };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load dealers";
+    console.error("Failed to load dealers:", error);
+    return { rows: [], state: "error", message };
   }
 }
 
@@ -153,79 +186,59 @@ function normalizeList<T>(payload: ListResponse<T>): T[] {
   return payload.items ?? payload.data ?? payload.result ?? payload.rows ?? [];
 }
 
-export async function fetchDealerGroups(dealerId: number): Promise<{ rows: DealerGroup[]; state: ApiState; message?: string }> {
+export async function fetchDealerGroups(dealerId: number): Promise<ApiListResult<DealerGroup>> {
   try {
-    const response = await fetch(`/api/dealers/${dealerId}/groups`, {
-      headers: { Accept: "application/json" }
-    });
-
-    if (!response.ok) throw new Error(`API responded ${response.status}`);
-
-    const payload = (await response.json()) as DealerGroupsResponse;
+    const payload = await requestJson<DealerGroupsResponse>(`/api/dealers/${dealerId}/groups`);
     return { rows: (payload.groups ?? payload.items ?? []).map(normalizeGroup), state: "live", message: payload.message };
-  } catch {
-    return { rows: [], state: "error" };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load dealer groups";
+    console.error(`Failed to load dealer groups for dealer ${dealerId}:`, error);
+    return { rows: [], state: "error", message };
   }
 }
 
-export async function fetchDealerUsage(): Promise<{ rows: DealerUsage[]; state: ApiState }> {
+export async function fetchDealerUsage(): Promise<ApiListResult<DealerUsage>> {
   try {
-    const response = await fetch("/api/dealers/usage", {
-      headers: { Accept: "application/json" }
-    });
-
-    if (!response.ok) throw new Error(`API responded ${response.status}`);
-
-    const payload = (await response.json()) as ListResponse<DealerUsage>;
+    const payload = await requestJson<ListResponse<DealerUsage>>("/api/dealers/usage");
     return { rows: normalizeList(payload).map(normalizeUsage), state: "live" };
-  } catch {
-    return { rows: [], state: "error" };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load dealer usage";
+    console.error("Failed to load dealer usage:", error);
+    return { rows: [], state: "error", message };
   }
 }
 
 export async function fetchCustomerUsage(
   dealerId: number
-): Promise<{ rows: CustomerUsage[]; state: ApiState; message?: string }> {
+): Promise<ApiListResult<CustomerUsage>> {
   try {
-    const response = await fetch(`/api/dealers/${dealerId}/customers/usage`, {
-      headers: { Accept: "application/json" }
-    });
-
-    if (!response.ok) throw new Error(`API responded ${response.status}`);
-
-    const payload = (await response.json()) as ListResponse<CustomerUsage>;
+    const payload = await requestJson<ListResponse<CustomerUsage>>(`/api/dealers/${dealerId}/customers/usage`);
     return { rows: normalizeList(payload).map(normalizeCustomer), state: "live", message: "message" in payload ? payload.message : undefined };
-  } catch {
-    return { rows: [], state: "error" };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load customer usage";
+    console.error(`Failed to load customer usage for dealer ${dealerId}:`, error);
+    return { rows: [], state: "error", message };
   }
 }
 
-export async function fetchDealerSites(dealerId: number): Promise<{ rows: DealerSite[]; state: ApiState; message?: string }> {
+export async function fetchDealerSites(dealerId: number): Promise<ApiListResult<DealerSite>> {
   try {
-    const response = await fetch(`/api/dealers/${dealerId}/sites`, {
-      headers: { Accept: "application/json" }
-    });
-
-    if (!response.ok) throw new Error(`API responded ${response.status}`);
-
-    const payload = (await response.json()) as ListResponse<DealerSite>;
+    const payload = await requestJson<ListResponse<DealerSite>>(`/api/dealers/${dealerId}/sites`);
     return { rows: normalizeList(payload).map(normalizeSite), state: "live", message: "message" in payload ? payload.message : undefined };
-  } catch {
-    return { rows: [], state: "error" };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load dealer sites";
+    console.error(`Failed to load dealer sites for dealer ${dealerId}:`, error);
+    return { rows: [], state: "error", message };
   }
 }
 
-export async function fetchOrders(): Promise<{ rows: OrderItem[]; state: ApiState; message?: string }> {
+export async function fetchOrders(): Promise<ApiListResult<OrderItem>> {
   try {
-    const response = await fetch("/api/order", {
-      headers: { Accept: "application/json" }
-    });
-
-    if (!response.ok) throw new Error(`API responded ${response.status}`);
-
-    const payload = (await response.json()) as ListResponse<OrderItem>;
+    const payload = await requestJson<ListResponse<OrderItem>>("/api/order");
     return { rows: normalizeList(payload).map(normalizeOrder), state: "live", message: "message" in payload ? payload.message : undefined };
-  } catch {
-    return { rows: [], state: "error" };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to load orders";
+    console.error("Failed to load orders:", error);
+    return { rows: [], state: "error", message };
   }
 }
