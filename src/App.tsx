@@ -40,8 +40,9 @@ import {
 import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUsage, OrderItem } from "@/types/dealer";
 import { cn, compactNumber, formatNumber } from "@/lib/utils";
 
-type PageKey = "dashboard" | "groups" | "details" | "orders";
+type PageKey = "dashboard" | "groups" | "details" | "topCustomers" | "topProducts" | "customerInsights" | "orders";
 type DatePreset = "all" | "7d" | "30d" | "90d" | "custom";
+const FIXED_DIVISIONS = ["CPAC East", "CPAC Metro", "CPAC North", "CPAC Northeast", "RMC - South Chain", "CPAC West"] as const;
 type DataColumn<T> = {
   align?: "left" | "right" | "center";
   dataIndex?: keyof T;
@@ -156,6 +157,46 @@ function groupByRegion(rows: Dealer[]) {
   );
 
   return Object.values(grouped).sort((a, b) => b.volume - a.volume);
+}
+
+function getPageTitle(page: PageKey) {
+  if (page === "dashboard") return "Dashboard";
+  if (page === "groups") return "Dealer Groups";
+  if (page === "details") return "Dealer Details";
+  if (page === "topCustomers") return "Top N Dealers";
+  if (page === "topProducts") return "Top N Products";
+  if (page === "customerInsights") return "Dealer Insights";
+  return "Orders";
+}
+
+function getPageSubtitle(page: PageKey) {
+  if (page === "dashboard") return "ภาพรวมทุก Dealer";
+  if (page === "groups") return "เจาะ Dealer ทีละรายเพื่อดูรายการกลุ่ม";
+  if (page === "details") return "Usage, customers และ sites ของแต่ละ Dealer";
+  if (page === "topCustomers") return "สรุป Top dealer รายเดือนจากข้อมูล orders โดยไม่ใช้ site_from";
+  if (page === "topProducts") return "สรุปสินค้าขายดีรายเดือนจากข้อมูล orders พร้อมรหัสสินค้าและชื่อสินค้า";
+  if (page === "customerInsights") return "Top dealer และ site summary จากข้อมูล orders ที่มีอยู่จริง";
+  return "รายการ order จากเส้น API จริง";
+}
+
+function getMonthKey(dateValue?: string | null) {
+  const date = parseDateValue(dateValue);
+  if (!date) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function getMonthLabel(monthKey: string) {
+  if (!monthKey) return "-";
+  const [yearText, monthText] = monthKey.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return monthKey;
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short"
+  }).format(new Date(year, month - 1, 1));
 }
 
 function App() {
@@ -371,6 +412,27 @@ function App() {
             />
             <SideNavItem
               collapsed={collapsed}
+              icon={<TrendingUp size={16} />}
+              label="Top N Dealers"
+              selected={page === "topCustomers"}
+              onClick={() => setPage("topCustomers")}
+            />
+            <SideNavItem
+              collapsed={collapsed}
+              icon={<PackageCheck size={16} />}
+              label="Top N Products"
+              selected={page === "topProducts"}
+              onClick={() => setPage("topProducts")}
+            />
+            <SideNavItem
+              collapsed={collapsed}
+              icon={<TrendingUp size={16} />}
+              label="Dealer Insights"
+              selected={page === "customerInsights"}
+              onClick={() => setPage("customerInsights")}
+            />
+            <SideNavItem
+              collapsed={collapsed}
               icon={<PackageCheck size={16} />}
               label="Orders"
               selected={page === "orders"}
@@ -394,24 +456,8 @@ function App() {
                 {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
               </button>
               <div className="min-w-0">
-                <h1 className="truncate text-lg font-semibold text-slate-950 dark:text-slate-100 lg:text-xl">
-                  {page === "dashboard"
-                    ? "Dashboard"
-                    : page === "groups"
-                      ? "Dealer Groups"
-                      : page === "details"
-                        ? "Dealer Details"
-                        : "Orders"}
-                </h1>
-                <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">
-                  {page === "dashboard"
-                    ? "ภาพรวมทุก Dealer"
-                    : page === "groups"
-                      ? "เจาะ Dealer ทีละรายเพื่อดูรายการกลุ่ม"
-                      : page === "details"
-                        ? "Usage, customers และ sites ของแต่ละ Dealer"
-                        : "รายการ order จากเส้น API จริง"}
-                </p>
+                <h1 className="truncate text-lg font-semibold text-slate-950 dark:text-slate-100 lg:text-xl">{getPageTitle(page)}</h1>
+                <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{getPageSubtitle(page)}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -482,6 +528,25 @@ function App() {
               sites={filteredSites}
               sitesState={sitesState}
               usageRows={filteredUsageRows}
+            />
+          )}
+
+          {page === "topCustomers" && (
+            <TopCustomersPage dealers={dealers} orders={filteredOrders} ordersState={ordersState} />
+          )}
+
+          {page === "topProducts" && (
+            <TopProductsPage dealers={dealers} orders={filteredOrders} ordersState={ordersState} />
+          )}
+
+          {page === "customerInsights" && (
+            <CustomerInsightsPage
+              dealers={dealers}
+              orders={filteredOrders}
+              ordersState={ordersState}
+              selectedDealer={selectedDealer}
+              selectedDealerId={selectedDealerId}
+              setSelectedDealerId={setSelectedDealerId}
             />
           )}
 
@@ -687,7 +752,7 @@ type GroupsPageProps = {
   groupsState: ApiState;
   selectedDealer?: Dealer;
   selectedDealerId: number | null;
-  setSelectedDealerId: (id: number) => void;
+  setSelectedDealerId: (id: number | null) => void;
   usageRows: DealerUsage[];
 };
 
@@ -794,7 +859,7 @@ type DetailsPageProps = {
   dealers: Dealer[];
   selectedDealer?: Dealer;
   selectedDealerId: number | null;
-  setSelectedDealerId: (id: number) => void;
+  setSelectedDealerId: (id: number | null) => void;
   sites: DealerSite[];
   sitesState: ApiState;
   usageRows: DealerUsage[];
@@ -902,6 +967,1029 @@ function DetailsPage(props: DetailsPageProps) {
   );
 }
 
+function TopCustomersPage({
+  dealers,
+  orders,
+  ordersState
+}: {
+  dealers: Dealer[];
+  orders: OrderItem[];
+  ordersState: ApiState;
+}) {
+  const [division, setDivision] = useState("all");
+  const [province, setProvince] = useState("all");
+  const [month, setMonth] = useState("all");
+  const [year, setYear] = useState("all");
+  const [customerFilter, setCustomerFilter] = useState("all");
+  const [topN, setTopN] = useState(5);
+
+  const dealerMap = useMemo(() => new Map(dealers.map((dealer) => [dealer.dealer_id, dealer])), [dealers]);
+
+  const enrichedOrders = useMemo(
+    () =>
+      orders.map((order) => {
+        const dealer = dealerMap.get(order.dealer_id);
+        const region = dealer?.region ?? "-";
+        const provinceName = dealer?.province ?? "-";
+        const monthKey = getMonthKey(order.pour_datetime ?? order.updated_at ?? order.created_at);
+        const customerName = dealer?.dealer_name?.trim() || order.dealer_name?.trim() || "ไม่ระบุ dealer";
+        const customerCode = dealer?.dealer_code?.trim() || order.dealer_code?.trim() || "-";
+        const siteKey = order.site?.site_code?.trim() || order.site?.site_id?.toString() || "";
+        const delivered = order.quantity?.delivered ?? 0;
+        const ordered = order.quantity?.ordered ?? 0;
+
+        return {
+          ...order,
+          customerCode,
+          customerName,
+          delivered,
+          monthKey,
+          ordered,
+          provinceName,
+          region,
+          siteKey
+        };
+      }),
+    [dealerMap, orders]
+  );
+
+  const divisions = useMemo(() => [...FIXED_DIVISIONS], []);
+  const provinces = useMemo(() => Array.from(new Set(enrichedOrders.map((order) => order.provinceName).filter(Boolean))).sort(), [enrichedOrders]);
+  const years = useMemo(() => Array.from(new Set(enrichedOrders.map((order) => order.monthKey.slice(0, 4)).filter(Boolean))).sort(), [enrichedOrders]);
+  const monthKeys = useMemo(() => Array.from(new Set(enrichedOrders.map((order) => order.monthKey).filter(Boolean))).sort(), [enrichedOrders]);
+
+  const ordersBeforeCustomer = useMemo(
+    () =>
+      enrichedOrders.filter((order) => {
+        const matchDivision = division === "all" || order.region === division;
+        const matchProvince = province === "all" || order.provinceName === province;
+        const matchYear = year === "all" || order.monthKey.startsWith(`${year}-`);
+        const matchMonth = month === "all" || order.monthKey === month;
+        return matchDivision && matchProvince && matchYear && matchMonth;
+      }),
+    [division, enrichedOrders, month, province, year]
+  );
+
+  const customerOptions = useMemo(
+    () => Array.from(new Set(ordersBeforeCustomer.map((order) => order.customerName))).sort(),
+    [ordersBeforeCustomer]
+  );
+
+  const filteredOrders = useMemo(
+    () => ordersBeforeCustomer.filter((order) => customerFilter === "all" || order.customerName === customerFilter),
+    [customerFilter, ordersBeforeCustomer]
+  );
+
+  const customerRows = useMemo(() => {
+    const rows = filteredOrders.reduce<
+      Map<
+        string,
+        {
+          countSite: number;
+          customerCode: string;
+          customerName: string;
+          delivered: number;
+          ordered: number;
+          sites: Set<string>;
+        }
+      >
+    >((acc, order) => {
+      const key = `${order.customerCode}::${order.customerName}`;
+      const current =
+        acc.get(key) ?? {
+          countSite: 0,
+          customerCode: order.customerCode,
+          customerName: order.customerName,
+          delivered: 0,
+          ordered: 0,
+          sites: new Set<string>()
+        };
+
+      current.delivered += order.delivered;
+      current.ordered += order.ordered;
+      if (order.siteKey) current.sites.add(order.siteKey);
+      current.countSite = current.sites.size;
+      acc.set(key, current);
+      return acc;
+    }, new Map());
+
+    return Array.from(rows.values()).sort((a, b) => b.delivered - a.delivered);
+  }, [filteredOrders]);
+
+  const monthlyRows = useMemo(() => {
+    const grouped = filteredOrders.reduce<
+      Map<
+        string,
+        {
+          monthKey: string;
+          delivered: number;
+          ordered: number;
+          customerMap: Map<
+            string,
+            {
+              customerName: string;
+              delivered: number;
+              sites: Set<string>;
+            }
+          >;
+        }
+      >
+    >((acc, order) => {
+      const current =
+        acc.get(order.monthKey) ?? {
+          monthKey: order.monthKey,
+          delivered: 0,
+          ordered: 0,
+          customerMap: new Map()
+        };
+
+      current.delivered += order.delivered;
+      current.ordered += order.ordered;
+
+      const customerKey = `${order.customerCode}::${order.customerName}`;
+      const customerCurrent =
+        current.customerMap.get(customerKey) ?? {
+          customerName: order.customerName,
+          delivered: 0,
+          sites: new Set<string>()
+        };
+
+      customerCurrent.delivered += order.delivered;
+      if (order.siteKey) customerCurrent.sites.add(order.siteKey);
+      current.customerMap.set(customerKey, customerCurrent);
+
+      acc.set(order.monthKey, current);
+      return acc;
+    }, new Map());
+
+    return Array.from(grouped.values())
+      .sort((a, b) => a.monthKey.localeCompare(b.monthKey))
+      .map((row) => ({
+        monthKey: row.monthKey,
+        monthLabel: getMonthLabel(row.monthKey),
+        ordered: row.ordered,
+        topCustomers: Array.from(row.customerMap.values())
+          .sort((a, b) => b.delivered - a.delivered)
+          .slice(0, topN)
+      }));
+  }, [filteredOrders, topN]);
+
+  const totalVolume = filteredOrders.reduce((sum, order) => sum + order.delivered, 0);
+  const totalSites = new Set(filteredOrders.map((order) => order.siteKey).filter(Boolean)).size;
+  const totalCustomers = customerRows.length;
+
+  const customerColumns: DataColumn<(typeof customerRows)[number]>[] = [
+    {
+      title: "Dealer name",
+      key: "customerName",
+      width: 250,
+      render: (_, record) => (
+        <div className="min-w-0">
+          <div className="truncate text-[13px] font-semibold leading-5 text-slate-900">{record.customerName}</div>
+          <div className="truncate text-[11px] font-medium text-slate-500">{record.customerCode}</div>
+        </div>
+      )
+    },
+    {
+      title: <span className="inline-block pr-3">CountSite</span>,
+      key: "countSite",
+      dataIndex: "countSite",
+      align: "right",
+      width: 88,
+      render: (value) => <span className="inline-block pr-4">{formatNumber(Number(value ?? 0))}</span>
+    },
+    {
+      title: <span className="inline-block pr-6">Volume</span>,
+      key: "delivered",
+      dataIndex: "delivered",
+      align: "right",
+      width: 128,
+      render: (value) => <span className="inline-block min-w-[2.5rem] pr-6">{formatNumber(Number(value ?? 0))}</span>
+    }
+  ];
+
+  return (
+    <>
+      <Card className="dashboard-card">
+        <CardContent className="space-y-4 p-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+            <TopCustomersFilter
+              label="Division"
+              value={division}
+              onChange={setDivision}
+              options={[{ label: "ทั้งหมด", value: "all" }, ...divisions.map((item) => ({ label: item, value: item }))]}
+            />
+            <TopCustomersFilter
+              label="Province"
+              value={province}
+              onChange={setProvince}
+              options={[{ label: "ทั้งหมด", value: "all" }, ...provinces.map((item) => ({ label: item, value: item }))]}
+              searchable
+              searchPlaceholder="ค้นหาจังหวัด"
+            />
+            <TopCustomersFilter
+              label="Month"
+              value={month}
+              onChange={setMonth}
+              options={[{ label: "ทั้งหมด", value: "all" }, ...monthKeys.map((item) => ({ label: getMonthLabel(item), value: item }))]}
+            />
+            <TopCustomersFilter
+              label="Year"
+              value={year}
+              onChange={setYear}
+              options={[{ label: "ทั้งหมด", value: "all" }, ...years.map((item) => ({ label: item, value: item }))]}
+            />
+            <TopCustomersFilter
+              label="Dealer"
+              value={customerFilter}
+              onChange={setCustomerFilter}
+              options={[{ label: "ทั้งหมด", value: "all" }, ...customerOptions.map((item) => ({ label: item, value: item }))]}
+              searchable
+              searchPlaceholder="ค้นหาชื่อ dealer"
+              className="xl:col-span-2"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">TopN</div>
+            <div className="inline-flex w-fit flex-wrap items-center gap-1 rounded-2xl border border-[#d9e3e6] bg-[#f8fafb] p-1.5 shadow-inner shadow-slate-100/70">
+              {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-semibold shadow-sm transition-all duration-150",
+                    topN === value
+                      ? "border-[#0f766e] bg-[#0f766e] text-white shadow-[0_10px_24px_rgba(15,118,110,0.22)]"
+                      : "border-transparent bg-white text-slate-700 hover:-translate-y-0.5 hover:border-[#c8d7db] hover:bg-[#fdfefe]"
+                  )}
+                  onClick={() => setTopN(value)}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <MetricCard compact icon={<Users size={16} />} label="Dealers" value={formatNumber(totalCustomers)} detail="จำนวน dealer ที่อยู่ในผลลัพธ์ปัจจุบัน" />
+        <MetricCard compact icon={<Database size={16} />} label="Sites" value={formatNumber(totalSites)} detail="นับจาก site ที่ไม่ซ้ำในผลลัพธ์ปัจจุบัน" tone="rose" />
+        <MetricCard compact icon={<PackageCheck size={16} />} label="Volume" value={compactNumber(totalVolume)} detail="ยอดส่งจริงรวมจาก orders ที่ถูกกรอง" tone="green" />
+      </section>
+
+      <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,.9fr)]">
+        <Card className="dashboard-card overflow-hidden">
+          <CardHeader className="border-b border-[#d9e3e6]">
+            <CardTitle className="text-lg">Top N Dealer</CardTitle>
+            <p className="text-xs font-medium text-slate-500">สรุปรายเดือนจากยอดส่งจริง พร้อมรายชื่อ Top {topN} dealer ของแต่ละเดือน</p>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full table-fixed border-collapse text-sm">
+                <colgroup>
+                  <col className="w-[76px]" />
+                  <col className="w-[88px]" />
+                  <col />
+                </colgroup>
+                <thead>
+                  <tr className="border-b border-[#d9e3e6] bg-[#f6f8f9]">
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">Month</th>
+                    <th className="px-1 py-2.5 text-right text-xs font-semibold text-slate-500">Volume All</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">TopN Dealer</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ordersState === "loading" && (
+                    <tr>
+                      <td className="px-3 py-10 text-center text-sm font-semibold text-slate-500" colSpan={3}>
+                        กำลังโหลดข้อมูล...
+                      </td>
+                    </tr>
+                  )}
+                  {ordersState !== "loading" && monthlyRows.length === 0 && (
+                    <tr>
+                      <td className="px-3 py-10 text-center text-sm font-semibold text-slate-500" colSpan={3}>
+                        ไม่มีข้อมูล
+                      </td>
+                    </tr>
+                  )}
+                  {monthlyRows.map((row, index) => (
+                    <tr key={row.monthKey || index} className="border-b border-[#edf1f2] align-top">
+                      <td className="px-3 py-3 font-semibold text-slate-950">{row.monthLabel}</td>
+                      <td className="px-1 py-3 text-right font-semibold text-slate-800">{formatNumber(row.ordered)}</td>
+                      <td className="px-3 py-3">
+                        <div className="space-y-1">
+                          {row.topCustomers.map((customer, customerIndex) => (
+                            <div key={`${row.monthKey}-${customer.customerName}-${customerIndex}`} className="line-clamp-2 text-sm text-slate-800">
+                              {customer.customerName} #{formatNumber(customer.sites.size)} site, {formatNumber(customer.delivered)} m3
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dashboard-card overflow-hidden">
+          <CardHeader className="border-b border-[#d9e3e6]">
+            <CardTitle className="text-lg">Dealer Ranking</CardTitle>
+            <p className="text-xs font-medium text-slate-500">สรุป dealer ตามจำนวน site และยอดส่งจริง</p>
+          </CardHeader>
+          <CardContent className="p-0">
+            <DataTable columns={customerColumns} data={customerRows} loading={ordersState === "loading"} rowKey={(record) => `${record.customerCode}-${record.customerName}`} minWidth={0} pageSize={15} />
+          </CardContent>
+        </Card>
+      </section>
+    </>
+  );
+}
+
+function TopProductsPage({
+  dealers,
+  orders,
+  ordersState
+}: {
+  dealers: Dealer[];
+  orders: OrderItem[];
+  ordersState: ApiState;
+}) {
+  const [division, setDivision] = useState("all");
+  const [province, setProvince] = useState("all");
+  const [month, setMonth] = useState("all");
+  const [year, setYear] = useState("all");
+  const [productFilter, setProductFilter] = useState("all");
+  const [topN, setTopN] = useState(5);
+
+  const dealerMap = useMemo(() => new Map(dealers.map((dealer) => [dealer.dealer_id, dealer])), [dealers]);
+
+  const enrichedOrders = useMemo(
+    () =>
+      orders.map((order) => {
+        const dealer = dealerMap.get(order.dealer_id);
+        const region = dealer?.region ?? "-";
+        const provinceName = dealer?.province ?? "-";
+        const monthKey = getMonthKey(order.pour_datetime ?? order.updated_at ?? order.created_at);
+        const productCode = order.order?.product_sku?.trim() || "-";
+        const productName = order.order?.product_name?.trim() || "ไม่ระบุสินค้า";
+        const productKey = `${productCode}::${productName}`;
+        const delivered = order.quantity?.delivered ?? 0;
+        const ordered = order.quantity?.ordered ?? 0;
+
+        return {
+          ...order,
+          delivered,
+          monthKey,
+          ordered,
+          productCode,
+          productKey,
+          productName,
+          provinceName,
+          region
+        };
+      }),
+    [dealerMap, orders]
+  );
+
+  const divisions = useMemo(() => [...FIXED_DIVISIONS], []);
+  const provinces = useMemo(() => Array.from(new Set(enrichedOrders.map((order) => order.provinceName).filter(Boolean))).sort(), [enrichedOrders]);
+  const years = useMemo(() => Array.from(new Set(enrichedOrders.map((order) => order.monthKey.slice(0, 4)).filter(Boolean))).sort(), [enrichedOrders]);
+  const monthKeys = useMemo(() => Array.from(new Set(enrichedOrders.map((order) => order.monthKey).filter(Boolean))).sort(), [enrichedOrders]);
+
+  const ordersBeforeProduct = useMemo(
+    () =>
+      enrichedOrders.filter((order) => {
+        const matchDivision = division === "all" || order.region === division;
+        const matchProvince = province === "all" || order.provinceName === province;
+        const matchYear = year === "all" || order.monthKey.startsWith(`${year}-`);
+        const matchMonth = month === "all" || order.monthKey === month;
+        return matchDivision && matchProvince && matchYear && matchMonth;
+      }),
+    [division, enrichedOrders, month, province, year]
+  );
+
+  const productOptions = useMemo(
+    () =>
+      Array.from(new Map(ordersBeforeProduct.map((order) => [order.productKey, `${order.productName} (${order.productCode})`])).entries())
+        .map(([value, label]) => ({ label, value }))
+        .sort((a, b) => a.label.localeCompare(b.label, "th")),
+    [ordersBeforeProduct]
+  );
+
+  const filteredOrders = useMemo(
+    () => ordersBeforeProduct.filter((order) => productFilter === "all" || order.productKey === productFilter),
+    [ordersBeforeProduct, productFilter]
+  );
+
+  const productRows = useMemo(() => {
+    const rows = filteredOrders.reduce<
+      Map<
+        string,
+        {
+          key: string;
+          latestPour: string | null;
+          orderCount: number;
+          ordered: number;
+          productCode: string;
+          productName: string;
+          delivered: number;
+        }
+      >
+    >((acc, order) => {
+      const current =
+        acc.get(order.productKey) ?? {
+          key: order.productKey,
+          latestPour: null,
+          orderCount: 0,
+          ordered: 0,
+          productCode: order.productCode,
+          productName: order.productName,
+          delivered: 0
+        };
+
+      current.orderCount += 1;
+      current.ordered += order.ordered;
+      current.delivered += order.delivered;
+
+      const candidateDate = parseDateValue(order.pour_datetime ?? order.updated_at ?? order.created_at);
+      const currentDate = parseDateValue(current.latestPour);
+      if (candidateDate && (!currentDate || candidateDate > currentDate)) {
+        current.latestPour = order.pour_datetime ?? order.updated_at ?? order.created_at ?? null;
+      }
+
+      acc.set(order.productKey, current);
+      return acc;
+    }, new Map());
+
+    return Array.from(rows.values()).sort((a, b) => b.delivered - a.delivered);
+  }, [filteredOrders]);
+
+  const monthlyRows = useMemo(() => {
+    const grouped = filteredOrders.reduce<
+      Map<
+        string,
+        {
+          delivered: number;
+          monthKey: string;
+          ordered: number;
+          productMap: Map<
+            string,
+            {
+              productCode: string;
+              productName: string;
+              delivered: number;
+            }
+          >;
+        }
+      >
+    >((acc, order) => {
+      const current =
+        acc.get(order.monthKey) ?? {
+          delivered: 0,
+          monthKey: order.monthKey,
+          ordered: 0,
+          productMap: new Map()
+        };
+
+      current.delivered += order.delivered;
+      current.ordered += order.ordered;
+
+      const productCurrent =
+        current.productMap.get(order.productKey) ?? {
+          productCode: order.productCode,
+          productName: order.productName,
+          delivered: 0
+        };
+
+      productCurrent.delivered += order.delivered;
+      current.productMap.set(order.productKey, productCurrent);
+      acc.set(order.monthKey, current);
+      return acc;
+    }, new Map());
+
+    return Array.from(grouped.values())
+      .sort((a, b) => a.monthKey.localeCompare(b.monthKey))
+      .map((row) => ({
+        delivered: row.delivered,
+        monthKey: row.monthKey,
+        monthLabel: getMonthLabel(row.monthKey),
+        ordered: row.ordered,
+        topProducts: Array.from(row.productMap.values())
+          .sort((a, b) => b.delivered - a.delivered)
+          .slice(0, topN)
+      }));
+  }, [filteredOrders, topN]);
+
+  const totalProducts = productRows.length;
+  const totalOrders = filteredOrders.length;
+  const totalVolume = filteredOrders.reduce((sum, order) => sum + order.delivered, 0);
+  const bestseller = productRows[0];
+
+  const productColumns: DataColumn<(typeof productRows)[number]>[] = [
+    {
+      title: "รหัสสินค้า",
+      key: "productCode",
+      dataIndex: "productCode",
+      width: 180
+    },
+    {
+      title: "ชื่อสินค้า",
+      key: "productName",
+      width: 320,
+      render: (_, record) => (
+        <div className="min-w-0">
+          <div className="truncate text-[13px] font-semibold leading-5 text-slate-900">{record.productName}</div>
+          <div className="truncate text-[11px] font-medium text-slate-500">{record.productCode}</div>
+        </div>
+      )
+    },
+    {
+      title: "Orders",
+      key: "orderCount",
+      dataIndex: "orderCount",
+      align: "right",
+      width: 110,
+      render: formatNumber
+    },
+    {
+      title: "Ordered",
+      key: "ordered",
+      dataIndex: "ordered",
+      align: "right",
+      width: 130,
+      render: formatNumber
+    },
+    {
+      title: "Delivered",
+      key: "delivered",
+      dataIndex: "delivered",
+      align: "right",
+      width: 130,
+      render: formatNumber
+    },
+    {
+      title: "ขายล่าสุด",
+      key: "latestPour",
+      dataIndex: "latestPour",
+      width: 190,
+      render: dateText
+    }
+  ];
+
+  return (
+    <>
+      <Card className="dashboard-card">
+        <CardContent className="space-y-4 p-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+            <TopCustomersFilter
+              label="Division"
+              value={division}
+              onChange={setDivision}
+              options={[{ label: "ทั้งหมด", value: "all" }, ...divisions.map((item) => ({ label: item, value: item }))]}
+            />
+            <TopCustomersFilter
+              label="Province"
+              value={province}
+              onChange={setProvince}
+              options={[{ label: "ทั้งหมด", value: "all" }, ...provinces.map((item) => ({ label: item, value: item }))]}
+              searchable
+              searchPlaceholder="ค้นหาจังหวัด"
+            />
+            <TopCustomersFilter
+              label="Month"
+              value={month}
+              onChange={setMonth}
+              options={[{ label: "ทั้งหมด", value: "all" }, ...monthKeys.map((item) => ({ label: getMonthLabel(item), value: item }))]}
+            />
+            <TopCustomersFilter
+              label="Year"
+              value={year}
+              onChange={setYear}
+              options={[{ label: "ทั้งหมด", value: "all" }, ...years.map((item) => ({ label: item, value: item }))]}
+            />
+            <TopCustomersFilter
+              label="Product"
+              value={productFilter}
+              onChange={setProductFilter}
+              options={[{ label: "ทั้งหมด", value: "all" }, ...productOptions]}
+              searchable
+              searchPlaceholder="ค้นหารหัสหรือชื่อสินค้า"
+              className="xl:col-span-2"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">TopN</div>
+            <div className="inline-flex w-fit flex-wrap items-center gap-1 rounded-2xl border border-[#d9e3e6] bg-[#f8fafb] p-1.5 shadow-inner shadow-slate-100/70">
+              {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-semibold shadow-sm transition-all duration-150",
+                    topN === value
+                      ? "border-[#0f766e] bg-[#0f766e] text-white shadow-[0_10px_24px_rgba(15,118,110,0.22)]"
+                      : "border-transparent bg-white text-slate-700 hover:-translate-y-0.5 hover:border-[#c8d7db] hover:bg-[#fdfefe]"
+                  )}
+                  onClick={() => setTopN(value)}
+                >
+                  {value}
+                </button>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard compact icon={<PackageCheck size={16} />} label="Products" value={formatNumber(totalProducts)} detail="จำนวนสินค้าที่อยู่ในผลลัพธ์ปัจจุบัน" />
+        <MetricCard compact icon={<Database size={16} />} label="Orders" value={formatNumber(totalOrders)} detail="จำนวน orders ที่ใช้คำนวณสินค้าขายดี" tone="rose" />
+        <MetricCard compact icon={<TrendingUp size={16} />} label="Delivered Qty" value={compactNumber(totalVolume)} detail="ยอดส่งจริงรวมของสินค้าที่ถูกกรอง" tone="green" />
+        <MetricCard compact icon={<Users size={16} />} label="Best Seller" value={bestseller?.productCode ?? "-"} detail={bestseller?.productName ?? "ยังไม่มีข้อมูลสินค้า"} tone="amber" />
+      </section>
+
+      <section className="grid grid-cols-1 gap-3">
+        <Card className="dashboard-card overflow-hidden">
+          <CardHeader className="border-b border-[#d9e3e6]">
+            <CardTitle className="text-lg">Top N Product</CardTitle>
+            <p className="text-xs font-medium text-slate-500">สรุปรายเดือนจากยอดส่งจริง พร้อมรายการสินค้าขายดี Top {topN} ของแต่ละเดือน</p>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full table-fixed border-collapse text-sm">
+                <colgroup>
+                  <col className="w-[88px]" />
+                  <col className="w-[120px]" />
+                  <col />
+                </colgroup>
+                <thead>
+                  <tr className="border-b border-[#d9e3e6] bg-[#f6f8f9]">
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">Month</th>
+                    <th className="px-2 py-2.5 text-right text-xs font-semibold text-slate-500">Volume All</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">TopN Product</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ordersState === "loading" && (
+                    <tr>
+                      <td className="px-3 py-10 text-center text-sm font-semibold text-slate-500" colSpan={3}>
+                        กำลังโหลดข้อมูล...
+                      </td>
+                    </tr>
+                  )}
+                  {ordersState !== "loading" && monthlyRows.length === 0 && (
+                    <tr>
+                      <td className="px-3 py-10 text-center text-sm font-semibold text-slate-500" colSpan={3}>
+                        ไม่มีข้อมูล
+                      </td>
+                    </tr>
+                  )}
+                  {monthlyRows.map((row, index) => (
+                    <tr key={row.monthKey || index} className="border-b border-[#edf1f2] align-top">
+                      <td className="px-3 py-3 font-semibold text-slate-950">{row.monthLabel}</td>
+                      <td className="px-2 py-3 text-right font-semibold text-slate-800">{formatNumber(row.delivered)}</td>
+                      <td className="px-3 py-3">
+                        <div className="space-y-1">
+                          {row.topProducts.map((product, productIndex) => (
+                            <div key={`${row.monthKey}-${product.productCode}-${productIndex}`} className="line-clamp-2 text-sm text-slate-800">
+                              {product.productName} ({product.productCode}), {formatNumber(product.delivered)} m3
+                            </div>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="dashboard-card overflow-hidden">
+          <CardHeader className="border-b border-[#d9e3e6]">
+            <CardTitle className="text-lg">Product Ranking</CardTitle>
+            <p className="text-xs font-medium text-slate-500">สรุปสินค้าตามจำนวน order และยอดส่งจริง</p>
+          </CardHeader>
+          <CardContent className="p-0">
+            <DataTable columns={productColumns} data={productRows} loading={ordersState === "loading"} rowKey="key" minWidth={980} pageSize={10} />
+          </CardContent>
+        </Card>
+      </section>
+    </>
+  );
+}
+
+function CustomerInsightsPage({
+  dealers,
+  orders,
+  ordersState,
+  selectedDealer,
+  selectedDealerId,
+  setSelectedDealerId
+}: {
+  dealers: Dealer[];
+  orders: OrderItem[];
+  ordersState: ApiState;
+  selectedDealer?: Dealer;
+  selectedDealerId: number | null;
+  setSelectedDealerId: (id: number | null) => void;
+}) {
+  const [topN, setTopN] = useState(10);
+  const currentDealer = selectedDealerId == null ? null : selectedDealer;
+  const dealerIdentity = useMemo(
+    () => (row: OrderItem) => ({
+      code: row.dealer_code?.trim() || "-",
+      name: row.dealer_name?.trim() || "ไม่ระบุ dealer"
+    }),
+    []
+  );
+
+  const dealerOrders = useMemo(
+    () => orders.filter((row) => selectedDealerId == null || row.dealer_id === selectedDealerId),
+    [orders, selectedDealerId]
+  );
+
+  const customerRows = useMemo(() => {
+    const rows = dealerOrders.reduce<
+      Map<
+        string,
+        {
+          key: string;
+          customerName: string;
+          customerCode: string;
+          orderCount: number;
+          uniqueSites: Set<string>;
+          ordered: number;
+          delivered: number;
+          latestPour: string | null;
+        }
+      >
+    >((acc, row) => {
+      const { code: customerCode, name: customerName } = dealerIdentity(row);
+      const key = `${customerCode}::${customerName}`;
+      const current =
+        acc.get(key) ?? {
+          key,
+          customerName,
+          customerCode,
+          orderCount: 0,
+          uniqueSites: new Set<string>(),
+          ordered: 0,
+          delivered: 0,
+          latestPour: null
+        };
+
+      current.orderCount += 1;
+      current.ordered += row.quantity?.ordered ?? 0;
+      current.delivered += row.quantity?.delivered ?? 0;
+      if (row.site?.site_code) current.uniqueSites.add(row.site.site_code);
+
+      const candidateDate = parseDateValue(row.pour_datetime ?? row.updated_at ?? row.created_at);
+      const currentDate = parseDateValue(current.latestPour);
+      if (candidateDate && (!currentDate || candidateDate > currentDate)) {
+        current.latestPour = row.pour_datetime ?? row.updated_at ?? row.created_at ?? null;
+      }
+
+      acc.set(key, current);
+      return acc;
+    }, new Map());
+
+    return Array.from(rows.values())
+      .map((row) => ({
+        ...row,
+        siteCount: row.uniqueSites.size
+      }))
+      .sort((a, b) => b.delivered - a.delivered);
+  }, [dealerIdentity, dealerOrders]);
+
+  const siteRows = useMemo(() => {
+    const rows = dealerOrders.reduce<
+      Map<
+        string,
+        {
+          key: string;
+          siteName: string;
+          siteCode: string;
+          customerName: string;
+          ordered: number;
+          delivered: number;
+          latestPour: string | null;
+        }
+      >
+    >((acc, row) => {
+      const siteCode = row.site?.site_code?.trim() || row.site?.site_id?.toString() || "-";
+      const siteName = row.site?.site_name?.trim() || "ไม่ระบุไซต์";
+      const { name: customerName } = dealerIdentity(row);
+      const key = `${siteCode}::${siteName}`;
+      const current =
+        acc.get(key) ?? {
+          key,
+          siteName,
+          siteCode,
+          customerName,
+          ordered: 0,
+          delivered: 0,
+          latestPour: null
+        };
+
+      current.ordered += row.quantity?.ordered ?? 0;
+      current.delivered += row.quantity?.delivered ?? 0;
+
+      const candidateDate = parseDateValue(row.pour_datetime ?? row.updated_at ?? row.created_at);
+      const currentDate = parseDateValue(current.latestPour);
+      if (candidateDate && (!currentDate || candidateDate > currentDate)) {
+        current.latestPour = row.pour_datetime ?? row.updated_at ?? row.created_at ?? null;
+      }
+
+      acc.set(key, current);
+      return acc;
+    }, new Map());
+
+    return Array.from(rows.values()).sort((a, b) => b.delivered - a.delivered);
+  }, [dealerIdentity, dealerOrders]);
+
+  const totalDelivered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
+  const totalOrdered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0);
+  const totalCustomers = customerRows.length;
+  const totalSites = siteRows.length;
+  const topCustomers = customerRows.slice(0, topN);
+
+  const customerColumns: DataColumn<(typeof customerRows)[number]>[] = [
+    {
+      title: "Dealer",
+      key: "customer",
+      width: 320,
+      render: (_, record) => (
+        <div>
+          <div className="font-semibold text-slate-950">{record.customerName}</div>
+          <div className="text-xs font-medium text-slate-500">{record.customerCode}</div>
+        </div>
+      )
+    },
+    { title: "Sites", key: "siteCount", dataIndex: "siteCount", align: "right", width: 110, render: formatNumber },
+    { title: "Orders", key: "orderCount", dataIndex: "orderCount", align: "right", width: 110, render: formatNumber },
+    { title: "Ordered", key: "ordered", dataIndex: "ordered", align: "right", width: 140, render: formatNumber },
+    { title: "Delivered", key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
+    { title: "Pour ล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
+  ];
+
+  const siteColumns: DataColumn<(typeof siteRows)[number]>[] = [
+    {
+      title: "Site",
+      key: "site",
+      width: 320,
+      render: (_, record) => (
+        <div>
+          <div className="font-semibold text-slate-950">{record.siteName}</div>
+          <div className="text-xs font-medium text-slate-500">{record.siteCode}</div>
+        </div>
+      )
+    },
+    { title: "Dealer", key: "customerName", dataIndex: "customerName", width: 240 },
+    { title: "Ordered", key: "ordered", dataIndex: "ordered", align: "right", width: 140, render: formatNumber },
+    { title: "Delivered", key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
+    { title: "Pour ล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
+  ];
+
+  return (
+    <>
+      <DealerPicker
+        dealers={dealers}
+        includeAll
+        selectedDealerId={selectedDealerId}
+        setSelectedDealerId={setSelectedDealerId}
+        title="เลือก Dealer เพื่อดู Top Dealer และ Site"
+      />
+
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCard icon={<Users size={18} />} label="Dealers" value={formatNumber(totalCustomers)} detail={currentDealer?.dealer_name ?? "จำนวน dealer จากทุก dealer ในข้อมูล orders"} />
+        <MetricCard icon={<Database size={18} />} label="Sites" value={formatNumber(totalSites)} detail="นับจาก site code/site id ที่ไม่ซ้ำ" tone="rose" />
+        <MetricCard icon={<TrendingUp size={18} />} label="Ordered Qty" value={compactNumber(totalOrdered)} detail="ยอดสั่งรวมจาก orders ที่กรองอยู่" tone="amber" />
+        <MetricCard icon={<PackageCheck size={18} />} label="Delivered Qty" value={compactNumber(totalDelivered)} detail="ยอดส่งจริงรวมจาก orders ที่กรองอยู่" tone="green" />
+      </section>
+
+      <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,.8fr)]">
+        <Card className="dashboard-card">
+          <CardHeader className="border-b border-[#d9e3e6]">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <CardTitle className="text-lg">Top Dealers by Delivered Volume</CardTitle>
+                <p className="text-xs font-medium text-slate-500">สรุปจาก dealer และ site ที่มีอยู่ในข้อมูล orders โดยไม่ใช้ site_from</p>
+              </div>
+              <div className="inline-flex rounded-md border border-[#d9e3e6] bg-white p-1 shadow-sm">
+                {[5, 10, 20].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={cn(
+                      "rounded px-3 py-1.5 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100",
+                      topN === value && "bg-slate-100 text-slate-950"
+                    )}
+                    onClick={() => setTopN(value)}
+                  >
+                    Top {value}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <DualBarChart
+              data={topCustomers.map((customer) => ({
+                label: customer.customerName,
+                primary: customer.delivered,
+                secondary: customer.ordered
+              }))}
+              primaryLabel="Delivered"
+              secondaryLabel="Ordered"
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="dashboard-card">
+          <CardHeader className="border-b border-[#d9e3e6]">
+            <CardTitle className="text-lg">Dealer Snapshot</CardTitle>
+            <p className="text-xs font-medium text-slate-500">ดูรายชื่อ dealer กลุ่มบนสุดพร้อมจำนวนไซต์ที่สัมพันธ์กัน</p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {topCustomers.length ? topCustomers.slice(0, 6).map((customer, index) => (
+              <div key={customer.key} className="rounded-2xl border border-[#d9e3e6] bg-white/70 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Rank {index + 1}</div>
+                    <div className="mt-1 truncate text-sm font-semibold text-slate-950">{customer.customerName}</div>
+                    <div className="text-xs font-medium text-slate-500">{customer.customerCode}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-lg font-bold text-slate-950">{formatNumber(customer.delivered)}</div>
+                    <div className="text-xs font-medium text-slate-500">delivered</div>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2 text-xs font-medium text-slate-500">
+                  <div className="rounded-xl bg-slate-50 px-2.5 py-2">
+                    <div className="text-[11px] uppercase tracking-wide">Sites</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">{formatNumber(customer.siteCount)}</div>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 px-2.5 py-2">
+                    <div className="text-[11px] uppercase tracking-wide">Orders</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">{formatNumber(customer.orderCount)}</div>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 px-2.5 py-2">
+                    <div className="text-[11px] uppercase tracking-wide">Ordered</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">{formatNumber(customer.ordered)}</div>
+                  </div>
+                </div>
+              </div>
+            )) : (
+              <div className="rounded-2xl border border-dashed border-[#d9e3e6] px-4 py-10 text-center text-sm font-semibold text-slate-500">
+                ไม่มีข้อมูลลูกค้าจาก orders ในช่วงเวลาที่เลือก
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <ShadcnTabs
+        items={[
+          {
+            key: "customers",
+            label: "Dealer Summary",
+            content: (
+              <Card className="dashboard-card overflow-hidden">
+                <CardHeader className="border-b border-[#d9e3e6]">
+                  <CardTitle className="text-lg">Dealer Summary Table</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <DataTable columns={customerColumns} data={customerRows} loading={ordersState === "loading"} rowKey="key" minWidth={1040} pageSize={10} />
+                </CardContent>
+              </Card>
+            )
+          },
+          {
+            key: "sites",
+            label: "Site Summary",
+            content: (
+              <Card className="dashboard-card overflow-hidden">
+                <CardHeader className="border-b border-[#d9e3e6]">
+                  <CardTitle className="text-lg">Site Summary Table</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <DataTable columns={siteColumns} data={siteRows} loading={ordersState === "loading"} rowKey="key" minWidth={1080} pageSize={10} />
+                </CardContent>
+              </Card>
+            )
+          }
+        ]}
+      />
+    </>
+  );
+}
+
 function OrdersPage({
   dealers,
   orders,
@@ -919,7 +2007,7 @@ function OrdersPage({
   selectedDealer?: Dealer;
   selectedDealerId: number | null;
   setOrderSearch: (value: string) => void;
-  setSelectedDealerId: (id: number) => void;
+  setSelectedDealerId: (id: number | null) => void;
 }) {
   const dealerOrders = useMemo(
     () => orders.filter((row) => selectedDealerId == null || row.dealer_id === selectedDealerId),
@@ -1324,20 +2412,22 @@ function ShadcnPagination({
 
 function DealerPicker({
   dealers,
+  includeAll = false,
   selectedDealerId,
   setSelectedDealerId,
   title
 }: {
   dealers: Dealer[];
+  includeAll?: boolean;
   selectedDealerId: number | null;
-  setSelectedDealerId: (id: number) => void;
+  setSelectedDealerId: (id: number | null) => void;
   title: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const selectedDealer = dealers.find((dealer) => dealer.dealer_id === selectedDealerId) ?? dealers[0] ?? null;
+  const selectedDealer = selectedDealerId == null ? null : dealers.find((dealer) => dealer.dealer_id === selectedDealerId) ?? dealers[0] ?? null;
   const filteredDealers = useMemo(() => {
     const searchValue = normalizeSearch(query);
     if (!searchValue) return dealers;
@@ -1393,7 +2483,9 @@ function DealerPicker({
       <CardContent className="grid gap-2 p-2 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-center">
         <div>
           <CardTitle className="text-[15px] lg:text-base">{title}</CardTitle>
-          <p className="mt-0.5 text-[10px] font-medium leading-4 text-slate-500">เลือก dealer หนึ่งรายเพื่อเรียก endpoint รายละเอียดของ dealer นั้น</p>
+          <p className="mt-0.5 text-[10px] font-medium leading-4 text-slate-500">
+            {includeAll ? "เลือกทุก dealer หรือเจาะราย dealer เพื่อเปรียบเทียบข้อมูล" : "เลือก dealer หนึ่งรายเพื่อเรียก endpoint รายละเอียดของ dealer นั้น"}
+          </p>
         </div>
         <div className="relative" ref={wrapperRef}>
           <button
@@ -1426,7 +2518,14 @@ function DealerPicker({
                   </span>
                 </span>
               ) : (
-                <span className="text-sm font-semibold text-slate-500">เลือก Dealer</span>
+                <span className="block">
+                  <span className="rounded-full bg-violet-50 px-1.5 py-0.5 text-[10px] font-bold text-violet-700 ring-1 ring-violet-100">
+                    ALL
+                  </span>
+                  <span className="mt-0.5 block text-[12px] font-semibold text-slate-900">
+                    {includeAll ? "ทุก Dealer" : "เลือก Dealer"}
+                  </span>
+                </span>
               )}
             </span>
             <ChevronDown
@@ -1451,6 +2550,37 @@ function DealerPicker({
               </div>
 
               <div className="max-h-[22rem] overflow-y-auto p-2">
+                {includeAll ? (
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selectedDealerId == null}
+                    className={cn(
+                      "mb-1 grid w-full grid-cols-[18px_minmax(0,1fr)] items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+                      selectedDealerId == null ? "bg-[#e8f3f2] text-[#145c5b] ring-1 ring-[#b8e1dc]" : "text-slate-700 hover:bg-slate-50"
+                    )}
+                    onClick={() => {
+                      setSelectedDealerId(null);
+                      setOpen(false);
+                    }}
+                  >
+                    <span className="flex h-5 items-center justify-center">
+                      {selectedDealerId == null ? <Check size={16} className="text-[#16706f]" /> : null}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-bold text-violet-700 ring-1 ring-violet-100">
+                        ALL DEALERS
+                      </span>
+                      <span className={cn(
+                        "mt-1 block text-sm font-semibold leading-5",
+                        selectedDealerId == null ? "text-[#145c5b]" : "text-slate-800"
+                      )}>
+                        ดูภาพรวมทุก dealer พร้อมกัน
+                      </span>
+                    </span>
+                  </button>
+                ) : null}
+
                 {filteredDealers.length ? filteredDealers.map((dealer) => {
                   const isSelected = dealer.dealer_id === selectedDealer?.dealer_id;
 
@@ -1561,6 +2691,171 @@ function FilterBar({
         <option value="new">New</option>
       </select>
     </div>
+  );
+}
+
+function TopCustomersFilter({
+  className,
+  label,
+  onChange,
+  options,
+  searchPlaceholder = "ค้นหา",
+  searchable = false,
+  value
+}: {
+  className?: string;
+  label: string;
+  onChange: (value: string) => void;
+  options: Array<{ label: string; value: string }>;
+  searchPlaceholder?: string;
+  searchable?: boolean;
+  value: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const selectedOption = options.find((option) => option.value === value) ?? options[0];
+  const filteredOptions = useMemo(() => {
+    if (!searchable) return options;
+
+    const searchValue = normalizeSearch(query);
+    if (!searchValue) return options;
+
+    return options.filter((option) => normalizeSearch(`${option.label} ${option.value}`).includes(searchValue));
+  }, [options, query, searchable]);
+
+  const closeDropdown = useCallback(() => {
+    setOpen(false);
+    setQuery("");
+  }, []);
+
+  useEffect(() => {
+    if (!searchable || !open) return;
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!wrapperRef.current?.contains(event.target as Node)) {
+        closeDropdown();
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeDropdown();
+      }
+    }
+
+    window.addEventListener("mousedown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("mousedown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [closeDropdown, open, searchable]);
+
+  useEffect(() => {
+    if (!searchable || !open) return;
+
+    const timerId = window.setTimeout(() => {
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    }, 0);
+
+    return () => window.clearTimeout(timerId);
+  }, [open, searchable]);
+
+  if (searchable) {
+    return (
+      <div className={cn("block space-y-1.5", className)} ref={wrapperRef}>
+        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+        <div className="relative">
+          <button
+            type="button"
+            className="flex h-10 w-full items-center justify-between gap-3 rounded-lg border border-[#d5e0e3] bg-white px-3 text-left text-sm font-medium text-slate-800 shadow-sm outline-none transition-colors hover:border-[#bfd0d4] focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+            onClick={() => {
+              if (open) {
+                closeDropdown();
+                return;
+              }
+
+              setOpen(true);
+            }}
+            aria-expanded={open}
+            aria-haspopup="listbox"
+          >
+            <span className="truncate">{selectedOption?.label ?? "เลือกข้อมูล"}</span>
+            <ChevronDown size={16} className={cn("shrink-0 text-slate-400 transition-transform", open && "rotate-180")} />
+          </button>
+
+          {open ? (
+            <div className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-xl border border-[#d5e0e3] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.14)]">
+              <div className="border-b border-slate-100 p-2.5">
+                <div className="flex items-center gap-2 rounded-lg border border-[#d5e0e3] bg-white px-3">
+                  <Search size={15} className="shrink-0 text-slate-400" />
+                  <input
+                    ref={searchInputRef}
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder={searchPlaceholder}
+                    className="h-10 w-full border-0 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+
+              <div className="max-h-[20rem] overflow-y-auto p-2">
+                {filteredOptions.length ? filteredOptions.map((option) => {
+                  const isSelected = option.value === value;
+
+                  return (
+                    <button
+                      key={`${label}-${option.value}`}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      className={cn(
+                        "grid w-full grid-cols-[18px_minmax(0,1fr)] items-start gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
+                        isSelected ? "bg-[#e8f3f2] text-[#145c5b] ring-1 ring-[#b8e1dc]" : "text-slate-700 hover:bg-slate-50"
+                      )}
+                      onClick={() => {
+                        onChange(option.value);
+                        closeDropdown();
+                      }}
+                    >
+                      <span className="flex h-5 items-center justify-center">
+                        {isSelected ? <Check size={16} className="text-[#16706f]" /> : null}
+                      </span>
+                      <span className="truncate font-medium">{option.label}</span>
+                    </button>
+                  );
+                }) : (
+                  <div className="px-3 py-6 text-center text-sm font-medium text-slate-500">
+                    ไม่พบข้อมูลที่ตรงกับ &quot;{query}&quot;
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <label className={cn("block space-y-1.5", className)}>
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+      <select
+        className="h-10 w-full rounded-lg border border-[#d5e0e3] bg-white px-3 text-sm font-medium text-slate-800 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {options.map((option) => (
+          <option key={`${label}-${option.value}`} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -1833,6 +3128,7 @@ function EmptyChart() {
 }
 
 type MetricCardProps = {
+  compact?: boolean;
   icon: ReactNode;
   label: string;
   value: string;
@@ -1840,7 +3136,7 @@ type MetricCardProps = {
   tone?: "teal" | "green" | "amber" | "rose";
 };
 
-function MetricCard({ icon, label, value, detail, tone = "teal" }: MetricCardProps) {
+function MetricCard({ compact = false, icon, label, value, detail, tone = "teal" }: MetricCardProps) {
   const tones = {
     teal: {
       card: "border border-[#e5e7eb] bg-white dark:border-slate-800 dark:bg-slate-950",
@@ -1863,15 +3159,15 @@ function MetricCard({ icon, label, value, detail, tone = "teal" }: MetricCardPro
 
   return (
     <Card className={cn("metric-card", toneClass.card)}>
-      <CardContent className="p-3.5">
+      <CardContent className={cn(compact ? "p-2.5" : "p-3.5")}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-slate-500">{label}</p>
-            <p className="mt-1.5 truncate text-[24px] font-semibold leading-none tracking-normal text-slate-950">{value}</p>
+            <p className={cn("font-semibold text-slate-500", compact ? "text-[11px]" : "text-xs")}>{label}</p>
+            <p className={cn("truncate font-semibold leading-none tracking-normal text-slate-950", compact ? "mt-1 text-[20px]" : "mt-1.5 text-[24px]")}>{value}</p>
           </div>
-          <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg shadow-sm", toneClass.icon)}>{icon}</div>
+          <div className={cn("flex shrink-0 items-center justify-center rounded-lg shadow-sm", compact ? "h-8 w-8" : "h-9 w-9", toneClass.icon)}>{icon}</div>
         </div>
-        <p className="mt-3 truncate text-xs font-medium text-slate-500">{detail}</p>
+        <p className={cn("truncate font-medium text-slate-500", compact ? "mt-2 text-[11px]" : "mt-3 text-xs")}>{detail}</p>
       </CardContent>
     </Card>
   );
