@@ -490,6 +490,9 @@ function App() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <span className="inline-flex h-10 items-center rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-black uppercase tracking-[0.2em] text-red-600 shadow-sm">
+                Test
+              </span>
               <DateRangeToolbar
                 dateFrom={dateFrom}
                 datePreset={datePreset}
@@ -762,19 +765,22 @@ function DashboardPage(props: DashboardPageProps) {
 
 function NetworkPage({ dealers, apiState }: { dealers: Dealer[]; apiState: ApiState }) {
   const uniqueDealers = useMemo(() => {
-    const byId = new Map<number, Dealer>();
+    const byIdentity = new Map<string, Dealer>();
 
     dealers.forEach((dealer) => {
-      const current = byId.get(dealer.dealer_id);
+      const identity =
+        dealer.dealer_code?.trim() ||
+        `${dealer.dealer_name?.trim() || "unknown"}::${dealer.region?.trim() || "-"}::${dealer.province?.trim() || "-"}`;
+      const current = byIdentity.get(identity);
       if (!current) {
-        byId.set(dealer.dealer_id, dealer);
+        byIdentity.set(identity, dealer);
         return;
       }
 
-      byId.set(dealer.dealer_id, {
+      byIdentity.set(identity, {
         ...current,
         ...dealer,
-        dealer_id: current.dealer_id,
+        dealer_id: current.dealer_id || dealer.dealer_id,
         dealer_code: current.dealer_code || dealer.dealer_code,
         dealer_name: current.dealer_name || dealer.dealer_name,
         region_id: current.region_id || dealer.region_id,
@@ -792,7 +798,7 @@ function NetworkPage({ dealers, apiState }: { dealers: Dealer[]; apiState: ApiSt
       });
     });
 
-    return Array.from(byId.values());
+    return Array.from(byIdentity.values());
   }, [dealers]);
 
   const regionColumns = useMemo(() => {
