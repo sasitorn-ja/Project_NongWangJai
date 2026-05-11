@@ -873,6 +873,9 @@ function RegionNetworkColumn({
     teal: "bg-teal-500",
     slate: "bg-slate-500"
   } as const;
+  const [expanded, setExpanded] = useState(false);
+  const visibleDealers = expanded ? region.dealers : region.dealers.slice(0, 6);
+  const hiddenCount = Math.max(region.dealers.length - 6, 0);
 
   return (
     <div className="relative">
@@ -889,13 +892,17 @@ function RegionNetworkColumn({
 
       <div className="mx-auto mt-4 h-6 w-px bg-[#d9e7f7]" />
       <div className="space-y-3">
-        {region.dealers.slice(0, 6).map((dealer) => (
+        {visibleDealers.map((dealer) => (
           <DealerNetworkCard key={dealer.dealer_id} dealer={dealer} accent={accent} dotClass={dotClasses[accent]} />
         ))}
-        {region.dealers.length > 6 ? (
-          <div className="rounded-2xl border border-dashed border-[#cfe0ef] bg-white/80 px-4 py-3 text-center text-xs font-semibold text-slate-500">
-            และอีก {formatNumber(region.dealers.length - 6)} dealers
-          </div>
+        {hiddenCount > 0 ? (
+          <button
+            type="button"
+            className="w-full rounded-2xl border border-dashed border-[#cfe0ef] bg-white/80 px-4 py-3 text-center text-xs font-semibold text-slate-500 transition-colors hover:border-[#9ec5ea] hover:bg-sky-50 hover:text-sky-700"
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded ? "ย่อรายการ" : `และอีก ${formatNumber(hiddenCount)} dealers`}
+          </button>
         ) : null}
       </div>
     </div>
@@ -911,8 +918,6 @@ function DealerNetworkCard({
   accent: "sky" | "emerald" | "amber" | "violet" | "orange" | "teal" | "slate";
   dotClass: string;
 }) {
-  const scoreDots = Math.max(Math.min(Math.round(dealer.group_count / 2), 6), 1);
-
   return (
     <div className="rounded-2xl border border-[#d9e3e6] bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
@@ -949,14 +954,6 @@ function DealerNetworkCard({
         </div>
       </div>
 
-      <div className="mt-3 flex items-center gap-1.5">
-        {Array.from({ length: scoreDots }).map((_, index) => (
-          <span key={index} className={cn("h-2.5 w-2.5 rounded-full", dotClass)} />
-        ))}
-        {Array.from({ length: Math.max(0, 6 - scoreDots) }).map((_, index) => (
-          <span key={`muted-${index}`} className="h-2.5 w-2.5 rounded-full bg-slate-200" />
-        ))}
-      </div>
     </div>
   );
 }
