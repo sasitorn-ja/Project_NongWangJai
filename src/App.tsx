@@ -40,7 +40,7 @@ import {
 import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUsage, OrderItem } from "@/types/dealer";
 import { cn, compactNumber, formatNumber } from "@/lib/utils";
 
-type PageKey = "dashboard" | "groups" | "details" | "topCustomers" | "topProducts" | "customerInsights" | "orders";
+type PageKey = "dashboard" | "network" | "groups" | "details" | "topCustomers" | "topProducts" | "customerInsights" | "orders";
 type DatePreset = "all" | "7d" | "30d" | "90d" | "custom";
 const FIXED_DIVISIONS = ["CPAC East", "CPAC Metro", "CPAC North", "CPAC Northeast", "RMC - South Chain", "CPAC West"] as const;
 type DataColumn<T> = {
@@ -159,8 +159,29 @@ function groupByRegion(rows: Dealer[]) {
   return Object.values(grouped).sort((a, b) => b.volume - a.volume);
 }
 
+function getRegionLabel(region: string) {
+  if (region === "CPAC Metro") return "METRO";
+  if (region === "CPAC East") return "EAST";
+  if (region === "CPAC West") return "WEST";
+  if (region === "CPAC North") return "NORTH";
+  if (region === "CPAC Northeast") return "NORTHEAST";
+  if (region === "RMC - South Chain") return "SOUTH";
+  return region.toUpperCase();
+}
+
+function getRegionAccent(region: string) {
+  if (region === "CPAC Metro") return "sky";
+  if (region === "CPAC East") return "emerald";
+  if (region === "CPAC West") return "amber";
+  if (region === "CPAC North") return "violet";
+  if (region === "CPAC Northeast") return "orange";
+  if (region === "RMC - South Chain") return "teal";
+  return "slate";
+}
+
 function getPageTitle(page: PageKey) {
   if (page === "dashboard") return "Dashboard";
+  if (page === "network") return "Dealer Network";
   if (page === "groups") return "Dealer Groups";
   if (page === "details") return "Dealer Details";
   if (page === "topCustomers") return "Top N Dealers";
@@ -171,6 +192,7 @@ function getPageTitle(page: PageKey) {
 
 function getPageSubtitle(page: PageKey) {
   if (page === "dashboard") return "ภาพรวมทุก Dealer";
+  if (page === "network") return "แผนผัง dealer network แยกตามภูมิภาคและ dealer สำคัญ";
   if (page === "groups") return "เจาะ Dealer ทีละรายเพื่อดูรายการกลุ่ม";
   if (page === "details") return "Usage, customers และ sites ของแต่ละ Dealer";
   if (page === "topCustomers") return "สรุป Top dealer รายเดือนจากข้อมูล orders โดยไม่ใช้ site_from";
@@ -398,6 +420,13 @@ function App() {
             />
             <SideNavItem
               collapsed={collapsed}
+              icon={<Layers3 size={16} />}
+              label="Dealer Network"
+              selected={page === "network"}
+              onClick={() => setPage("network")}
+            />
+            <SideNavItem
+              collapsed={collapsed}
               icon={<Users size={16} />}
               label="Dealer Groups"
               selected={page === "groups"}
@@ -503,6 +532,10 @@ function App() {
               totalGroups={totalGroups}
               totalVolume={totalVolume}
             />
+          )}
+
+          {page === "network" && (
+            <NetworkPage dealers={filteredDealers} apiState={apiState} />
           )}
 
           {page === "groups" && (
@@ -724,6 +757,207 @@ function DashboardPage(props: DashboardPageProps) {
         </Card>
       </section>
     </>
+  );
+}
+
+function NetworkPage({ dealers, apiState }: { dealers: Dealer[]; apiState: ApiState }) {
+  const regionColumns = useMemo(() => {
+    const grouped = dealers.reduce<
+      Map<
+        string,
+        {
+          region: string;
+          dealers: Dealer[];
+          dealerCount: number;
+          totalGroups: number;
+          totalVolume: number;
+        }
+      >
+    >((acc, dealer) => {
+      const current =
+        acc.get(dealer.region) ?? {
+          region: dealer.region,
+          dealers: [],
+          dealerCount: 0,
+          totalGroups: 0,
+          totalVolume: 0
+        };
+
+      current.dealers.push(dealer);
+      current.dealerCount += 1;
+      current.totalGroups += dealer.group_count;
+      current.totalVolume += dealer.volume;
+      acc.set(dealer.region, current);
+      return acc;
+    }, new Map());
+
+    return Array.from(grouped.values())
+      .map((item) => ({
+        ...item,
+        dealers: [...item.dealers].sort((a, b) => b.volume - a.volume)
+      }))
+      .sort((a, b) => b.totalVolume - a.totalVolume);
+  }, [dealers]);
+
+  const totalDealers = dealers.length;
+  const totalGroups = dealers.reduce((sum, dealer) => sum + dealer.group_count, 0);
+  return (
+    <section className="space-y-4">
+      <Card className="overflow-hidden border-0 bg-transparent shadow-none">
+        <CardContent className="px-0 pt-0">
+          <div className="mx-auto max-w-[340px] rounded-[28px] bg-gradient-to-br from-sky-500 via-cyan-500 to-sky-600 px-7 py-8 text-center text-white shadow-[0_26px_60px_rgba(14,116,214,0.28)]">
+            <div className="text-xl font-semibold">CPAC - AI วางใจ</div>
+            <div className="mt-2 text-sm font-medium text-sky-50/95">Dealer Network ทั่วประเทศ</div>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] font-semibold">
+              <span className="rounded-full bg-white/20 px-3 py-1.5">{formatNumber(totalDealers)} Dealers</span>
+              <span className="rounded-full bg-white/20 px-3 py-1.5">{formatNumber(totalGroups)} กลุ่ม</span>
+              <span className="rounded-full bg-white/20 px-3 py-1.5">{compactNumber(dealers.reduce((sum, dealer) => sum + dealer.volume, 0))} m3</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="overflow-x-auto pb-2">
+        <div className="min-w-[1180px] px-1">
+          <div className="mx-auto h-8 w-px bg-[#b7d7f5]" />
+          <div className="h-px w-full bg-[#b7d7f5]" />
+          <div className="grid gap-4 pt-6" style={{ gridTemplateColumns: `repeat(${Math.max(regionColumns.length, 1)}, minmax(0, 1fr))` }}>
+            {regionColumns.map((region) => (
+              <RegionNetworkColumn key={region.region} region={region} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {apiState === "loading" ? (
+        <div className="rounded-2xl border border-dashed border-[#d9e3e6] bg-white px-4 py-10 text-center text-sm font-semibold text-slate-500">
+          กำลังโหลดข้อมูล dealer network...
+        </div>
+      ) : null}
+      {apiState !== "loading" && !regionColumns.length ? (
+        <div className="rounded-2xl border border-dashed border-[#d9e3e6] bg-white px-4 py-10 text-center text-sm font-semibold text-slate-500">
+          ไม่มีข้อมูล dealer สำหรับสร้างแผนผัง
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function RegionNetworkColumn({
+  region
+}: {
+  region: {
+    region: string;
+    dealers: Dealer[];
+    dealerCount: number;
+    totalGroups: number;
+    totalVolume: number;
+  };
+}) {
+  const accent = getRegionAccent(region.region);
+  const accentClasses = {
+    sky: "border-sky-200 text-sky-700 bg-sky-50",
+    emerald: "border-emerald-200 text-emerald-700 bg-emerald-50",
+    amber: "border-amber-200 text-amber-700 bg-amber-50",
+    violet: "border-violet-200 text-violet-700 bg-violet-50",
+    orange: "border-orange-200 text-orange-700 bg-orange-50",
+    teal: "border-teal-200 text-teal-700 bg-teal-50",
+    slate: "border-slate-200 text-slate-700 bg-slate-50"
+  } as const;
+  const dotClasses = {
+    sky: "bg-sky-500",
+    emerald: "bg-emerald-500",
+    amber: "bg-amber-500",
+    violet: "bg-violet-500",
+    orange: "bg-orange-500",
+    teal: "bg-teal-500",
+    slate: "bg-slate-500"
+  } as const;
+
+  return (
+    <div className="relative">
+      <div className="mx-auto mb-4 h-6 w-px bg-[#b7d7f5]" />
+      <div className="rounded-[22px] border border-[#a8d5ff] bg-white px-4 py-4 shadow-sm">
+        <div className={cn("text-[10px] font-black tracking-[0.22em]", accentClasses[accent].split(" ")[1])}>{getRegionLabel(region.region)}</div>
+        <div className="mt-2 text-xl font-semibold text-slate-900">{region.region}</div>
+        <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-medium text-slate-500">
+          <span>{formatNumber(region.dealerCount)} dealers</span>
+          <span>{formatNumber(region.totalGroups)} groups</span>
+          <span>{compactNumber(region.totalVolume)} m3</span>
+        </div>
+      </div>
+
+      <div className="mx-auto mt-4 h-6 w-px bg-[#d9e7f7]" />
+      <div className="space-y-3">
+        {region.dealers.slice(0, 6).map((dealer) => (
+          <DealerNetworkCard key={dealer.dealer_id} dealer={dealer} accent={accent} dotClass={dotClasses[accent]} />
+        ))}
+        {region.dealers.length > 6 ? (
+          <div className="rounded-2xl border border-dashed border-[#cfe0ef] bg-white/80 px-4 py-3 text-center text-xs font-semibold text-slate-500">
+            และอีก {formatNumber(region.dealers.length - 6)} dealers
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function DealerNetworkCard({
+  dealer,
+  accent,
+  dotClass
+}: {
+  dealer: Dealer;
+  accent: "sky" | "emerald" | "amber" | "violet" | "orange" | "teal" | "slate";
+  dotClass: string;
+}) {
+  const scoreDots = Math.max(Math.min(Math.round(dealer.group_count / 2), 6), 1);
+
+  return (
+    <div className="rounded-2xl border border-[#d9e3e6] bg-white p-3 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className={cn("flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-black uppercase", accent === "sky" && "bg-sky-50 text-sky-700", accent === "emerald" && "bg-emerald-50 text-emerald-700", accent === "amber" && "bg-amber-50 text-amber-700", accent === "violet" && "bg-violet-50 text-violet-700", accent === "orange" && "bg-orange-50 text-orange-700", accent === "teal" && "bg-teal-50 text-teal-700", accent === "slate" && "bg-slate-50 text-slate-700")}>
+              {dealer.dealer_name.slice(0, 1)}
+            </span>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-slate-900">{dealer.dealer_name}</div>
+              <div className="text-[11px] font-medium text-slate-500">{dealer.dealer_code}</div>
+            </div>
+          </div>
+        </div>
+        <span className={cn("mt-1 h-2.5 w-2.5 rounded-full", dotClass)} />
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-[11px]">
+        <div>
+          <div className="font-medium text-slate-400">Groups</div>
+          <div className="mt-0.5 font-semibold text-slate-800">{formatNumber(dealer.group_count)}</div>
+        </div>
+        <div>
+          <div className="font-medium text-slate-400">Volume</div>
+          <div className="mt-0.5 font-semibold text-slate-800">{compactNumber(dealer.volume)}</div>
+        </div>
+        <div>
+          <div className="font-medium text-slate-400">Province</div>
+          <div className="mt-0.5 truncate font-semibold text-slate-800">{dealer.province || "-"}</div>
+        </div>
+        <div>
+          <div className="font-medium text-slate-400">Unit</div>
+          <div className="mt-0.5 font-semibold text-slate-800">{dealer.unit || "m3"}</div>
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center gap-1.5">
+        {Array.from({ length: scoreDots }).map((_, index) => (
+          <span key={index} className={cn("h-2.5 w-2.5 rounded-full", dotClass)} />
+        ))}
+        {Array.from({ length: Math.max(0, 6 - scoreDots) }).map((_, index) => (
+          <span key={`muted-${index}`} className="h-2.5 w-2.5 rounded-full bg-slate-200" />
+        ))}
+      </div>
+    </div>
   );
 }
 
