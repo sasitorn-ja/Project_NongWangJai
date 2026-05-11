@@ -761,8 +761,42 @@ function DashboardPage(props: DashboardPageProps) {
 }
 
 function NetworkPage({ dealers, apiState }: { dealers: Dealer[]; apiState: ApiState }) {
+  const uniqueDealers = useMemo(() => {
+    const byId = new Map<number, Dealer>();
+
+    dealers.forEach((dealer) => {
+      const current = byId.get(dealer.dealer_id);
+      if (!current) {
+        byId.set(dealer.dealer_id, dealer);
+        return;
+      }
+
+      byId.set(dealer.dealer_id, {
+        ...current,
+        ...dealer,
+        dealer_id: current.dealer_id,
+        dealer_code: current.dealer_code || dealer.dealer_code,
+        dealer_name: current.dealer_name || dealer.dealer_name,
+        region_id: current.region_id || dealer.region_id,
+        region: current.region || dealer.region,
+        province_id: current.province_id || dealer.province_id,
+        province: current.province || dealer.province,
+        group_count: current.group_count + dealer.group_count,
+        volume: current.volume + dealer.volume,
+        unit: current.unit || dealer.unit,
+        last_active_days: current.last_active_days ?? dealer.last_active_days,
+        last_active_at: current.last_active_at ?? dealer.last_active_at,
+        created_at: current.created_at ?? dealer.created_at,
+        updated_at: current.updated_at ?? dealer.updated_at,
+        status: current.status ?? dealer.status
+      });
+    });
+
+    return Array.from(byId.values());
+  }, [dealers]);
+
   const regionColumns = useMemo(() => {
-    const grouped = dealers.reduce<
+    const grouped = uniqueDealers.reduce<
       Map<
         string,
         {
@@ -797,10 +831,10 @@ function NetworkPage({ dealers, apiState }: { dealers: Dealer[]; apiState: ApiSt
         dealers: [...item.dealers].sort((a, b) => b.volume - a.volume)
       }))
       .sort((a, b) => b.totalVolume - a.totalVolume);
-  }, [dealers]);
+  }, [uniqueDealers]);
 
-  const totalDealers = dealers.length;
-  const totalGroups = dealers.reduce((sum, dealer) => sum + dealer.group_count, 0);
+  const totalDealers = uniqueDealers.length;
+  const totalGroups = uniqueDealers.reduce((sum, dealer) => sum + dealer.group_count, 0);
   return (
     <section className="space-y-4">
       <Card className="overflow-hidden border-0 bg-transparent shadow-none">
@@ -811,7 +845,7 @@ function NetworkPage({ dealers, apiState }: { dealers: Dealer[]; apiState: ApiSt
             <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] font-semibold">
               <span className="rounded-full bg-white/20 px-3 py-1.5">{formatNumber(totalDealers)} Dealers</span>
               <span className="rounded-full bg-white/20 px-3 py-1.5">{formatNumber(totalGroups)} กลุ่ม</span>
-              <span className="rounded-full bg-white/20 px-3 py-1.5">{compactNumber(dealers.reduce((sum, dealer) => sum + dealer.volume, 0))} m3</span>
+              <span className="rounded-full bg-white/20 px-3 py-1.5">{compactNumber(uniqueDealers.reduce((sum, dealer) => sum + dealer.volume, 0))} m3</span>
             </div>
           </div>
         </CardContent>
