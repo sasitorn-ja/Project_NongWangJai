@@ -1886,8 +1886,8 @@ export function DateRangeToolbar({
   setDateTo: (value: string) => void;
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
-      <div className="flex h-10 items-center gap-2 rounded-xl border border-[#d5e0e3] bg-white px-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:col-span-2 lg:min-w-[190px]">
+    <div className="grid w-full gap-2 sm:grid-cols-2 xl:flex xl:w-auto xl:flex-nowrap xl:items-center xl:justify-end">
+      <div className="flex h-11 items-center gap-2 rounded-2xl border border-[#d5e0e3] bg-white px-3.5 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:col-span-2 xl:min-w-[210px]">
         <CalendarDays size={15} className="text-slate-500" />
         <select
           className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-700 outline-none dark:text-slate-200"
@@ -1902,7 +1902,7 @@ export function DateRangeToolbar({
         </select>
       </div>
       <input
-        className="h-10 w-full rounded-xl border border-[#d5e0e3] bg-white px-3.5 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 sm:w-auto sm:min-w-[150px]"
+        className="h-11 w-full rounded-2xl border border-[#d5e0e3] bg-white px-3.5 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 sm:w-auto sm:min-w-[150px]"
         type="date"
         value={dateFrom}
         onChange={(event) => {
@@ -1910,9 +1910,9 @@ export function DateRangeToolbar({
           setDateFrom(event.target.value);
         }}
       />
-      <span className="hidden text-sm text-slate-400 lg:inline">-</span>
+      <span className="hidden text-sm text-slate-400 xl:inline">-</span>
       <input
-        className="h-10 w-full rounded-xl border border-[#d5e0e3] bg-white px-3.5 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 sm:w-auto sm:min-w-[150px]"
+        className="h-11 w-full rounded-2xl border border-[#d5e0e3] bg-white px-3.5 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 sm:w-auto sm:min-w-[150px]"
         type="date"
         value={dateTo}
         onChange={(event) => {

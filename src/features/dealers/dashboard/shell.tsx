@@ -359,8 +359,8 @@ function DealerDashboardApp() {
 
       <div className={cn("min-h-screen transition-all", collapsed ? "md:pl-[64px]" : "md:pl-[228px]")}>
         <header className="app-header sticky top-0 z-10 border-b border-[#d7e0e3] bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
-          <div className="flex flex-col gap-3 px-3 py-3 sm:px-4 lg:px-5">
-            <div className="flex min-w-0 items-start justify-between gap-3 sm:items-center">
+          <div className="flex flex-col gap-3 px-3 py-3 sm:px-4 lg:px-5 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex min-w-0 items-start gap-3 sm:items-center">
               <div className="flex items-center gap-2 md:hidden">
                 <button
                   aria-label="Open menu"
@@ -379,25 +379,26 @@ function DealerDashboardApp() {
               >
                 {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
               </button>
-              <div className="min-w-0 flex-1">
-                <h1 className="truncate text-base font-semibold text-slate-950 dark:text-slate-100 sm:text-lg lg:text-xl">{getPageTitle(page)}</h1>
-                <p className="line-clamp-2 text-xs font-medium text-slate-500 dark:text-slate-400 sm:truncate">{getPageSubtitle(page)}</p>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-semibold text-slate-950 dark:text-slate-100 lg:text-xl">{getPageTitle(page)}</h1>
+                <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">{getPageSubtitle(page)}</p>
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="Toggle theme"
-                className="shrink-0 bg-white shadow-sm"
-                onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
-              >
-                {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-              </Button>
             </div>
-            <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-end">
-              <div className="flex items-center justify-between gap-2 sm:justify-start">
+
+            <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-end">
+              <div className="flex flex-wrap items-center gap-2 xl:justify-end">
                 <span className="inline-flex h-10 items-center rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-black uppercase tracking-[0.2em] text-red-600 shadow-sm">
                   Test
                 </span>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Toggle theme"
+                  className="shrink-0 bg-white shadow-sm"
+                  onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+                >
+                  {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+                </Button>
               </div>
               <DateRangeToolbar
                 dateFrom={dateFrom}
