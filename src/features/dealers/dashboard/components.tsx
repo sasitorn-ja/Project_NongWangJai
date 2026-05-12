@@ -532,11 +532,12 @@ export function GroupsPage({ dealers, groups, groupsState, selectedDealer, selec
             </p>
           </CardHeader>
           <CardContent>
-            <DualBarChart
+            <GroupDeliveredBookedComparison
               data={topGroups.map((group) => ({
                 label: group.group_name,
                 primary: group.delivered_volume,
-                secondary: group.booked_volume
+                secondary: group.booked_volume,
+                unit: group.unit
               }))}
               primaryLabel="Delivered"
               secondaryLabel="Booked"
@@ -2758,7 +2759,7 @@ function DualBarChart({
   const secondaryColor = "#2563eb";
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex gap-4 text-xs font-semibold text-slate-500">
         <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: primaryColor }} />{primaryLabel}</span>
         <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: secondaryColor }} />{secondaryLabel}</span>
@@ -2779,6 +2780,141 @@ function DualBarChart({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function GroupDeliveredBookedComparison({
+  data,
+  primaryLabel,
+  secondaryLabel
+}: {
+  data: Array<{ label: string; primary: number; secondary: number; unit?: string }>;
+  primaryLabel: string;
+  secondaryLabel: string;
+}) {
+  const max = Math.max(...data.flatMap((item) => [item.primary, item.secondary]), 1);
+
+  if (!data.length) return <EmptyChart />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 text-xs font-semibold text-slate-500">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <span className="flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-emerald-700">
+            <i className="h-2.5 w-2.5 rounded-full bg-[#0f766e]" />
+            {primaryLabel}
+          </span>
+          <span className="flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-blue-700">
+            <i className="h-2.5 w-2.5 rounded-full bg-[#2563eb]" />
+            {secondaryLabel}
+          </span>
+        </div>
+        <span className="text-[11px] font-medium text-slate-400">
+          {formatNumber(data.length)} groups
+        </span>
+      </div>
+
+      <div className="rounded-[22px] border border-[#e5e7eb] bg-[#fbfcfd] p-2 dark:border-slate-800 dark:bg-slate-950/50">
+        <div className="max-h-[31rem] space-y-2.5 overflow-y-auto pr-1 delivered-booked-scroll">
+        {data.map((item) => {
+          const total = item.primary + item.secondary;
+          const deliveredPercent = total ? Math.round((item.primary / total) * 100) : 0;
+          const bookedPercent = total ? Math.round((item.secondary / total) * 100) : 0;
+          const delta = item.primary - item.secondary;
+          const leadLabel =
+            delta === 0
+              ? "Balanced"
+              : delta > 0
+                ? `${primaryLabel} leads`
+                : `${secondaryLabel} leads`;
+
+          return (
+            <div
+              key={item.label}
+              className="rounded-[20px] border border-[#e5e7eb] bg-[linear-gradient(180deg,#ffffff_0%,#fbfdff_100%)] p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950/70"
+            >
+              <div className="flex flex-col gap-2.5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-slate-900">{item.label}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold">
+                    <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-slate-600">
+                      Total {formatNumber(total)} {item.unit ?? "m3"}
+                    </span>
+                    <span
+                      className={cn(
+                        "rounded-full px-2.5 py-0.5",
+                        delta === 0 && "bg-slate-100 text-slate-600",
+                        delta > 0 && "bg-emerald-50 text-emerald-700",
+                        delta < 0 && "bg-blue-50 text-blue-700"
+                      )}
+                    >
+                      {leadLabel}
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 lg:min-w-[230px]">
+                  <div className="rounded-[18px] border border-emerald-100 bg-emerald-50/70 p-2.5">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+                      {primaryLabel}
+                    </div>
+                    <div className="mt-1 text-[1.65rem] leading-none font-semibold text-slate-950">
+                      {formatNumber(item.primary)}
+                    </div>
+                    <div className="mt-1 text-[11px] font-medium text-emerald-700/80">
+                      {deliveredPercent}% of pair
+                    </div>
+                  </div>
+                  <div className="rounded-[18px] border border-blue-100 bg-blue-50/70 p-2.5">
+                    <div className="text-[11px] font-semibold uppercase tracking-wide text-blue-700">
+                      {secondaryLabel}
+                    </div>
+                    <div className="mt-1 text-[1.65rem] leading-none font-semibold text-slate-950">
+                      {formatNumber(item.secondary)}
+                    </div>
+                    <div className="mt-1 text-[11px] font-medium text-blue-700/80">
+                      {bookedPercent}% of pair
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 space-y-2.5">
+                <div>
+                  <div className="mb-1 flex items-center justify-between gap-3 text-[11px] font-medium text-slate-500">
+                    <span>{primaryLabel}</span>
+                    <span>
+                      {formatNumber(item.primary)} {item.unit ?? "m3"}
+                    </span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-slate-100">
+                    <div
+                      className="h-2.5 rounded-full bg-[#0f766e]"
+                      style={{ width: `${Math.max((item.primary / max) * 100, 4)}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-1 flex items-center justify-between gap-3 text-[11px] font-medium text-slate-500">
+                    <span>{secondaryLabel}</span>
+                    <span>
+                      {formatNumber(item.secondary)} {item.unit ?? "m3"}
+                    </span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-slate-100">
+                    <div
+                      className="h-2.5 rounded-full bg-[#2563eb]"
+                      style={{ width: `${Math.max((item.secondary / max) * 100, 4)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        </div>
+      </div>
     </div>
   );
 }

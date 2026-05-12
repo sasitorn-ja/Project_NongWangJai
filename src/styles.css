@@ -115,6 +115,24 @@ select {
   background-color: #1e293b !important;
 }
 
+.delivered-booked-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.65) transparent;
+}
+
+.delivered-booked-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.delivered-booked-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.delivered-booked-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.55);
+}
+
 .dark .border-\[\#d9e3e6\],
 .dark .border-\[\#d5e0e3\],
 .dark .border-\[\#e1e8ea\] {
