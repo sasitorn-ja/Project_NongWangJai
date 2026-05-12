@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
+  ArrowUpDown,
   CalendarDays,
   Check,
   ChevronDown,
@@ -105,8 +106,24 @@ export function SideNavItem({
 export function DashboardPage(props: DashboardPageProps) {
   const pageSize = 10;
   const [tablePage, setTablePage] = useState(1);
-  const totalPages = Math.max(Math.ceil(props.filteredDealers.length / pageSize), 1);
-  const pagedDealers = props.filteredDealers.slice((tablePage - 1) * pageSize, tablePage * pageSize);
+  const [tableSort, setTableSort] = useState<{
+    direction: "asc" | "desc";
+    key: "group_count" | "volume";
+  } | null>(null);
+
+  const sortedDealers = useMemo(() => {
+    if (!tableSort) return props.filteredDealers;
+
+    const direction = tableSort.direction === "asc" ? 1 : -1;
+    return [...props.filteredDealers].sort((a, b) => {
+      const delta = (a[tableSort.key] - b[tableSort.key]) * direction;
+      if (delta !== 0) return delta;
+      return a.dealer_name.localeCompare(b.dealer_name, "th");
+    });
+  }, [props.filteredDealers, tableSort]);
+
+  const totalPages = Math.max(Math.ceil(sortedDealers.length / pageSize), 1);
+  const pagedDealers = sortedDealers.slice((tablePage - 1) * pageSize, tablePage * pageSize);
 
   useEffect(() => {
     const resetId = window.setTimeout(() => {
@@ -114,7 +131,21 @@ export function DashboardPage(props: DashboardPageProps) {
     }, 0);
 
     return () => window.clearTimeout(resetId);
-  }, [props.filteredDealers.length, props.region, props.search, props.status]);
+  }, [props.filteredDealers.length, props.region, props.search, props.status, tableSort]);
+
+  const toggleTableSort = (key: "group_count" | "volume") => {
+    setTableSort((current) => {
+      if (!current || current.key !== key) {
+        return { key, direction: "desc" };
+      }
+
+      if (current.direction === "desc") {
+        return { key, direction: "asc" };
+      }
+
+      return null;
+    });
+  };
 
   const columns: DataColumn<Dealer>[] = [
     dealerColumn((dealer) => {
@@ -124,7 +155,14 @@ export function DashboardPage(props: DashboardPageProps) {
     { title: "ภูมิภาค", dataIndex: "region", key: "region", width: 160, render: regionPill },
     { title: "จังหวัด", dataIndex: "province", key: "province", width: 140 },
     {
-      title: "Volume",
+      title: (
+        <SortHeader
+          active={tableSort?.key === "volume"}
+          direction={tableSort?.key === "volume" ? tableSort.direction : null}
+          label="Volume"
+          onClick={() => toggleTableSort("volume")}
+        />
+      ),
       dataIndex: "volume",
       key: "volume",
       align: "right",
@@ -134,7 +172,14 @@ export function DashboardPage(props: DashboardPageProps) {
       )
     },
     {
-      title: "กลุ่ม",
+      title: (
+        <SortHeader
+          active={tableSort?.key === "group_count"}
+          direction={tableSort?.key === "group_count" ? tableSort.direction : null}
+          label="กลุ่ม"
+          onClick={() => toggleTableSort("group_count")}
+        />
+      ),
       dataIndex: "group_count",
       key: "group_count",
       align: "right",
@@ -166,8 +211,7 @@ export function DashboardPage(props: DashboardPageProps) {
       <section className="grid grid-cols-1 gap-3">
         <Card className="dashboard-card">
           <CardHeader className="border-b border-[#d9e3e6]">
-            <CardTitle className="text-lg">Volume by Region</CardTitle>
-            <p className="text-xs font-medium text-slate-500">เทียบปริมาณคอนกรีตส่งจริงรวมรายภูมิภาค พร้อมดูรายละเอียดเมื่อชี้แต่ละแท่ง</p>
+            <CardTitle className="text-lg">ปริมาณการขายแยกตามพื้นที่ของ Dealer</CardTitle>
           </CardHeader>
           <CardContent>
             <RegionVolumeExplorer regionRows={props.regionRows} />
@@ -2362,6 +2406,39 @@ function DealerPicker({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function SortHeader({
+  active,
+  direction,
+  label,
+  onClick
+}: {
+  active: boolean;
+  direction: "asc" | "desc" | null;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={cn(
+        "inline-flex items-center gap-1 font-semibold transition-colors hover:text-slate-700",
+        active && "text-slate-900"
+      )}
+      onClick={onClick}
+      type="button"
+    >
+      <span>{label}</span>
+      <ArrowUpDown
+        size={13}
+        className={cn(
+          "transition-colors",
+          active ? "text-slate-700" : "text-slate-400",
+          direction === "asc" && "rotate-180"
+        )}
+      />
+    </button>
   );
 }
 
