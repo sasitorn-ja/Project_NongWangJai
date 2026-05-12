@@ -1,4 +1,12 @@
-import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUsage, OrderItem } from "@/types/dealer";
+import type {
+  ApiState,
+  CustomerUsage,
+  Dealer,
+  DealerGroup,
+  DealerSite,
+  DealerUsage,
+  OrderItem
+} from "@/features/dealers/types";
 
 type DealerApiResponse =
   | Dealer[]
