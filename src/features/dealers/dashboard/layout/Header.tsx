@@ -1,6 +1,5 @@
-import { Menu, Moon, Sun } from "lucide-react";
+import { Menu } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { DateRangeToolbar } from "../filters/DateRangeToolbar";
 import type { DatePreset } from "../lib/dates";
 import { type PageKey, getPageSubtitle, getPageTitle } from "../config/pageMeta";
@@ -12,12 +11,10 @@ export function Header({
   dateTo,
   onOpenMobileNav,
   onToggleCollapsed,
-  onToggleTheme,
   page,
   setDateFrom,
   setDatePreset,
-  setDateTo,
-  theme
+  setDateTo
 }: {
   collapsed: boolean;
   dateFrom: string;
@@ -25,12 +22,10 @@ export function Header({
   dateTo: string;
   onOpenMobileNav: () => void;
   onToggleCollapsed: () => void;
-  onToggleTheme: () => void;
   page: PageKey;
   setDateFrom: (value: string) => void;
   setDatePreset: (value: DatePreset) => void;
   setDateTo: (value: string) => void;
-  theme: "light" | "dark";
 }) {
   return (
     <header className="app-header sticky top-0 z-10 border-b border-[#d7e0e3] bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
@@ -65,15 +60,6 @@ export function Header({
             <span className="inline-flex h-10 items-center rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-black uppercase tracking-[0.2em] text-red-600 shadow-sm">
               Test
             </span>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Toggle theme"
-              className="shrink-0 bg-white shadow-sm"
-              onClick={onToggleTheme}
-            >
-              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-            </Button>
           </div>
           <DateRangeToolbar
             dateFrom={dateFrom}

@@ -152,6 +152,7 @@ export function CustomerInsightsPage({
     {
       title: "Dealer",
       key: "customer",
+      sortAccessor: (record) => record.customerName,
       width: 320,
       render: (_, record) => (
         <div>
@@ -171,6 +172,7 @@ export function CustomerInsightsPage({
     {
       title: "Site",
       key: "site",
+      sortAccessor: (record) => record.siteName,
       width: 320,
       render: (_, record) => (
         <div>

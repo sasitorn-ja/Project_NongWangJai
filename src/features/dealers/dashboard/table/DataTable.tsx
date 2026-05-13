@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   Pagination,
@@ -12,7 +12,23 @@ import {
 import { cn } from "@/lib/cn";
 import { formatNumber } from "@/lib/number";
 import { buildPaginationItems } from "../lib/pagination";
+import { SortHeader } from "./SortHeader";
 import type { DataColumn } from "./types";
+
+function sortValue(value: unknown) {
+  if (value == null) return "";
+  if (typeof value === "number") return value;
+  if (typeof value === "boolean") return value ? 1 : 0;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "string") {
+    const numeric = Number(value.replace(/,/g, ""));
+    if (Number.isFinite(numeric) && value.trim() !== "") return numeric;
+    const date = Date.parse(value);
+    if (Number.isFinite(date) && /[-/:T]/.test(value)) return date;
+    return value.toLocaleLowerCase();
+  }
+  return String(value).toLocaleLowerCase();
+}
 
 export function DataTable<T>({
   columns,
@@ -30,8 +46,30 @@ export function DataTable<T>({
   rowKey: keyof T | ((record: T) => string | number);
 }) {
   const [page, setPage] = useState(1);
-  const totalPages = Math.max(Math.ceil(data.length / (pageSize ?? (data.length || 1))), 1);
-  const rows = pageSize ? data.slice((page - 1) * pageSize, page * pageSize) : data;
+  const [sort, setSort] = useState<{ direction: "asc" | "desc"; key: string } | null>(null);
+  const sortableColumns = useMemo(
+    () => new Set(columns.filter((column) => column.sortable !== false && (column.sortAccessor || column.dataIndex)).map((column) => column.key)),
+    [columns]
+  );
+  const sortedData = useMemo(() => {
+    if (!sort) return data;
+    const column = columns.find((item) => item.key === sort.key);
+    if (!column || !sortableColumns.has(column.key)) return data;
+
+    return [...data].sort((a, b) => {
+      const accessor = column.sortAccessor ?? column.dataIndex;
+      const rawA = typeof accessor === "function" ? accessor(a) : accessor ? a[accessor] : undefined;
+      const rawB = typeof accessor === "function" ? accessor(b) : accessor ? b[accessor] : undefined;
+      const valueA = sortValue(rawA);
+      const valueB = sortValue(rawB);
+      const direction = sort.direction === "asc" ? 1 : -1;
+
+      if (typeof valueA === "number" && typeof valueB === "number") return (valueA - valueB) * direction;
+      return String(valueA).localeCompare(String(valueB), "th", { numeric: true }) * direction;
+    });
+  }, [columns, data, sort, sortableColumns]);
+  const totalPages = Math.max(Math.ceil(sortedData.length / (pageSize ?? (sortedData.length || 1))), 1);
+  const rows = pageSize ? sortedData.slice((page - 1) * pageSize, page * pageSize) : sortedData;
   const fillerRowCount = !loading && pageSize && rows.length > 0 ? Math.max(pageSize - rows.length, 0) : 0;
 
   useEffect(() => {
@@ -40,7 +78,15 @@ export function DataTable<T>({
     }, 0);
 
     return () => window.clearTimeout(resetId);
-  }, [data.length, pageSize]);
+  }, [data.length, pageSize, sort]);
+
+  const toggleSort = (columnKey: string) => {
+    setSort((current) => {
+      if (!current || current.key !== columnKey) return { direction: "desc", key: columnKey };
+      if (current.direction === "desc") return { direction: "asc", key: columnKey };
+      return null;
+    });
+  };
 
   const getKey = (record: T) => {
     if (typeof rowKey === "function") return rowKey(record);
@@ -65,7 +111,16 @@ export function DataTable<T>({
                   )}
                   style={{ width: column.width }}
                 >
-                  {column.title}
+                  {sortableColumns.has(column.key) ? (
+                    <SortHeader
+                      active={sort?.key === column.key}
+                      direction={sort?.key === column.key ? sort.direction : null}
+                      label={column.title}
+                      onClick={() => toggleSort(column.key)}
+                    />
+                  ) : (
+                    column.title
+                  )}
                 </th>
               ))}
             </tr>
@@ -127,7 +182,7 @@ export function DataTable<T>({
         <ShadcnPagination
           currentPage={page}
           pageSize={pageSize}
-          totalItems={data.length}
+          totalItems={sortedData.length}
           totalPages={totalPages}
           onPageChange={setPage}
         />

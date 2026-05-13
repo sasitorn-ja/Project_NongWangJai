@@ -440,7 +440,7 @@ export function DetailsPage(props: DetailsPageProps) {
   const maxDealerVolume = Math.max(...topDealerVolume.map((dealer) => dealer.volume), 1);
 
   const customerColumns: DataColumn<(typeof orderCustomerRows)[number]>[] = [
-    { title: "Customer", key: "customer", width: 300, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.customerName}</div><div className="text-xs font-medium text-slate-500">{record.customerCode}</div></div> },
+    { title: "Customer", key: "customer", sortAccessor: (record) => record.customerName, width: 300, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.customerName}</div><div className="text-xs font-medium text-slate-500">{record.customerCode}</div></div> },
     { title: "Sites", key: "siteCount", dataIndex: "siteCount", align: "right", width: 110, render: formatNumber },
     { title: "Orders", key: "orderCount", dataIndex: "orderCount", align: "right", width: 110, render: formatNumber },
     { title: "Ordered", key: "ordered", dataIndex: "ordered", align: "right", width: 140, render: formatNumber },
@@ -449,7 +449,7 @@ export function DetailsPage(props: DetailsPageProps) {
   ];
 
   const siteColumns: DataColumn<(typeof orderSiteRows)[number]>[] = [
-    { title: "Site", key: "site", width: 300, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.siteName}</div><div className="text-xs font-medium text-slate-500">{record.siteCode}</div></div> },
+    { title: "Site", key: "site", sortAccessor: (record) => record.siteName, width: 300, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.siteName}</div><div className="text-xs font-medium text-slate-500">{record.siteCode}</div></div> },
     { title: "Customer", key: "customerName", dataIndex: "customerName", width: 240 },
     { title: "Ordered", key: "ordered", dataIndex: "ordered", align: "right", width: 140, render: formatNumber },
     { title: "Delivered", key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },

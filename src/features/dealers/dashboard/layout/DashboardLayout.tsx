@@ -11,25 +11,21 @@ export function DashboardLayout({
   dateFrom,
   datePreset,
   dateTo,
-  onToggleTheme,
   page,
   setDateFrom,
   setDatePreset,
   setDateTo,
-  setPage,
-  theme
+  setPage
 }: {
   children: ReactNode;
   dateFrom: string;
   datePreset: DatePreset;
   dateTo: string;
-  onToggleTheme: () => void;
   page: PageKey;
   setDateFrom: (value: string) => void;
   setDatePreset: (value: DatePreset) => void;
   setDateTo: (value: string) => void;
   setPage: (page: PageKey) => void;
-  theme: "light" | "dark";
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -81,12 +77,10 @@ export function DashboardLayout({
           dateTo={dateTo}
           onOpenMobileNav={() => setMobileNavOpen(true)}
           onToggleCollapsed={() => setCollapsed((value) => !value)}
-          onToggleTheme={onToggleTheme}
           page={page}
           setDateFrom={setDateFrom}
           setDatePreset={setDatePreset}
           setDateTo={setDateTo}
-          theme={theme}
         />
 
         <main className="space-y-3 p-3 lg:p-4">{children}</main>

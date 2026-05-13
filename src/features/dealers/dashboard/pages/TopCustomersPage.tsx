@@ -187,6 +187,7 @@ export function TopCustomersPage({
     {
       title: "Dealer name",
       key: "customerName",
+      dataIndex: "customerName",
       width: 250,
       render: (_, record) => (
         <div className="min-w-0">
@@ -210,6 +211,25 @@ export function TopCustomersPage({
       align: "right",
       width: 128,
       render: (value) => <span className="inline-block min-w-[2.5rem] pr-6">{formatNumber(Number(value ?? 0))}</span>
+    }
+  ];
+
+  const monthlyColumns: DataColumn<(typeof monthlyRows)[number]>[] = [
+    { title: "Month", key: "month", dataIndex: "monthLabel", sortAccessor: (record) => record.monthKey, width: 120 },
+    { title: "Volume All", key: "ordered", dataIndex: "ordered", align: "right", width: 120, render: formatNumber },
+    {
+      title: "TopN Dealer",
+      key: "topCustomers",
+      sortable: false,
+      render: (_, record) => (
+        <div className="space-y-1">
+          {record.topCustomers.map((customer, customerIndex) => (
+            <div key={`${record.monthKey}-${customer.customerName}-${customerIndex}`} className="line-clamp-2 text-sm text-slate-800">
+              {customer.customerName} #{formatNumber(customer.sites.size)} site, {formatNumber(customer.delivered)} m3
+            </div>
+          ))}
+        </div>
+      )
     }
   ];
 
@@ -291,53 +311,7 @@ export function TopCustomersPage({
             <p className="text-xs font-medium text-slate-500">สรุปรายเดือนจากยอดส่งจริง พร้อมรายชื่อ Top {topN} dealer ของแต่ละเดือน</p>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full table-fixed border-collapse text-sm">
-                <colgroup>
-                  <col className="w-[76px]" />
-                  <col className="w-[88px]" />
-                  <col />
-                </colgroup>
-                <thead>
-                  <tr className="border-b border-[#d9e3e6] bg-[#f6f8f9]">
-                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">Month</th>
-                    <th className="px-1 py-2.5 text-right text-xs font-semibold text-slate-500">Volume All</th>
-                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-500">TopN Dealer</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ordersState === "loading" && (
-                    <tr>
-                      <td className="px-3 py-10 text-center text-sm font-semibold text-slate-500" colSpan={3}>
-                        กำลังโหลดข้อมูล...
-                      </td>
-                    </tr>
-                  )}
-                  {ordersState !== "loading" && monthlyRows.length === 0 && (
-                    <tr>
-                      <td className="px-3 py-10 text-center text-sm font-semibold text-slate-500" colSpan={3}>
-                        ไม่มีข้อมูล
-                      </td>
-                    </tr>
-                  )}
-                  {monthlyRows.map((row, index) => (
-                    <tr key={row.monthKey || index} className="border-b border-[#edf1f2] align-top">
-                      <td className="px-3 py-3 font-semibold text-slate-950">{row.monthLabel}</td>
-                      <td className="px-1 py-3 text-right font-semibold text-slate-800">{formatNumber(row.ordered)}</td>
-                      <td className="px-3 py-3">
-                        <div className="space-y-1">
-                          {row.topCustomers.map((customer, customerIndex) => (
-                            <div key={`${row.monthKey}-${customer.customerName}-${customerIndex}`} className="line-clamp-2 text-sm text-slate-800">
-                              {customer.customerName} #{formatNumber(customer.sites.size)} site, {formatNumber(customer.delivered)} m3
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <DataTable columns={monthlyColumns} data={monthlyRows} loading={ordersState === "loading"} rowKey="monthKey" minWidth={720} />
           </CardContent>
         </Card>
 

@@ -3,7 +3,6 @@ import { useState } from "react";
 import type { PageKey } from "./config/pageMeta";
 import { useDashboardFilters } from "./hooks/useDashboardFilters";
 import { useDealerDashboardData } from "./hooks/useDealerDashboardData";
-import { useThemeMode } from "./hooks/useThemeMode";
 import { DashboardLayout } from "./layout/DashboardLayout";
 import { CustomerInsightsPage } from "./pages/CustomerInsightsPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -20,7 +19,6 @@ const ORDER_DATA_PAGES: PageKey[] = ["details", "topCustomers", "topProducts", "
 function DealerDashboardApp() {
   const [page, setPage] = useState<PageKey>("dashboard");
   const filters = useDashboardFilters();
-  const { theme, toggleTheme } = useThemeMode();
   const data = useDealerDashboardData({
     dateFrom: filters.dateFrom,
     dateTo: filters.dateTo,
@@ -35,13 +33,11 @@ function DealerDashboardApp() {
       dateFrom={filters.dateFrom}
       datePreset={filters.datePreset}
       dateTo={filters.dateTo}
-      onToggleTheme={toggleTheme}
       page={page}
       setDateFrom={filters.setDateFrom}
       setDatePreset={filters.setDatePreset}
       setDateTo={filters.setDateTo}
       setPage={setPage}
-      theme={theme}
     >
       {ORDER_DATA_PAGES.includes(page) && data.ordersState === "error" && (
         <section className="grid grid-cols-1">

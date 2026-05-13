@@ -1,4 +1,5 @@
 import { ArrowUpDown } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { cn } from "@/lib/cn";
 
@@ -10,7 +11,7 @@ export function SortHeader({
 }: {
   active: boolean;
   direction: "asc" | "desc" | null;
-  label: string;
+  label: ReactNode;
   onClick: () => void;
 }) {
   return (

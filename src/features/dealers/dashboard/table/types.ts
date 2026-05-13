@@ -5,6 +5,8 @@ export type DataColumn<T> = {
   dataIndex?: keyof T;
   key: string;
   render?: (value: never, record: T) => ReactNode;
+  sortable?: boolean;
+  sortAccessor?: keyof T | ((record: T) => unknown);
   title: ReactNode;
   width?: number;
 };

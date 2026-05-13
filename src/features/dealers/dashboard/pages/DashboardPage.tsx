@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { Layers3, PackageCheck, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,8 +11,7 @@ import type { DataColumn } from "../table/types";
 import { MetricCard } from "../ui/MetricCard";
 import { ToggleGroup } from "../ui/ToggleGroup";
 import { FilterBar } from "../filters/FilterBar";
-import { SortHeader } from "../table/SortHeader";
-import { DataTable, ShadcnPagination } from "../table/DataTable";
+import { DataTable } from "../table/DataTable";
 import { TimeVolumeBarChart, type ChartRange } from "../charts/TimeVolumeBarChart";
 import { dealerColumn, statusColumn, regionPill, VolumeCell, ApiErrorBanner } from "../table/columns";
 
@@ -37,50 +36,8 @@ type DashboardPageProps = {
 };
 
 export function DashboardPage(props: DashboardPageProps) {
-  const pageSize = 10;
-  const [tablePage, setTablePage] = useState(1);
-  const [tableSort, setTableSort] = useState<{
-    direction: "asc" | "desc";
-    key: "group_count" | "volume";
-  } | null>(null);
   const [chartRange, setChartRange] = useState<ChartRange>("all");
   const volumeUnit = props.filteredDealers.find((dealer) => dealer.unit)?.unit ?? props.topDealer?.unit ?? "m3";
-
-  const sortedDealers = useMemo(() => {
-    if (!tableSort) return props.filteredDealers;
-
-    const direction = tableSort.direction === "asc" ? 1 : -1;
-    return [...props.filteredDealers].sort((a, b) => {
-      const delta = (a[tableSort.key] - b[tableSort.key]) * direction;
-      if (delta !== 0) return delta;
-      return a.dealer_name.localeCompare(b.dealer_name, "th");
-    });
-  }, [props.filteredDealers, tableSort]);
-
-  const totalPages = Math.max(Math.ceil(sortedDealers.length / pageSize), 1);
-  const pagedDealers = sortedDealers.slice((tablePage - 1) * pageSize, tablePage * pageSize);
-
-  useEffect(() => {
-    const resetId = window.setTimeout(() => {
-      setTablePage(1);
-    }, 0);
-
-    return () => window.clearTimeout(resetId);
-  }, [props.filteredDealers.length, props.region, props.search, props.status, tableSort]);
-
-  const toggleTableSort = (key: "group_count" | "volume") => {
-    setTableSort((current) => {
-      if (!current || current.key !== key) {
-        return { key, direction: "desc" };
-      }
-
-      if (current.direction === "desc") {
-        return { key, direction: "asc" };
-      }
-
-      return null;
-    });
-  };
 
   const columns: DataColumn<Dealer>[] = [
     dealerColumn((dealer) => {
@@ -90,14 +47,7 @@ export function DashboardPage(props: DashboardPageProps) {
     { title: "ภูมิภาค", dataIndex: "region", key: "region", width: 160, render: regionPill },
     { title: "จังหวัด", dataIndex: "province", key: "province", width: 140 },
     {
-      title: (
-        <SortHeader
-          active={tableSort?.key === "volume"}
-          direction={tableSort?.key === "volume" ? tableSort.direction : null}
-          label="Volume"
-          onClick={() => toggleTableSort("volume")}
-        />
-      ),
+      title: "Volume",
       dataIndex: "volume",
       key: "volume",
       align: "right",
@@ -107,14 +57,7 @@ export function DashboardPage(props: DashboardPageProps) {
       )
     },
     {
-      title: (
-        <SortHeader
-          active={tableSort?.key === "group_count"}
-          direction={tableSort?.key === "group_count" ? tableSort.direction : null}
-          label="กลุ่ม"
-          onClick={() => toggleTableSort("group_count")}
-        />
-      ),
+      title: "กลุ่ม",
       dataIndex: "group_count",
       key: "group_count",
       align: "right",
@@ -199,14 +142,7 @@ export function DashboardPage(props: DashboardPageProps) {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <DataTable columns={columns} data={pagedDealers} loading={props.apiState === "loading"} rowKey="dealer_id" minWidth={1180} />
-            <ShadcnPagination
-              currentPage={tablePage}
-              pageSize={pageSize}
-              totalItems={props.filteredDealers.length}
-              totalPages={totalPages}
-              onPageChange={setTablePage}
-            />
+            <DataTable columns={columns} data={props.filteredDealers} loading={props.apiState === "loading"} rowKey="dealer_id" minWidth={1180} pageSize={10} />
           </CardContent>
         </Card>
       </section>

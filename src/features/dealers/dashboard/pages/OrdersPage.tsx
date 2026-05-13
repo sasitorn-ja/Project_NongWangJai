@@ -42,6 +42,7 @@ export function OrdersPage({
     {
       title: "Order",
       key: "order",
+      sortAccessor: (record) => `${record.order?.product_name ?? ""} ${record.order?.order_no ?? ""} ${record.order?.product_sku ?? ""}`,
       width: 300,
       render: (_, record) => (
         <div>
@@ -55,6 +56,7 @@ export function OrdersPage({
     {
       title: "Dealer",
       key: "dealer",
+      sortAccessor: (record) => record.dealer_name,
       width: 240,
       render: (_, record) => (
         <div>
@@ -66,6 +68,7 @@ export function OrdersPage({
     {
       title: "Customer / Site",
       key: "customer-site",
+      sortAccessor: (record) => `${record.customer?.name ?? ""} ${record.site?.site_name ?? ""}`,
       width: 280,
       render: (_, record) => (
         <div>
@@ -80,6 +83,7 @@ export function OrdersPage({
       title: "Ordered",
       key: "ordered",
       align: "right",
+      sortAccessor: (record) => record.quantity?.ordered ?? 0,
       width: 130,
       render: (_, record) => `${formatNumber(record.quantity?.ordered ?? 0)} ${record.quantity?.unit ?? "-"}`
     },
@@ -87,6 +91,7 @@ export function OrdersPage({
       title: "Delivered",
       key: "delivered",
       align: "right",
+      sortAccessor: (record) => record.quantity?.delivered ?? 0,
       width: 130,
       render: (_, record) => `${formatNumber(record.quantity?.delivered ?? 0)} ${record.quantity?.unit ?? "-"}`
     },
@@ -100,6 +105,7 @@ export function OrdersPage({
     {
       title: "สถานะ",
       key: "status",
+      sortAccessor: (record) => record.status?.order ?? "",
       width: 140,
       render: (_, record) => (
         <span className="inline-flex rounded-md bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-700">
