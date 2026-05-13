@@ -29,8 +29,8 @@ export function DualBarChart({
         <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: primaryColor }} />{primaryLabel}</span>
         <span className="flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: secondaryColor }} />{secondaryLabel}</span>
       </div>
-      {data.map((item) => (
-        <div key={item.label} className="grid gap-2">
+      {data.map((item, index) => (
+        <div key={`${item.label}-${index}`} className="grid gap-2">
           <div className="flex items-center justify-between gap-3 text-sm">
             <span className="truncate font-semibold text-slate-700">{item.label}</span>
             <span className="shrink-0 font-semibold text-slate-950">{formatNumber(item.primary)} / {formatNumber(item.secondary)}</span>

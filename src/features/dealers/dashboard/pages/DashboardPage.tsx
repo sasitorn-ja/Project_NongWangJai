@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Layers3, PackageCheck, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
 import type { ApiState, Dealer } from "@/features/dealers/types";
 import type { PageKey } from "../config/pageMeta";
@@ -10,10 +9,11 @@ import { dateText } from "../lib/dates";
 import { groupByRegion } from "../lib/regions";
 import type { DataColumn } from "../table/types";
 import { MetricCard } from "../ui/MetricCard";
+import { ToggleGroup } from "../ui/ToggleGroup";
 import { FilterBar } from "../filters/FilterBar";
 import { SortHeader } from "../table/SortHeader";
 import { DataTable, ShadcnPagination } from "../table/DataTable";
-import { RegionVolumeExplorer } from "../charts/RegionVolumeExplorer";
+import { TimeVolumeBarChart, type ChartRange } from "../charts/TimeVolumeBarChart";
 import { dealerColumn, statusColumn, regionPill, VolumeCell, ApiErrorBanner } from "../table/columns";
 
 type DashboardPageProps = {
@@ -28,7 +28,7 @@ type DashboardPageProps = {
   setPage: (page: PageKey) => void;
   setRegion: (value: string) => void;
   setSearch: (value: string) => void;
-  setSelectedDealerId: (id: number) => void;
+  setSelectedDealerId: (id: number | null) => void;
   setStatus: (value: string) => void;
   status: string;
   topDealer?: Dealer;
@@ -43,22 +43,8 @@ export function DashboardPage(props: DashboardPageProps) {
     direction: "asc" | "desc";
     key: "group_count" | "volume";
   } | null>(null);
-  const [chartPeriod, setChartPeriod] = useState<"all" | "year" | "month" | "day">("all");
+  const [chartRange, setChartRange] = useState<ChartRange>("all");
   const volumeUnit = props.filteredDealers.find((dealer) => dealer.unit)?.unit ?? props.topDealer?.unit ?? "m3";
-
-  const chartRegionRows = useMemo(() => {
-    if (chartPeriod === "all") return props.regionRows;
-    const now = new Date();
-    const yearStr = String(now.getFullYear());
-    const monthStr = `${yearStr}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const dayStr = `${monthStr}-${String(now.getDate()).padStart(2, "0")}`;
-    const prefix = chartPeriod === "day" ? dayStr : chartPeriod === "month" ? monthStr : yearStr;
-    const filtered = props.filteredDealers.filter((dealer) => {
-      const d = dealer.last_active_at ?? dealer.updated_at ?? "";
-      return d.startsWith(prefix);
-    });
-    return groupByRegion(filtered);
-  }, [chartPeriod, props.filteredDealers, props.regionRows]);
 
   const sortedDealers = useMemo(() => {
     if (!tableSort) return props.filteredDealers;
@@ -99,7 +85,7 @@ export function DashboardPage(props: DashboardPageProps) {
   const columns: DataColumn<Dealer>[] = [
     dealerColumn((dealer) => {
       props.setSelectedDealerId(dealer.dealer_id);
-      props.setPage("groups");
+      props.setPage("details");
     }),
     { title: "ภูมิภาค", dataIndex: "region", key: "region", width: 160, render: regionPill },
     { title: "จังหวัด", dataIndex: "province", key: "province", width: 140 },
@@ -169,30 +155,24 @@ export function DashboardPage(props: DashboardPageProps) {
               <div>
                 <CardTitle className="text-lg">ปริมาณการขายแยกตามพื้นที่ของ Dealer</CardTitle>
                 <p className="mt-1 text-xs font-medium text-slate-500">
-                  ตัวเลือก ปี/เดือน/วัน อิงจากวันที่ใช้งานล่าสุดของ dealer
+                  เริ่มจากทั้งหมดก่อน แล้วค่อยเปลี่ยนเป็นปี/เดือน/วันเมื่ออยากดูช่วงเวลา สีในแท่งแยกตามภูมิภาค
                 </p>
               </div>
-              <div className="flex rounded-lg border border-[#d9e3e6] bg-[#f6f8f9] p-0.5 text-xs font-semibold dark:border-slate-700 dark:bg-slate-900">
-                {(["all", "year", "month", "day"] as const).map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    className={cn(
-                      "rounded-md px-3 py-1 transition-colors",
-                      chartPeriod === p
-                        ? "bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-slate-100"
-                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                    )}
-                    onClick={() => setChartPeriod(p)}
-                  >
-                    {p === "all" ? "ทั้งหมด" : p === "year" ? "ปี" : p === "month" ? "เดือน" : "วัน"}
-                  </button>
-                ))}
-              </div>
+              <ToggleGroup
+                ariaLabel="ช่วงเวลากราฟ"
+                options={[
+                  { value: "all", label: "ทั้งหมด" },
+                  { value: "year", label: "ปี" },
+                  { value: "month", label: "เดือน" },
+                  { value: "day", label: "วัน" }
+                ]}
+                value={chartRange}
+                onChange={setChartRange}
+              />
             </div>
           </CardHeader>
           <CardContent>
-            <RegionVolumeExplorer regionRows={chartRegionRows} />
+            <TimeVolumeBarChart dealers={props.filteredDealers} range={chartRange} unit={volumeUnit} />
           </CardContent>
         </Card>
       </section>

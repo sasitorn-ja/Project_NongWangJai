@@ -113,13 +113,14 @@ export function OrdersPage({
     <>
       <DealerPicker
         dealers={dealers}
+        includeAll
         selectedDealerId={selectedDealerId}
         setSelectedDealerId={setSelectedDealerId}
-        title="เลือก Dealer เพื่อดู Orders"
+        title="เลือก Dealer หรือดู Orders ทั้งหมด"
       />
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard icon={<PackageCheck size={18} />} label="Orders" value={formatNumber(dealerOrders.length)} detail={selectedDealer?.dealer_name ?? "จำนวน order ของ dealer ที่เลือก"} />
+        <MetricCard icon={<PackageCheck size={18} />} label="Orders" value={formatNumber(dealerOrders.length)} detail={selectedDealer?.dealer_name ?? "จำนวน order ทั้งหมดที่กรองอยู่"} />
         <MetricCard icon={<TrendingUp size={18} />} label="Ordered Qty" value={compactNumber(totalOrdered)} detail="ยอดสั่งรวมจาก order ทั้งหมด" tone="amber" />
         <MetricCard icon={<PackageCheck size={18} />} label="Delivered Qty" value={compactNumber(totalDelivered)} detail="ยอดส่งจริงรวมจาก order ทั้งหมด" tone="green" />
         <MetricCard icon={<Users size={18} />} label="Unique Sites" value={formatNumber(uniqueSites)} detail={`นับจาก site code ที่ไม่ซ้ำใน ${formatNumber(dealerOrders.length)} orders ของ dealer นี้`} tone="rose" />

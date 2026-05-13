@@ -21,10 +21,10 @@ export function ProgressList({ rows }: { rows: Array<{ label: string; total: num
 
   return (
     <div className="space-y-4">
-      {rows.map((row) => {
+      {rows.map((row, index) => {
         const percent = row.total ? Math.min(Math.round((row.value / row.total) * 100), 100) : 0;
         return (
-          <div key={row.label}>
+          <div key={`${row.label}-${index}`}>
             <div className="mb-2 flex items-center justify-between gap-3 text-sm">
               <span className="truncate font-semibold text-slate-700">{row.label}</span>
               <span className="shrink-0 font-semibold text-slate-950">{percent}%</span>

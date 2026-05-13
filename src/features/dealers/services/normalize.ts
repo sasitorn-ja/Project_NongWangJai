@@ -67,8 +67,11 @@ export function normalizeCustomer(row: CustomerUsage): CustomerUsage {
 export function normalizeSite(row: DealerSite): DealerSite {
   return {
     ...row,
+    id: row.id == null ? undefined : toNumber(row.id),
     dealer_id: toNumber(row.dealer_id),
-    site_id: toNumber(row.site_id),
+    site_id: toNumber(row.site_id || row.id),
+    province_id: row.province_id == null ? undefined : toNumber(row.province_id),
+    region_id: row.region_id == null ? undefined : toNumber(row.region_id),
     total_ordered: toNumber(row.total_ordered),
     total_delivered: toNumber(row.total_delivered),
     unit: row.unit || "m3"

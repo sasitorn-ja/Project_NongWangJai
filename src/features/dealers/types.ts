@@ -61,12 +61,18 @@ export type CustomerUsage = {
 };
 
 export type DealerSite = {
+  id?: number;
   dealer_id: number;
-  dealer_code: string;
-  dealer_name: string;
+  dealer_code?: string;
+  dealer_name?: string;
   site_id: number;
   site_code: string;
   site_name: string;
+  province_id?: number;
+  province_bluned_id?: string | null;
+  province_name?: string | null;
+  region_id?: number;
+  region?: string | null;
   customer?: {
     id?: number;
     code?: string;

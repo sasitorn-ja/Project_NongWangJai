@@ -59,7 +59,6 @@ export function useDealerDashboardData({
     setDealers(result.rows);
     setApiState(result.state);
     setApiMessage(result.message);
-    setSelectedDealerId((current) => current ?? result.rows[0]?.dealer_id ?? null);
   }, []);
 
   const loadUsage = useCallback(async () => {
@@ -84,7 +83,7 @@ export function useDealerDashboardData({
     const [groupResult, customerResult, siteResult] = await Promise.all([
       fetchDealerGroups(dealer.dealer_id),
       fetchCustomerUsage(dealerCodeKey),
-      fetchDealerSites(dealerCodeKey)
+      fetchDealerSites(dealer.dealer_id)
     ]);
     setGroups(groupResult.rows);
     setGroupsState(groupResult.state);
@@ -105,7 +104,17 @@ export function useDealerDashboardData({
   }, [loadDealers, loadOrders, loadUsage]);
 
   useEffect(() => {
-    if (!selectedDealerId) return undefined;
+    if (!selectedDealerId) {
+      const requestId = window.setTimeout(() => {
+        setGroups([]);
+        setCustomers([]);
+        setSites([]);
+        setGroupsState("live");
+        setCustomersState("live");
+        setSitesState("live");
+      }, 0);
+      return () => window.clearTimeout(requestId);
+    }
     const dealer = dealers.find((item) => item.dealer_id === selectedDealerId);
     if (!dealer) return undefined;
 
@@ -117,7 +126,7 @@ export function useDealerDashboardData({
   }, [dealers, loadDealerChildren, selectedDealerId]);
 
   const selectedDealer = useMemo(
-    () => dealers.find((dealer) => dealer.dealer_id === selectedDealerId) ?? dealers[0],
+    () => (selectedDealerId == null ? undefined : dealers.find((dealer) => dealer.dealer_id === selectedDealerId)),
     [dealers, selectedDealerId]
   );
 

@@ -60,7 +60,7 @@ export function DataTable<T>({
                 <th
                   key={column.key}
                   className={cn(
-                    "px-3 py-2.5 text-xs font-semibold text-slate-500 dark:text-slate-400",
+                    "border-r border-[#e5e9ec] px-3 py-2.5 text-xs font-semibold text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400",
                     alignClass(column.align)
                   )}
                   style={{ width: column.width }}
@@ -96,7 +96,10 @@ export function DataTable<T>({
                     return (
                       <td
                         key={column.key}
-                        className={cn("px-3 py-2.5 align-middle text-slate-800 dark:text-slate-200", alignClass(column.align))}
+                        className={cn(
+                          "border-r border-[#edf1f2] px-3 py-2.5 align-middle text-slate-800 last:border-r-0 dark:border-slate-800 dark:text-slate-200",
+                          alignClass(column.align)
+                        )}
                       >
                         {column.render ? column.render(rawValue as never, record) : String(rawValue ?? "-")}
                       </td>
@@ -111,7 +114,7 @@ export function DataTable<T>({
                 className="border-b border-[#edf1f2] dark:border-slate-800"
               >
                 {columns.map((column) => (
-                  <td key={`${column.key}-filler-${index}`} className="px-3 py-2.5">
+                  <td key={`${column.key}-filler-${index}`} className="border-r border-[#edf1f2] px-3 py-2.5 last:border-r-0 dark:border-slate-800">
                     <div className="h-[45px]" />
                   </td>
                 ))}

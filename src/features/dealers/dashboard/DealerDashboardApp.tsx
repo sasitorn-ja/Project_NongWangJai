@@ -15,7 +15,7 @@ import { TopCustomersPage } from "./pages/TopCustomersPage";
 import { TopProductsPage } from "./pages/TopProductsPage";
 import { ApiErrorBanner } from "./table/columns";
 
-const ORDER_DATA_PAGES: PageKey[] = ["topCustomers", "topProducts", "customerInsights", "orders"];
+const ORDER_DATA_PAGES: PageKey[] = ["details", "topCustomers", "topProducts", "customerInsights", "orders"];
 
 function DealerDashboardApp() {
   const [page, setPage] = useState<PageKey>("dashboard");
@@ -92,6 +92,11 @@ function DealerDashboardApp() {
           customers={data.filteredCustomers}
           customersState={data.customersState}
           dealers={data.dealers}
+          filteredDealers={data.filteredDealers}
+          groups={data.filteredGroups}
+          groupsState={data.groupsState}
+          orders={data.filteredOrders}
+          ordersState={data.ordersState}
           selectedDealer={data.selectedDealer}
           selectedDealerId={data.selectedDealerId}
           setSelectedDealerId={data.setSelectedDealerId}
