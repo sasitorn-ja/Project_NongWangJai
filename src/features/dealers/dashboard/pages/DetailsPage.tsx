@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { BarChart3, Clock3, Layers3, MapPin, PackageCheck, Search, User, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import { BarChart3, ChevronDown, Clock3, Layers3, MapPin, PackageCheck, Search, User, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { compactNumber, formatNumber } from "@/lib/number";
@@ -23,9 +23,11 @@ type AreaRow = {
   label: string;
   ordered: number;
   unit: string;
+  children?: AreaRow[];
 };
 
 const AREA_CHART_LIMIT = 8;
+const OTHER_AREAS_KEY = "__other_areas";
 
 type DetailsPageProps = {
   customers: CustomerUsage[];
@@ -45,20 +47,22 @@ type DetailsPageProps = {
 };
 
 function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaRow[]; unit: string }) {
+  const [othersExpanded, setOthersExpanded] = useState(false);
   const sortedRows = [...rows].sort((a, b) => Math.max(b.delivered, b.ordered) - Math.max(a.delivered, a.ordered));
   const topRows = sortedRows.slice(0, AREA_CHART_LIMIT);
   const remainingRows = sortedRows.slice(AREA_CHART_LIMIT);
-  const compactRows = remainingRows.length
+  const compactRows: AreaRow[] = remainingRows.length
     ? [
         ...topRows,
         {
           count: remainingRows.reduce((sum, row) => sum + row.count, 0),
           delivered: remainingRows.reduce((sum, row) => sum + row.delivered, 0),
           detail: `${formatNumber(remainingRows.length)} พื้นที่`,
-          key: "__other_areas",
+          key: OTHER_AREAS_KEY,
           label: "พื้นที่อื่นๆ",
           ordered: remainingRows.reduce((sum, row) => sum + row.ordered, 0),
-          unit
+          unit,
+          children: remainingRows
         }
       ]
     : topRows;
@@ -127,38 +131,105 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
-        {compactRows.map((row, index) => (
-          <div key={row.key} className="rounded-lg border border-[#e5e7eb] bg-white p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[11px] font-bold text-white" style={{ backgroundColor: palette[index % palette.length] }}>
-                    {index + 1}
-                  </span>
-                  <div className="truncate text-sm font-semibold text-slate-800" title={row.label}>{row.label}</div>
+        {compactRows.map((row, index) => {
+          const isOthers = row.key === OTHER_AREAS_KEY;
+          const canExpand = isOthers && !!row.children?.length;
+          const expanded = canExpand && othersExpanded;
+          return (
+            <div
+              key={row.key}
+              className={`rounded-lg border bg-white p-3 ${
+                canExpand ? "border-[#cfd6dc] ring-1 ring-[#0f766e]/10" : "border-[#e5e7eb]"
+              } ${expanded ? "md:col-span-2" : ""}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[11px] font-bold text-white"
+                      style={{ backgroundColor: palette[index % palette.length] }}
+                    >
+                      {index + 1}
+                    </span>
+                    <div className="truncate text-sm font-semibold text-slate-800" title={row.label}>
+                      {row.label}
+                    </div>
+                  </div>
+                  <div className="mt-1 text-xs font-medium text-slate-500">{row.detail}</div>
                 </div>
-                <div className="mt-1 text-xs font-medium text-slate-500">{row.detail}</div>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <div className="text-sm font-bold text-slate-950">
+                    {compactNumber(Math.max(row.delivered, row.ordered))} {unit}
+                  </div>
+                  {canExpand ? (
+                    <button
+                      type="button"
+                      onClick={() => setOthersExpanded((value) => !value)}
+                      aria-expanded={expanded}
+                      className="flex items-center gap-1 rounded-md border border-[#e5e7eb] bg-[#fbfcfd] px-2 py-0.5 text-[11px] font-semibold text-slate-600 transition hover:border-[#0f766e]/40 hover:text-slate-900"
+                    >
+                      {expanded ? "ย่อรายการ" : "ดูจังหวัด"}
+                      <ChevronDown
+                        size={12}
+                        className={`transition-transform ${expanded ? "rotate-180" : ""}`}
+                      />
+                    </button>
+                  ) : null}
+                </div>
               </div>
-              <div className="shrink-0 text-right text-sm font-bold text-slate-950">
-                {compactNumber(Math.max(row.delivered, row.ordered))} {unit}
-              </div>
-            </div>
-            <div className="mt-3 grid gap-1.5">
-              <div className="h-2.5 rounded-full bg-slate-100">
-                <div className="h-2.5 rounded-full bg-[#0f766e]" style={{ width: `${Math.max((row.delivered / max) * 100, row.delivered > 0 ? 2 : 0)}%` }} />
-              </div>
-              {hasOrdered ? (
+              <div className="mt-3 grid gap-1.5">
                 <div className="h-2.5 rounded-full bg-slate-100">
-                  <div className="h-2.5 rounded-full bg-[#2563eb]" style={{ width: `${Math.max((row.ordered / max) * 100, row.ordered > 0 ? 2 : 0)}%` }} />
+                  <div
+                    className="h-2.5 rounded-full bg-[#0f766e]"
+                    style={{ width: `${Math.max((row.delivered / max) * 100, row.delivered > 0 ? 2 : 0)}%` }}
+                  />
+                </div>
+                {hasOrdered ? (
+                  <div className="h-2.5 rounded-full bg-slate-100">
+                    <div
+                      className="h-2.5 rounded-full bg-[#2563eb]"
+                      style={{ width: `${Math.max((row.ordered / max) * 100, row.ordered > 0 ? 2 : 0)}%` }}
+                    />
+                  </div>
+                ) : null}
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-3 text-xs font-medium text-slate-500">
+                <span>Delivered {formatNumber(row.delivered)} {unit}</span>
+                {hasOrdered ? <span>Ordered {formatNumber(row.ordered)} {unit}</span> : null}
+              </div>
+
+              {expanded && row.children ? (
+                <div className="mt-3 rounded-md border border-dashed border-[#d9e3e6] bg-[#f8fafb] p-2">
+                  <div className="grid grid-cols-[1fr_60px_70px_70px] gap-2 px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                    <span>จังหวัด</span>
+                    <span className="text-right">Sites</span>
+                    <span className="text-right">Delivered</span>
+                    <span className="text-right">Ordered</span>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {row.children.map((child) => (
+                      <div
+                        key={child.key}
+                        className="grid grid-cols-[1fr_60px_70px_70px] items-center gap-2 rounded-md px-2 py-1 text-xs hover:bg-white"
+                      >
+                        <span className="truncate font-medium text-slate-700" title={child.label}>
+                          {child.label}
+                        </span>
+                        <span className="text-right text-slate-500">{formatNumber(child.count)}</span>
+                        <span className="text-right font-semibold text-slate-800">
+                          {formatNumber(child.delivered)}
+                        </span>
+                        <span className="text-right font-semibold text-slate-800">
+                          {formatNumber(child.ordered)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : null}
             </div>
-            <div className="mt-2 flex items-center justify-between gap-3 text-xs font-medium text-slate-500">
-              <span>Delivered {formatNumber(row.delivered)} {unit}</span>
-              {hasOrdered ? <span>Ordered {formatNumber(row.ordered)} {unit}</span> : null}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
