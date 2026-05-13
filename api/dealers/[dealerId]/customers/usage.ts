@@ -1,4 +1,4 @@
-import { proxyToCpac } from "../../../../lib/cpac-proxy.js";
+import { proxyToCpac } from "../../../_shared/cpac-proxy.js";
 
 function resolveDealerId(request: Request) {
   const url = new URL(request.url);

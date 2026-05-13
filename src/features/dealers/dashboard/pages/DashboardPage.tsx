@@ -1,0 +1,235 @@
+import { useEffect, useMemo, useState } from "react";
+import { Layers3, PackageCheck, Users } from "lucide-react";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/cn";
+import { compactNumber, formatNumber } from "@/lib/number";
+import type { ApiState, Dealer } from "@/features/dealers/types";
+import type { PageKey } from "../config/pageMeta";
+import { dateText } from "../lib/dates";
+import { groupByRegion } from "../lib/regions";
+import type { DataColumn } from "../table/types";
+import { MetricCard } from "../ui/MetricCard";
+import { FilterBar } from "../filters/FilterBar";
+import { SortHeader } from "../table/SortHeader";
+import { DataTable, ShadcnPagination } from "../table/DataTable";
+import { RegionVolumeExplorer } from "../charts/RegionVolumeExplorer";
+import { dealerColumn, statusColumn, regionPill, VolumeCell, ApiErrorBanner } from "../table/columns";
+
+type DashboardPageProps = {
+  activeRate: number;
+  apiMessage?: string;
+  apiState: ApiState;
+  filteredDealers: Dealer[];
+  region: string;
+  regionRows: ReturnType<typeof groupByRegion>;
+  regions: string[];
+  search: string;
+  setPage: (page: PageKey) => void;
+  setRegion: (value: string) => void;
+  setSearch: (value: string) => void;
+  setSelectedDealerId: (id: number) => void;
+  setStatus: (value: string) => void;
+  status: string;
+  topDealer?: Dealer;
+  totalGroups: number;
+  totalVolume: number;
+};
+
+export function DashboardPage(props: DashboardPageProps) {
+  const pageSize = 10;
+  const [tablePage, setTablePage] = useState(1);
+  const [tableSort, setTableSort] = useState<{
+    direction: "asc" | "desc";
+    key: "group_count" | "volume";
+  } | null>(null);
+  const [chartPeriod, setChartPeriod] = useState<"all" | "year" | "month" | "day">("all");
+  const volumeUnit = props.filteredDealers.find((dealer) => dealer.unit)?.unit ?? props.topDealer?.unit ?? "m3";
+
+  const chartRegionRows = useMemo(() => {
+    if (chartPeriod === "all") return props.regionRows;
+    const now = new Date();
+    const yearStr = String(now.getFullYear());
+    const monthStr = `${yearStr}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const dayStr = `${monthStr}-${String(now.getDate()).padStart(2, "0")}`;
+    const prefix = chartPeriod === "day" ? dayStr : chartPeriod === "month" ? monthStr : yearStr;
+    const filtered = props.filteredDealers.filter((dealer) => {
+      const d = dealer.last_active_at ?? dealer.updated_at ?? "";
+      return d.startsWith(prefix);
+    });
+    return groupByRegion(filtered);
+  }, [chartPeriod, props.filteredDealers, props.regionRows]);
+
+  const sortedDealers = useMemo(() => {
+    if (!tableSort) return props.filteredDealers;
+
+    const direction = tableSort.direction === "asc" ? 1 : -1;
+    return [...props.filteredDealers].sort((a, b) => {
+      const delta = (a[tableSort.key] - b[tableSort.key]) * direction;
+      if (delta !== 0) return delta;
+      return a.dealer_name.localeCompare(b.dealer_name, "th");
+    });
+  }, [props.filteredDealers, tableSort]);
+
+  const totalPages = Math.max(Math.ceil(sortedDealers.length / pageSize), 1);
+  const pagedDealers = sortedDealers.slice((tablePage - 1) * pageSize, tablePage * pageSize);
+
+  useEffect(() => {
+    const resetId = window.setTimeout(() => {
+      setTablePage(1);
+    }, 0);
+
+    return () => window.clearTimeout(resetId);
+  }, [props.filteredDealers.length, props.region, props.search, props.status, tableSort]);
+
+  const toggleTableSort = (key: "group_count" | "volume") => {
+    setTableSort((current) => {
+      if (!current || current.key !== key) {
+        return { key, direction: "desc" };
+      }
+
+      if (current.direction === "desc") {
+        return { key, direction: "asc" };
+      }
+
+      return null;
+    });
+  };
+
+  const columns: DataColumn<Dealer>[] = [
+    dealerColumn((dealer) => {
+      props.setSelectedDealerId(dealer.dealer_id);
+      props.setPage("groups");
+    }),
+    { title: "ภูมิภาค", dataIndex: "region", key: "region", width: 160, render: regionPill },
+    { title: "จังหวัด", dataIndex: "province", key: "province", width: 140 },
+    {
+      title: (
+        <SortHeader
+          active={tableSort?.key === "volume"}
+          direction={tableSort?.key === "volume" ? tableSort.direction : null}
+          label="Volume"
+          onClick={() => toggleTableSort("volume")}
+        />
+      ),
+      dataIndex: "volume",
+      key: "volume",
+      align: "right",
+      width: 160,
+      render: (_, record) => (
+        <VolumeCell value={record.volume} unit={record.unit} max={Math.max(props.topDealer?.volume ?? 1, 1)} />
+      )
+    },
+    {
+      title: (
+        <SortHeader
+          active={tableSort?.key === "group_count"}
+          direction={tableSort?.key === "group_count" ? tableSort.direction : null}
+          label="กลุ่ม"
+          onClick={() => toggleTableSort("group_count")}
+        />
+      ),
+      dataIndex: "group_count",
+      key: "group_count",
+      align: "right",
+      width: 110,
+      render: formatNumber
+    },
+    {
+      title: "ใช้งานล่าสุด",
+      dataIndex: "last_active_at",
+      key: "last_active_at",
+      width: 190,
+      render: dateText
+    },
+    statusColumn<Dealer>()
+  ];
+
+  return (
+    <>
+      {props.apiState === "error" && (
+        <section className="grid grid-cols-1">
+          <ApiErrorBanner message={props.apiMessage} />
+        </section>
+      )}
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <MetricCard
+          icon={<PackageCheck size={18} />}
+          label="Total Volume"
+          value={`${compactNumber(props.totalVolume)} ${volumeUnit}`}
+          detail={`${formatNumber(props.totalVolume)} ${volumeUnit} across selected dealers`}
+        />
+        <MetricCard icon={<Users size={18} />} label="Active Dealers" value={`${props.activeRate}%`} detail="Active dealer status from API" tone="green" />
+        <MetricCard icon={<Layers3 size={18} />} label="Total Groups" value={formatNumber(props.totalGroups)} detail="จำนวนกลุ่มรวมของ dealer ที่กำลังแสดง" tone="rose" />
+      </section>
+      <section className="grid grid-cols-1 gap-3">
+        <Card className="dashboard-card">
+          <CardHeader className="border-b border-[#d9e3e6]">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <CardTitle className="text-lg">ปริมาณการขายแยกตามพื้นที่ของ Dealer</CardTitle>
+                <p className="mt-1 text-xs font-medium text-slate-500">
+                  ตัวเลือก ปี/เดือน/วัน อิงจากวันที่ใช้งานล่าสุดของ dealer
+                </p>
+              </div>
+              <div className="flex rounded-lg border border-[#d9e3e6] bg-[#f6f8f9] p-0.5 text-xs font-semibold dark:border-slate-700 dark:bg-slate-900">
+                {(["all", "year", "month", "day"] as const).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    className={cn(
+                      "rounded-md px-3 py-1 transition-colors",
+                      chartPeriod === p
+                        ? "bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-slate-100"
+                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                    )}
+                    onClick={() => setChartPeriod(p)}
+                  >
+                    {p === "all" ? "ทั้งหมด" : p === "year" ? "ปี" : p === "month" ? "เดือน" : "วัน"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <RegionVolumeExplorer regionRows={chartRegionRows} />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid grid-cols-1 gap-3">
+        <Card className="dashboard-card overflow-hidden">
+          <CardHeader className="border-b border-[#d9e3e6] bg-white">
+            <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(400px,620px)] xl:items-center">
+              <div>
+                <CardTitle className="text-lg">ภาพรวม Dealer ทั้งหมด</CardTitle>
+                <p className="mt-1 max-w-xl text-xs font-medium leading-5 text-slate-500">
+                  ดูปริมาณคอนกรีตส่งจริงรวม จำนวนกลุ่ม วันที่ใช้งานล่าสุด และสถานะ dealer
+                </p>
+              </div>
+              <FilterBar
+                region={props.region}
+                regions={props.regions}
+                search={props.search}
+                setRegion={props.setRegion}
+                setSearch={props.setSearch}
+                setStatus={props.setStatus}
+                status={props.status}
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <DataTable columns={columns} data={pagedDealers} loading={props.apiState === "loading"} rowKey="dealer_id" minWidth={1180} />
+            <ShadcnPagination
+              currentPage={tablePage}
+              pageSize={pageSize}
+              totalItems={props.filteredDealers.length}
+              totalPages={totalPages}
+              onPageChange={setTablePage}
+            />
+          </CardContent>
+        </Card>
+      </section>
+    </>
+  );
+}

@@ -1,3 +1,5 @@
+import process from "node:process";
+
 function cleanEnv(value?: string) {
   if (!value) return "";
   const trimmed = value.trim();

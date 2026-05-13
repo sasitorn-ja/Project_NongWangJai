@@ -1,1 +1,1 @@
-export { default } from "@/features/dealers/dashboard/shell";
+export { default } from "@/features/dealers/dashboard";

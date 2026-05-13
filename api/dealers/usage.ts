@@ -1,4 +1,4 @@
-import { proxyToCpac } from "../../lib/cpac-proxy.js";
+import { proxyToCpac } from "../_shared/cpac-proxy.js";
 
 export async function GET(request: Request) {
   return proxyToCpac(request, "/api/ai-wangjai/dealers/usage");
