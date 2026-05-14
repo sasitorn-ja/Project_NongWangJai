@@ -7,6 +7,7 @@ import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUs
 import { dateText, parseDateValue } from "../lib/dates";
 import type { DataColumn } from "../table/types";
 import { MetricCard } from "../ui/MetricCard";
+import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
 import { DealerPicker } from "../filters/DealerPicker";
 import { ShadcnTabs } from "../ui/ShadcnTabs";
 import { DataTable } from "../table/DataTable";
@@ -476,11 +477,40 @@ export function DetailsPage(props: DetailsPageProps) {
         title="เลือก Dealer เพื่อวิเคราะห์"
       />
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard icon={<PackageCheck size={18} />} label="Delivered Volume" value={`${compactNumber(totalAreaDelivered)} ${areaUnit}`} detail={isAllDealers ? "รวมทุก dealer ที่กรองอยู่" : props.selectedDealer?.dealer_name ?? "-"} />
-        <MetricCard icon={<Layers3 size={18} />} label="Groups" value={formatNumber(totalGroups)} detail={isAllDealers ? "จำนวนกลุ่มรวมจาก dealer list" : "จำนวนกลุ่มของ dealer ที่เลือก"} tone="rose" />
-        <MetricCard icon={<Search size={18} />} label="Price Checks" value={formatNumber(usageSummary.priceConcreteCount)} detail="จำนวนครั้งที่เช็คราคา" />
-        <MetricCard icon={<Users size={18} />} label="Customers" value={formatNumber(orderCustomerRows.length || usageSummary.customerCreateCount)} detail="ลูกค้าที่พบใน orders ที่กรองอยู่" tone="green" />
+      <section className="grid grid-cols-1">
+        <SummaryKpiStrip
+          items={[
+            {
+              detail: isAllDealers ? "รวมทุก dealer ที่กรองอยู่" : props.selectedDealer?.dealer_name ?? "-",
+              icon: <PackageCheck size={14} />,
+              label: "Delivered Volume",
+              value: (
+                <>
+                  {compactNumber(totalAreaDelivered)}{" "}
+                  <span className="text-xs font-semibold text-slate-400">{areaUnit}</span>
+                </>
+              )
+            },
+            {
+              detail: isAllDealers ? "จำนวนกลุ่มรวมจาก dealer list" : "จำนวนกลุ่มของ dealer ที่เลือก",
+              icon: <Layers3 size={14} />,
+              label: "Groups",
+              value: formatNumber(totalGroups)
+            },
+            {
+              detail: "จำนวนครั้งที่เช็คราคา",
+              icon: <Search size={14} />,
+              label: "Price Checks",
+              value: formatNumber(usageSummary.priceConcreteCount)
+            },
+            {
+              detail: "ลูกค้าที่พบใน orders ที่กรองอยู่",
+              icon: <Users size={14} />,
+              label: "Customers",
+              value: formatNumber(orderCustomerRows.length || usageSummary.customerCreateCount)
+            }
+          ]}
+        />
       </section>
 
       <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]">

@@ -8,7 +8,7 @@ import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
 import { getMonthKey, getMonthLabel } from "../lib/dates";
 import { FIXED_DIVISIONS } from "../lib/regions";
 import type { DataColumn } from "../table/types";
-import { MetricCard } from "../ui/MetricCard";
+import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
 import { DataTable } from "../table/DataTable";
 import { TopCustomersFilter } from "../filters/TopCustomersFilter";
 
@@ -183,6 +183,7 @@ export function TopCustomersPage({
   const totalVolume = filteredOrders.reduce((sum, order) => sum + order.delivered, 0);
   const totalSites = new Set(filteredOrders.map((order) => order.siteKey).filter(Boolean)).size;
   const totalCustomers = customerRows.length;
+  const topDealer = customerRows[0];
 
   const customerColumns: DataColumn<(typeof customerRows)[number]>[] = [
     {
@@ -299,16 +300,46 @@ export function TopCustomersPage({
         </CardContent>
       </Card>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        <MetricCard compact icon={<Users size={16} />} label="Dealers" value={formatNumber(totalCustomers)} detail="จำนวน dealer ที่อยู่ในผลลัพธ์ปัจจุบัน" />
-        <MetricCard compact icon={<Database size={16} />} label="Sites" value={formatNumber(totalSites)} detail="นับจาก site ที่ไม่ซ้ำในผลลัพธ์ปัจจุบัน" tone="rose" />
-        <MetricCard compact icon={<PackageCheck size={16} />} label="Delivered Volume" value={compactNumber(totalVolume)} detail="ปริมาณส่งจริงรวมจาก orders ที่ถูกกรอง" tone="green" />
+      <section className="grid grid-cols-1">
+        <SummaryKpiStrip
+          items={[
+            {
+              detail: "จำนวน dealer ที่อยู่ในผลลัพธ์ปัจจุบัน",
+              icon: <Users size={14} />,
+              label: "Dealers",
+              value: formatNumber(totalCustomers)
+            },
+            {
+              detail: "นับจาก site ที่ไม่ซ้ำในผลลัพธ์ปัจจุบัน",
+              icon: <Database size={14} />,
+              label: "Sites",
+              value: formatNumber(totalSites)
+            },
+            {
+              detail: "ปริมาณส่งจริงรวมจาก orders ที่ถูกกรอง",
+              icon: <PackageCheck size={14} />,
+              label: "Delivered Volume",
+              value: (
+                <>
+                  {compactNumber(totalVolume)}{" "}
+                  <span className="text-xs font-semibold text-slate-400">m3</span>
+                </>
+              )
+            },
+            {
+              detail: topDealer?.customerName ?? "ยังไม่มีข้อมูล dealer",
+              icon: <Users size={14} />,
+              label: "Top Dealer",
+              value: <span className="text-base font-bold leading-tight">{topDealer?.customerCode ?? "-"}</span>
+            }
+          ]}
+        />
       </section>
 
       <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,.9fr)]">
         <Card className="dashboard-card overflow-hidden">
           <CardHeader className="border-b border-[#d9e3e6]">
-            <CardTitle className="text-lg">Top N Dealer</CardTitle>
+            <CardTitle className="text-lg">Top N Dealers</CardTitle>
             <p className="text-xs font-medium text-slate-500">สรุปรายเดือนจาก Delivered Volume พร้อมรายชื่อ Top {topN} dealer ของแต่ละเดือน</p>
           </CardHeader>
           <CardContent className="p-0">

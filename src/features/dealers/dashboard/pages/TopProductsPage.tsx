@@ -8,7 +8,7 @@ import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
 import { getMonthKey, getMonthLabel, parseDateValue } from "../lib/dates";
 import { FIXED_DIVISIONS } from "../lib/regions";
 import type { DataColumn } from "../table/types";
-import { MetricCard } from "../ui/MetricCard";
+import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
 import { DataTable } from "../table/DataTable";
 import { TopCustomersFilter } from "../filters/TopCustomersFilter";
 
@@ -333,17 +333,46 @@ export function TopProductsPage({
         </CardContent>
       </Card>
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard compact icon={<PackageCheck size={16} />} label="Products" value={formatNumber(totalProducts)} detail="จำนวนสินค้าที่อยู่ในผลลัพธ์ปัจจุบัน" />
-        <MetricCard compact icon={<Database size={16} />} label="Order Count" value={formatNumber(totalOrders)} detail="จำนวนรายการ order ที่ใช้คำนวณสินค้าขายดี" tone="rose" />
-        <MetricCard compact icon={<TrendingUp size={16} />} label="Delivered Volume" value={compactNumber(totalVolume)} detail="ปริมาณส่งจริงรวมของสินค้าที่ถูกกรอง" tone="green" />
-        <MetricCard compact icon={<Users size={16} />} label="Best Seller" value={bestseller?.productCode ?? "-"} detail={bestseller?.productName ?? "ยังไม่มีข้อมูลสินค้า"} tone="amber" />
+      <section className="grid grid-cols-1">
+        <SummaryKpiStrip
+          items={[
+            {
+              detail: "จำนวนสินค้าที่อยู่ในผลลัพธ์ปัจจุบัน",
+              icon: <PackageCheck size={14} />,
+              label: "Products",
+              value: formatNumber(totalProducts)
+            },
+            {
+              detail: "จำนวนรายการ order ที่ใช้คำนวณสินค้าขายดี",
+              icon: <Database size={14} />,
+              label: "Order Count",
+              value: formatNumber(totalOrders)
+            },
+            {
+              detail: "ปริมาณส่งจริงรวมของสินค้าที่ถูกกรอง",
+              icon: <TrendingUp size={14} />,
+              label: "Delivered Volume",
+              value: (
+                <>
+                  {compactNumber(totalVolume)}{" "}
+                  <span className="text-xs font-semibold text-slate-400">m3</span>
+                </>
+              )
+            },
+            {
+              detail: bestseller?.productName ?? "ยังไม่มีข้อมูลสินค้า",
+              icon: <Users size={14} />,
+              label: "Best Seller",
+              value: <span className="text-base font-bold leading-tight">{bestseller?.productCode ?? "-"}</span>
+            }
+          ]}
+        />
       </section>
 
-      <section className="grid grid-cols-1 gap-3">
+      <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,.9fr)]">
         <Card className="dashboard-card overflow-hidden">
           <CardHeader className="border-b border-[#d9e3e6]">
-            <CardTitle className="text-lg">Top N Product</CardTitle>
+            <CardTitle className="text-lg">Top N Products</CardTitle>
             <p className="text-xs font-medium text-slate-500">สรุปรายเดือนจาก Delivered Volume พร้อมรายการสินค้าขายดี Top {topN} ของแต่ละเดือน</p>
           </CardHeader>
           <CardContent className="p-0">
