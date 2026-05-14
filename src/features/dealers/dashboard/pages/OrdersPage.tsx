@@ -81,7 +81,7 @@ export function OrdersPage({
       )
     },
     {
-      title: "Ordered",
+      title: "Ordered Volume",
       key: "ordered",
       align: "right",
       sortAccessor: (record) => record.quantity?.ordered ?? 0,
@@ -89,7 +89,7 @@ export function OrdersPage({
       render: (_, record) => `${formatNumber(record.quantity?.ordered ?? 0)} ${record.quantity?.unit ?? "-"}`
     },
     {
-      title: "Delivered",
+      title: "Delivered Volume",
       key: "delivered",
       align: "right",
       sortAccessor: (record) => record.quantity?.delivered ?? 0,
@@ -134,13 +134,13 @@ export function OrdersPage({
         includeAll
         selectedDealerId={selectedDealerId}
         setSelectedDealerId={setSelectedDealerId}
-        title="เลือก Dealer หรือดู Orders ทั้งหมด"
+        title="เลือก Dealer หรือดูรายการ Order ทั้งหมด"
       />
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={<PackageCheck size={18} />} label="Order Count" value={formatNumber(dealerOrders.length)} detail={selectedDealer?.dealer_name ?? "จำนวนรายการ order ที่กรองอยู่"} />
         <MetricCard icon={<TrendingUp size={18} />} label="Ordered Volume" value={compactNumber(totalOrdered)} detail="ปริมาณที่สั่งรวมจาก order ทั้งหมด" tone="amber" />
-        <MetricCard icon={<PackageCheck size={18} />} label="Delivered Qty" value={compactNumber(totalDelivered)} detail="ยอดส่งจริงรวมจาก order ทั้งหมด" tone="green" />
+        <MetricCard icon={<PackageCheck size={18} />} label="Delivered Volume" value={compactNumber(totalDelivered)} detail="ปริมาณส่งจริงรวมจาก order ทั้งหมด" tone="green" />
         <MetricCard icon={<Users size={18} />} label="Unique Sites" value={formatNumber(uniqueSites)} detail={`นับจาก site code ที่ไม่ซ้ำใน ${formatNumber(dealerOrders.length)} orders ของ dealer นี้`} tone="rose" />
       </section>
 
@@ -148,7 +148,7 @@ export function OrdersPage({
         <CardHeader className="border-b border-[#d9e3e6] bg-white">
           <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-center">
             <div>
-              <CardTitle className="text-lg">Orders ของ Dealer</CardTitle>
+              <CardTitle className="text-lg">Order List ของ Dealer</CardTitle>
               <p className="mt-1 text-xs font-medium text-slate-500">
                 {selectedDealer
                   ? `แสดงรายการ order ของ ${selectedDealer.dealer_name}`

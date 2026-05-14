@@ -67,17 +67,17 @@ export function GroupsPage({ dealers, groups, groupsState, selectedDealer, selec
       <DealerPicker dealers={dealers} selectedDealerId={selectedDealerId} setSelectedDealerId={setSelectedDealerId} title="เลือก Dealer เพื่อดูรายการกลุ่ม" />
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={<Layers3 size={18} />} label="Groups" value={formatNumber(groups.length)} detail={selectedDealer?.dealer_name ?? "Select dealer"} />
-        <MetricCard icon={<PackageCheck size={18} />} label="Delivered" value={`${compactNumber(totalDelivered)} ${volumeUnit}`} detail="ปริมาณคอนกรีตส่งจริงของกลุ่ม" tone="green" />
-        <MetricCard icon={<TrendingUp size={18} />} label="Booked" value={`${compactNumber(totalBooked)} ${volumeUnit}`} detail="ปริมาณคอนกรีตที่มีการจอง" tone="amber" />
+        <MetricCard icon={<PackageCheck size={18} />} label="Delivered Volume" value={`${compactNumber(totalDelivered)} ${volumeUnit}`} detail="ปริมาณคอนกรีตส่งจริงของกลุ่ม" tone="green" />
+        <MetricCard icon={<TrendingUp size={18} />} label="Booked Volume" value={`${compactNumber(totalBooked)} ${volumeUnit}`} detail="ปริมาณคอนกรีตที่มีการจอง" tone="amber" />
         <MetricCard icon={<Search size={18} />} label="Price / Booking" value={`${formatNumber(totalPriceChecks)} / ${formatNumber(totalBookings)}`} detail="จำนวนเช็คราคาและจองคิว" tone="rose" />
       </section>
 
       <section className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(280px,.8fr)]">
         <Card className="dashboard-card">
           <CardHeader className="border-b border-[#d9e3e6]">
-            <CardTitle className="text-lg">Delivered vs Booked by Group</CardTitle>
+            <CardTitle className="text-lg">Delivered Volume vs Booked Volume by Group</CardTitle>
             <p className="text-xs font-medium text-slate-500">
-              แสดงเฉพาะ {formatNumber(topGroups.length)} กลุ่มที่มี volume สูงสุดจากทั้งหมด {formatNumber(groups.length)} กลุ่ม เพื่อดูว่ากลุ่มไหนจองนำหรือส่งจริงนำ
+              แสดงเฉพาะ {formatNumber(topGroups.length)} กลุ่มที่มี Delivered/Booked Volume สูงสุดจากทั้งหมด {formatNumber(groups.length)} กลุ่ม เพื่อดูว่ากลุ่มไหน Booked Volume นำหรือ Delivered Volume นำ
             </p>
           </CardHeader>
           <CardContent>

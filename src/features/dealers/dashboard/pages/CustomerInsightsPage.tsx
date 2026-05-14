@@ -162,9 +162,9 @@ export function CustomerInsightsPage({
       )
     },
     { title: "Sites", key: "siteCount", dataIndex: "siteCount", align: "right", width: 110, render: formatNumber },
-    { title: "Orders", key: "orderCount", dataIndex: "orderCount", align: "right", width: 110, render: formatNumber },
-    { title: "Ordered", key: "ordered", dataIndex: "ordered", align: "right", width: 140, render: formatNumber },
-    { title: "Delivered", key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
+    { title: "Order Count", key: "orderCount", dataIndex: "orderCount", align: "right", width: 130, render: formatNumber },
+    { title: "Ordered Volume", key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
+    { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
     { title: "Pour ล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
   ];
 
@@ -182,8 +182,8 @@ export function CustomerInsightsPage({
       )
     },
     { title: "Dealer", key: "customerName", dataIndex: "customerName", width: 240 },
-    { title: "Ordered", key: "ordered", dataIndex: "ordered", align: "right", width: 140, render: formatNumber },
-    { title: "Delivered", key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
+    { title: "Ordered Volume", key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
+    { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
     { title: "Pour ล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
   ];
 
@@ -201,7 +201,7 @@ export function CustomerInsightsPage({
         <MetricCard icon={<Users size={18} />} label="Customers" value={formatNumber(totalCustomers)} detail={currentDealer?.dealer_name ?? "จำนวนลูกค้าในข้อมูล orders ที่กรองอยู่"} />
         <MetricCard icon={<Database size={18} />} label="Sites" value={formatNumber(totalSites)} detail="นับจาก site code/site id ที่ไม่ซ้ำ" tone="rose" />
         <MetricCard icon={<TrendingUp size={18} />} label="Ordered Volume" value={compactNumber(totalOrdered)} detail="ปริมาณที่สั่งรวมจาก orders ที่กรองอยู่" tone="amber" />
-        <MetricCard icon={<PackageCheck size={18} />} label="Delivered Qty" value={compactNumber(totalDelivered)} detail="ยอดส่งจริงรวมจาก orders ที่กรองอยู่" tone="green" />
+        <MetricCard icon={<PackageCheck size={18} />} label="Delivered Volume" value={compactNumber(totalDelivered)} detail="ปริมาณส่งจริงรวมจาก orders ที่กรองอยู่" tone="green" />
       </section>
 
       <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,.8fr)]">
@@ -210,7 +210,7 @@ export function CustomerInsightsPage({
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <CardTitle className="text-lg">Top Customers by Delivered Volume</CardTitle>
-                <p className="text-xs font-medium text-slate-500">สรุปลูกค้าที่รับคอนกรีตสูงสุดของ dealer ที่เลือก พร้อมเทียบ ordered กับ delivered</p>
+                <p className="text-xs font-medium text-slate-500">สรุปลูกค้าที่รับคอนกรีตสูงสุดของ dealer ที่เลือก พร้อมเทียบ Ordered Volume กับ Delivered Volume</p>
               </div>
               <div className="inline-flex rounded-md border border-[#d9e3e6] bg-white p-1 shadow-sm">
                 {[5, 10, 20].map((value) => (
@@ -236,8 +236,8 @@ export function CustomerInsightsPage({
                 primary: customer.delivered,
                 secondary: customer.ordered
               }))}
-              primaryLabel="Delivered"
-              secondaryLabel="Ordered"
+              primaryLabel="Delivered Volume"
+              secondaryLabel="Ordered Volume"
             />
           </CardContent>
         </Card>
@@ -267,11 +267,11 @@ export function CustomerInsightsPage({
                     <div className="mt-1 text-sm font-semibold text-slate-900">{formatNumber(customer.siteCount)}</div>
                   </div>
                   <div className="rounded-xl bg-slate-50 px-2.5 py-2">
-                    <div className="text-[11px] uppercase tracking-wide">Orders</div>
+                    <div className="text-[11px] uppercase tracking-wide">Order Count</div>
                     <div className="mt-1 text-sm font-semibold text-slate-900">{formatNumber(customer.orderCount)}</div>
                   </div>
                   <div className="rounded-xl bg-slate-50 px-2.5 py-2">
-                    <div className="text-[11px] uppercase tracking-wide">Ordered</div>
+                    <div className="text-[11px] uppercase tracking-wide">Ordered Volume</div>
                     <div className="mt-1 text-sm font-semibold text-slate-900">{formatNumber(customer.ordered)}</div>
                   </div>
                 </div>

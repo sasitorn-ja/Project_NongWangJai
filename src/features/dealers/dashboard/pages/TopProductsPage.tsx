@@ -212,7 +212,7 @@ export function TopProductsPage({
       )
     },
     {
-      title: "Orders",
+      title: "Order Count",
       key: "orderCount",
       dataIndex: "orderCount",
       align: "right",
@@ -220,7 +220,7 @@ export function TopProductsPage({
       render: formatNumber
     },
     {
-      title: "Ordered",
+      title: "Ordered Volume",
       key: "ordered",
       dataIndex: "ordered",
       align: "right",
@@ -228,7 +228,7 @@ export function TopProductsPage({
       render: formatNumber
     },
     {
-      title: "Delivered",
+      title: "Delivered Volume",
       key: "delivered",
       dataIndex: "delivered",
       align: "right",
@@ -251,7 +251,7 @@ export function TopProductsPage({
 
   const monthlyColumns: DataColumn<(typeof monthlyRows)[number]>[] = [
     { title: "Month", key: "month", dataIndex: "monthLabel", sortAccessor: (record) => record.monthKey, width: 120 },
-    { title: "Volume All", key: "delivered", dataIndex: "delivered", align: "right", width: 130, render: formatNumber },
+    { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
     {
       title: "TopN Product",
       key: "topProducts",
@@ -336,7 +336,7 @@ export function TopProductsPage({
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard compact icon={<PackageCheck size={16} />} label="Products" value={formatNumber(totalProducts)} detail="จำนวนสินค้าที่อยู่ในผลลัพธ์ปัจจุบัน" />
         <MetricCard compact icon={<Database size={16} />} label="Order Count" value={formatNumber(totalOrders)} detail="จำนวนรายการ order ที่ใช้คำนวณสินค้าขายดี" tone="rose" />
-        <MetricCard compact icon={<TrendingUp size={16} />} label="Delivered Qty" value={compactNumber(totalVolume)} detail="ยอดส่งจริงรวมของสินค้าที่ถูกกรอง" tone="green" />
+        <MetricCard compact icon={<TrendingUp size={16} />} label="Delivered Volume" value={compactNumber(totalVolume)} detail="ปริมาณส่งจริงรวมของสินค้าที่ถูกกรอง" tone="green" />
         <MetricCard compact icon={<Users size={16} />} label="Best Seller" value={bestseller?.productCode ?? "-"} detail={bestseller?.productName ?? "ยังไม่มีข้อมูลสินค้า"} tone="amber" />
       </section>
 
@@ -344,7 +344,7 @@ export function TopProductsPage({
         <Card className="dashboard-card overflow-hidden">
           <CardHeader className="border-b border-[#d9e3e6]">
             <CardTitle className="text-lg">Top N Product</CardTitle>
-            <p className="text-xs font-medium text-slate-500">สรุปรายเดือนจากยอดส่งจริง พร้อมรายการสินค้าขายดี Top {topN} ของแต่ละเดือน</p>
+            <p className="text-xs font-medium text-slate-500">สรุปรายเดือนจาก Delivered Volume พร้อมรายการสินค้าขายดี Top {topN} ของแต่ละเดือน</p>
           </CardHeader>
           <CardContent className="p-0">
             <DataTable columns={monthlyColumns} data={monthlyRows} loading={ordersState === "loading"} rowKey="monthKey" minWidth={760} />
@@ -354,7 +354,7 @@ export function TopProductsPage({
         <Card className="dashboard-card overflow-hidden">
           <CardHeader className="border-b border-[#d9e3e6]">
             <CardTitle className="text-lg">Product Ranking</CardTitle>
-            <p className="text-xs font-medium text-slate-500">สรุปสินค้าตามจำนวน order และยอดส่งจริง</p>
+            <p className="text-xs font-medium text-slate-500">สรุปสินค้าตาม Order Count และ Delivered Volume</p>
           </CardHeader>
           <CardContent className="p-0">
             <DataTable columns={productColumns} data={productRows} loading={ordersState === "loading"} rowKey="key" minWidth={980} pageSize={10} />

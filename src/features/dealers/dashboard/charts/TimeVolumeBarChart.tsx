@@ -610,7 +610,7 @@ export function TimeVolumeBarChart({ dealers, range, unit = "m3" }: { dealers: D
               <p className="mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100">{activeBucket.periodLabel}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <StatChip label="Volume" value={`${compactNumber(activeBucket.value)} ${unit}`} />
+              <StatChip label="Delivered Volume" value={`${compactNumber(activeBucket.value)} ${unit}`} />
               <StatChip label="Dealers" value={formatNumber(activeBucket.dealers)} />
               <StatChip label="Groups" value={formatNumber(activeBucket.groups)} />
             </div>

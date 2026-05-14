@@ -170,6 +170,7 @@ export function TopCustomersPage({
     return Array.from(grouped.values())
       .sort((a, b) => a.monthKey.localeCompare(b.monthKey))
       .map((row) => ({
+        delivered: row.delivered,
         monthKey: row.monthKey,
         monthLabel: getMonthLabel(row.monthKey),
         ordered: row.ordered,
@@ -205,7 +206,7 @@ export function TopCustomersPage({
       render: (value) => <span className="inline-block pr-4">{formatNumber(Number(value ?? 0))}</span>
     },
     {
-      title: <span className="inline-block pr-6">Volume</span>,
+      title: <span className="inline-block pr-6">Delivered Volume</span>,
       key: "delivered",
       dataIndex: "delivered",
       align: "right",
@@ -216,7 +217,7 @@ export function TopCustomersPage({
 
   const monthlyColumns: DataColumn<(typeof monthlyRows)[number]>[] = [
     { title: "Month", key: "month", dataIndex: "monthLabel", sortAccessor: (record) => record.monthKey, width: 120 },
-    { title: "Volume All", key: "ordered", dataIndex: "ordered", align: "right", width: 120, render: formatNumber },
+    { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
     {
       title: "TopN Dealer",
       key: "topCustomers",
@@ -301,14 +302,14 @@ export function TopCustomersPage({
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard compact icon={<Users size={16} />} label="Dealers" value={formatNumber(totalCustomers)} detail="จำนวน dealer ที่อยู่ในผลลัพธ์ปัจจุบัน" />
         <MetricCard compact icon={<Database size={16} />} label="Sites" value={formatNumber(totalSites)} detail="นับจาก site ที่ไม่ซ้ำในผลลัพธ์ปัจจุบัน" tone="rose" />
-        <MetricCard compact icon={<PackageCheck size={16} />} label="Volume" value={compactNumber(totalVolume)} detail="ยอดส่งจริงรวมจาก orders ที่ถูกกรอง" tone="green" />
+        <MetricCard compact icon={<PackageCheck size={16} />} label="Delivered Volume" value={compactNumber(totalVolume)} detail="ปริมาณส่งจริงรวมจาก orders ที่ถูกกรอง" tone="green" />
       </section>
 
       <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,.9fr)]">
         <Card className="dashboard-card overflow-hidden">
           <CardHeader className="border-b border-[#d9e3e6]">
             <CardTitle className="text-lg">Top N Dealer</CardTitle>
-            <p className="text-xs font-medium text-slate-500">สรุปรายเดือนจากยอดส่งจริง พร้อมรายชื่อ Top {topN} dealer ของแต่ละเดือน</p>
+            <p className="text-xs font-medium text-slate-500">สรุปรายเดือนจาก Delivered Volume พร้อมรายชื่อ Top {topN} dealer ของแต่ละเดือน</p>
           </CardHeader>
           <CardContent className="p-0">
             <DataTable columns={monthlyColumns} data={monthlyRows} loading={ordersState === "loading"} rowKey="monthKey" minWidth={720} />
@@ -318,7 +319,7 @@ export function TopCustomersPage({
         <Card className="dashboard-card overflow-hidden">
           <CardHeader className="border-b border-[#d9e3e6]">
             <CardTitle className="text-lg">Dealer Ranking</CardTitle>
-            <p className="text-xs font-medium text-slate-500">สรุป dealer ตามจำนวน site และยอดส่งจริง</p>
+            <p className="text-xs font-medium text-slate-500">สรุป dealer ตามจำนวน site และ Delivered Volume</p>
           </CardHeader>
           <CardContent className="p-0">
             <DataTable columns={customerColumns} data={customerRows} loading={ordersState === "loading"} rowKey={(record) => `${record.customerCode}-${record.customerName}`} minWidth={0} pageSize={15} />

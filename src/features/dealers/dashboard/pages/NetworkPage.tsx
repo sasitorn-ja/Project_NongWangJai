@@ -38,7 +38,7 @@ function DealerNetworkCard({
           <div className="mt-0.5 font-semibold text-slate-800">{formatNumber(dealer.group_count)}</div>
         </div>
         <div>
-          <div className="font-medium text-slate-400">Volume</div>
+          <div className="font-medium text-slate-400">Delivered Volume</div>
           <div className="mt-0.5 font-semibold text-slate-800">{compactNumber(dealer.volume)}</div>
         </div>
         <div>

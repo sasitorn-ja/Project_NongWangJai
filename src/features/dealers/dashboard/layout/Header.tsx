@@ -57,7 +57,7 @@ export function Header({
 
         <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-end">
           <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-            <span className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-black uppercase tracking-[0.2em] text-slate-700 shadow-sm">
+            <span className="inline-flex h-10 items-center rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-black uppercase tracking-[0.2em] text-red-600 shadow-sm">
               Test
             </span>
           </div>

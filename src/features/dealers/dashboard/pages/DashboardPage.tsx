@@ -66,7 +66,7 @@ function KpiStrip({
       accent: "bg-slate-100 text-slate-700",
       detail: `${formatNumber(totalVolume)} ${unit} ทั้งหมด`,
       icon: <PackageCheck size={14} />,
-      label: "Total Volume",
+      label: "Total Delivered Volume",
       value: (
         <>
           {compactNumber(totalVolume)}{" "}
@@ -151,7 +151,7 @@ export function DashboardPage(props: DashboardPageProps) {
     { title: "ภูมิภาค", dataIndex: "region", key: "region", width: 160, render: regionPill },
     { title: "จังหวัด", dataIndex: "province", key: "province", width: 140 },
     {
-      title: "Volume",
+      title: "Delivered Volume",
       dataIndex: "volume",
       key: "volume",
       align: "right",

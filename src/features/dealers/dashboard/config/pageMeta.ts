@@ -31,7 +31,7 @@ export function getPageSubtitle(page: PageKey) {
     return "สรุปสินค้าขายดีรายเดือนจากข้อมูล orders พร้อมรหัสสินค้าและชื่อสินค้า";
   }
   if (page === "customerInsights") {
-    return "Top dealer และ site summary จากข้อมูล orders ที่มีอยู่จริง";
+    return "Top dealer และ site summary จากรายการ order ที่มีอยู่จริง";
   }
   return "รายการ order";
 }

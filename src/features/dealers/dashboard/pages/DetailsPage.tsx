@@ -93,7 +93,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
     <div className="space-y-4">
       <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center">
         <div className="rounded-lg border border-[#e5e7eb] bg-[#fbfcfd] px-3 py-2">
-          <div className="text-xs font-semibold text-slate-500">Delivered / Ordered</div>
+          <div className="text-xs font-semibold text-slate-500">Delivered Volume / Ordered Volume</div>
           <div className="mt-1 text-lg font-bold text-slate-950">
             {compactNumber(totalDelivered)} / {compactNumber(totalOrdered)} {unit}
           </div>
@@ -194,8 +194,8 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                 ) : null}
               </div>
               <div className="mt-2 flex items-center justify-between gap-3 text-xs font-medium text-slate-500">
-                <span>Delivered {formatNumber(row.delivered)} {unit}</span>
-                {hasOrdered ? <span>Ordered {formatNumber(row.ordered)} {unit}</span> : null}
+                <span>Delivered Volume {formatNumber(row.delivered)} {unit}</span>
+                {hasOrdered ? <span>Ordered Volume {formatNumber(row.ordered)} {unit}</span> : null}
               </div>
 
               {expanded && row.children ? (
@@ -203,8 +203,8 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                   <div className="grid grid-cols-[1fr_60px_70px_70px] gap-2 px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                     <span>จังหวัด</span>
                     <span className="text-right">Sites</span>
-                    <span className="text-right">Delivered</span>
-                    <span className="text-right">Ordered</span>
+                    <span className="text-right">Delivered Volume</span>
+                    <span className="text-right">Ordered Volume</span>
                   </div>
                   <div className="max-h-60 overflow-y-auto">
                     {row.children.map((child) => (
@@ -442,17 +442,17 @@ export function DetailsPage(props: DetailsPageProps) {
   const customerColumns: DataColumn<(typeof orderCustomerRows)[number]>[] = [
     { title: "Customer", key: "customer", sortAccessor: (record) => record.customerName, width: 300, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.customerName}</div><div className="text-xs font-medium text-slate-500">{record.customerCode}</div></div> },
     { title: "Sites", key: "siteCount", dataIndex: "siteCount", align: "right", width: 110, render: formatNumber },
-    { title: "Orders", key: "orderCount", dataIndex: "orderCount", align: "right", width: 110, render: formatNumber },
-    { title: "Ordered", key: "ordered", dataIndex: "ordered", align: "right", width: 140, render: formatNumber },
-    { title: "Delivered", key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
+    { title: "Order Count", key: "orderCount", dataIndex: "orderCount", align: "right", width: 130, render: formatNumber },
+    { title: "Ordered Volume", key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
+    { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
     { title: "Pour ล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
   ];
 
   const siteColumns: DataColumn<(typeof orderSiteRows)[number]>[] = [
     { title: "Site", key: "site", sortAccessor: (record) => record.siteName, width: 300, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.siteName}</div><div className="text-xs font-medium text-slate-500">{record.siteCode}</div></div> },
     { title: "Customer", key: "customerName", dataIndex: "customerName", width: 240 },
-    { title: "Ordered", key: "ordered", dataIndex: "ordered", align: "right", width: 140, render: formatNumber },
-    { title: "Delivered", key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
+    { title: "Ordered Volume", key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
+    { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
     { title: "Pour ล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
   ];
 
@@ -477,7 +477,7 @@ export function DetailsPage(props: DetailsPageProps) {
       />
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard icon={<PackageCheck size={18} />} label="Volume" value={`${compactNumber(totalAreaDelivered)} ${areaUnit}`} detail={isAllDealers ? "รวมทุก dealer ที่กรองอยู่" : props.selectedDealer?.dealer_name ?? "-"} />
+        <MetricCard icon={<PackageCheck size={18} />} label="Delivered Volume" value={`${compactNumber(totalAreaDelivered)} ${areaUnit}`} detail={isAllDealers ? "รวมทุก dealer ที่กรองอยู่" : props.selectedDealer?.dealer_name ?? "-"} />
         <MetricCard icon={<Layers3 size={18} />} label="Groups" value={formatNumber(totalGroups)} detail={isAllDealers ? "จำนวนกลุ่มรวมจาก dealer list" : "จำนวนกลุ่มของ dealer ที่เลือก"} tone="rose" />
         <MetricCard icon={<Search size={18} />} label="Price Checks" value={formatNumber(usageSummary.priceConcreteCount)} detail="จำนวนครั้งที่เช็คราคา" />
         <MetricCard icon={<Users size={18} />} label="Customers" value={formatNumber(orderCustomerRows.length || usageSummary.customerCreateCount)} detail="ลูกค้าที่พบใน orders ที่กรองอยู่" tone="green" />
@@ -501,7 +501,7 @@ export function DetailsPage(props: DetailsPageProps) {
 
         <Card className="dashboard-card">
           <CardHeader className="border-b border-[#d9e3e6]">
-            <CardTitle className="text-lg">{isAllDealers ? "Top Dealer Volume" : "Usage Summary"}</CardTitle>
+            <CardTitle className="text-lg">{isAllDealers ? "Top Dealer Delivered Volume" : "Usage Summary"}</CardTitle>
             <p className="text-xs font-medium text-slate-500">
               {isAllDealers ? "Dealer ที่มี volume สูงสุดใน filter ปัจจุบัน" : `${props.selectedDealer?.dealer_name ?? "-"} | Updated: ${dateText(usageSummary.updatedAt)}`}
             </p>
@@ -531,10 +531,10 @@ export function DetailsPage(props: DetailsPageProps) {
           <CardHeader className="border-b border-[#d9e3e6]">
             <CardTitle className="flex items-center gap-2 text-lg">
               <BarChart3 size={18} />
-              {isAllDealers ? "Customer Insight" : "Group Volume"}
+              {isAllDealers ? "Customer Insight" : "Group Delivered Volume"}
             </CardTitle>
             <p className="text-xs font-medium text-slate-500">
-              {isAllDealers ? "Top customers จาก orders ทั้งหมดที่กรองอยู่" : "Delivered เทียบกับ Booked ของกลุ่มใน dealer ที่เลือก"}
+              {isAllDealers ? "Top customers จากรายการ order ทั้งหมดที่กรองอยู่" : "Delivered Volume เทียบกับ Booked Volume ของกลุ่มใน dealer ที่เลือก"}
             </p>
           </CardHeader>
           <CardContent>
@@ -545,8 +545,8 @@ export function DetailsPage(props: DetailsPageProps) {
                   primary: customer.delivered,
                   secondary: customer.ordered
                 }))}
-                primaryLabel="Delivered"
-                secondaryLabel="Ordered"
+                primaryLabel="Delivered Volume"
+                secondaryLabel="Ordered Volume"
               />
             ) : (
               <GroupVolumeInsights groups={topGroups} totalBooked={totalBooked} totalDelivered={totalDelivered} totalGroups={props.groups.length} unit={areaUnit} />
@@ -557,7 +557,7 @@ export function DetailsPage(props: DetailsPageProps) {
         <Card className="dashboard-card">
           <CardHeader className="border-b border-[#d9e3e6]">
             <CardTitle className="text-lg">Site Delivery Progress</CardTitle>
-            <p className="text-xs font-medium text-slate-500">ไซต์ที่มี delivered สูงสุดจาก orders ที่กรองอยู่</p>
+            <p className="text-xs font-medium text-slate-500">ไซต์ที่มี Delivered Volume สูงสุดจากรายการ order ที่กรองอยู่</p>
           </CardHeader>
           <CardContent>
             <ProgressList
