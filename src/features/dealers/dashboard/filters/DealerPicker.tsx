@@ -86,7 +86,7 @@ export function DealerPicker({
         <div className="relative" ref={wrapperRef}>
           <button
             type="button"
-            className="flex min-h-[3rem] w-full items-center justify-between gap-3 rounded-2xl border border-[#d5e0e3] bg-white px-3 py-1.5 text-left text-sm text-slate-800 shadow-sm outline-none transition-colors hover:border-[#bfd0d4] focus:border-[#16706f] focus:ring-2 focus:ring-[#16706f]/15"
+            className="flex min-h-[3rem] w-full items-center justify-between gap-3 rounded-2xl border border-[#d5e0e3] bg-white px-3 py-1.5 text-left text-sm text-slate-800 shadow-sm outline-none transition-colors hover:border-slate-300 focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
             onClick={() => {
               if (open) {
                 closePicker();
@@ -126,7 +126,7 @@ export function DealerPicker({
             </span>
             <ChevronDown
               size={18}
-              className={cn("shrink-0 text-slate-400 transition-transform", open && "rotate-180 text-[#16706f]")}
+              className={cn("shrink-0 text-slate-400 transition-transform", open && "rotate-180 text-slate-700")}
             />
           </button>
 
@@ -153,7 +153,7 @@ export function DealerPicker({
                     aria-selected={selectedDealerId == null}
                     className={cn(
                       "mb-1 grid w-full grid-cols-[18px_minmax(0,1fr)] items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-                      selectedDealerId == null ? "bg-[#e8f3f2] text-[#145c5b] ring-1 ring-[#b8e1dc]" : "text-slate-700 hover:bg-slate-50"
+                      selectedDealerId == null ? "bg-slate-100 text-slate-950 ring-1 ring-slate-200" : "text-slate-700 hover:bg-slate-50"
                     )}
                     onClick={() => {
                       setSelectedDealerId(null);
@@ -161,7 +161,7 @@ export function DealerPicker({
                     }}
                   >
                     <span className="flex h-5 items-center justify-center">
-                      {selectedDealerId == null ? <Check size={16} className="text-[#16706f]" /> : null}
+                      {selectedDealerId == null ? <Check size={16} className="text-slate-950" /> : null}
                     </span>
                     <span className="min-w-0">
                       <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[11px] font-bold text-violet-700 ring-1 ring-violet-100">
@@ -169,7 +169,7 @@ export function DealerPicker({
                       </span>
                       <span className={cn(
                         "mt-1 block text-sm font-semibold leading-5",
-                        selectedDealerId == null ? "text-[#145c5b]" : "text-slate-800"
+                        selectedDealerId == null ? "text-slate-950" : "text-slate-800"
                       )}>
                         ดูภาพรวมทุก dealer พร้อมกัน
                       </span>
@@ -188,7 +188,7 @@ export function DealerPicker({
                       aria-selected={isSelected}
                       className={cn(
                         "grid w-full grid-cols-[18px_minmax(0,1fr)] items-start gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
-                        isSelected ? "bg-[#e8f3f2] text-[#145c5b] ring-1 ring-[#b8e1dc]" : "text-slate-700 hover:bg-slate-50"
+                        isSelected ? "bg-slate-100 text-slate-950 ring-1 ring-slate-200" : "text-slate-700 hover:bg-slate-50"
                       )}
                       onClick={() => {
                         setSelectedDealerId(dealer.dealer_id);
@@ -196,7 +196,7 @@ export function DealerPicker({
                       }}
                     >
                       <span className="flex h-5 items-center justify-center">
-                        {isSelected ? <Check size={16} className="text-[#16706f]" /> : null}
+                        {isSelected ? <Check size={16} className="text-slate-950" /> : null}
                       </span>
                       <span className="min-w-0">
                         <span className="flex flex-wrap items-center gap-2">
@@ -215,7 +215,7 @@ export function DealerPicker({
                         </span>
                         <span className={cn(
                           "mt-1 block line-clamp-2 text-sm font-semibold leading-5",
-                          isSelected ? "text-[#145c5b]" : "text-slate-800"
+                          isSelected ? "text-slate-950" : "text-slate-800"
                         )}>
                           {dealer.dealer_name}
                         </span>

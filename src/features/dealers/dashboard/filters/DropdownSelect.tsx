@@ -1,31 +1,39 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, ChevronDown, Search } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { normalizeSearch } from "../lib/search";
 
-export function TopCustomersFilter({
+type DropdownSelectProps<T extends string> = {
+  buttonClassName?: string;
+  className?: string;
+  label?: string;
+  leading?: ReactNode;
+  onChange: (value: T) => void;
+  options: Array<{ label: string; value: T }>;
+  placeholder?: string;
+  searchPlaceholder?: string;
+  searchable?: boolean;
+  value: T;
+};
+
+export function DropdownSelect<T extends string>({
+  buttonClassName,
   className,
   label,
+  leading,
   onChange,
   options,
+  placeholder = "เลือกข้อมูล",
   searchPlaceholder = "ค้นหา",
   searchable = false,
   value
-}: {
-  className?: string;
-  label: string;
-  onChange: (value: string) => void;
-  options: Array<{ label: string; value: string }>;
-  searchPlaceholder?: string;
-  searchable?: boolean;
-  value: string;
-}) {
+}: DropdownSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const selectedOption = options.find((option) => option.value === value) ?? options[0];
+  const selectedOption = options.find((option) => option.value === value);
   const filteredOptions = useMemo(() => {
     if (!searchable) return options;
 
@@ -44,15 +52,11 @@ export function TopCustomersFilter({
     if (!open) return;
 
     function handlePointerDown(event: MouseEvent) {
-      if (!wrapperRef.current?.contains(event.target as Node)) {
-        closeDropdown();
-      }
+      if (!wrapperRef.current?.contains(event.target as Node)) closeDropdown();
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        closeDropdown();
-      }
+      if (event.key === "Escape") closeDropdown();
     }
 
     window.addEventListener("mousedown", handlePointerDown);
@@ -77,11 +81,14 @@ export function TopCustomersFilter({
 
   return (
     <div className={cn("block space-y-1.5", className)} ref={wrapperRef}>
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+      {label ? <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div> : null}
       <div className="relative">
         <button
           type="button"
-          className="flex h-10 w-full items-center justify-between gap-3 rounded-lg border border-[#d5e0e3] bg-white px-3 text-left text-sm font-medium text-slate-800 shadow-sm outline-none transition-colors hover:border-slate-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+          className={cn(
+            "flex h-10 w-full items-center justify-between gap-3 rounded-lg border border-[#d5e0e3] bg-white px-3 text-left text-sm font-medium text-slate-800 shadow-sm outline-none transition-colors hover:border-slate-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200",
+            buttonClassName
+          )}
           onClick={() => {
             if (open) {
               closeDropdown();
@@ -93,7 +100,10 @@ export function TopCustomersFilter({
           aria-expanded={open}
           aria-haspopup="listbox"
         >
-          <span className="truncate">{selectedOption?.label ?? "เลือกข้อมูล"}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            {leading}
+            <span className="truncate">{selectedOption?.label ?? placeholder}</span>
+          </span>
           <ChevronDown size={16} className={cn("shrink-0 text-slate-400 transition-transform", open && "rotate-180")} />
         </button>
 
@@ -120,7 +130,7 @@ export function TopCustomersFilter({
 
                 return (
                   <button
-                    key={`${label}-${option.value}`}
+                    key={option.value}
                     type="button"
                     role="option"
                     aria-selected={isSelected}

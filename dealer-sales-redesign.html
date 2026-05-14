@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Dealer Sales – Redesign Concepts</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c-east: #10b981;
+    --c-metro: #3b82f6;
+    --c-north: #06b6d4;
+    --c-ne: #14b8a6;
+    --c-west: #8b5cf6;
+    --c-south: #f59e0b;
+    --c-bg: #f7f8fb;
+    --c-ink: #0f172a;
+    --c-ink-2: #475569;
+    --c-line: #e6e9ef;
+  }
+  html, body { font-family: 'IBM Plex Sans Thai', 'Inter', system-ui, sans-serif; background: var(--c-bg); color: var(--c-ink); }
+  .num { font-family: 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
+  .chip { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; font-size:12px; font-weight:500; }
+  .pill-tab { padding:8px 18px; border-radius:999px; font-size:13px; font-weight:500; cursor:pointer; transition:all .15s; }
+  .pill-tab.active { background:#0f172a; color:#fff; }
+  .pill-tab:not(.active) { color:#64748b; }
+  .pill-tab:not(.active):hover { background:#eef0f4; }
+  .legend-dot { width:8px; height:8px; border-radius:999px; display:inline-block; }
+  .soft-card { background:#fff; border:1px solid var(--c-line); border-radius:16px; }
+  .version-tab { padding:10px 18px; font-size:13px; font-weight:600; border-radius:10px; cursor:pointer; transition:all .15s; }
+  .version-tab.active { background:#0f172a; color:#fff; }
+  .version-tab:not(.active) { color:#475569; }
+  .version-tab:not(.active):hover { background:#eef0f4; }
+  .version-panel { display:none; }
+  .version-panel.active { display:block; }
+  .arrow-up { color:#10b981; }
+  .arrow-down { color:#ef4444; }
+  .progress-track { height:8px; background:#eef0f4; border-radius:999px; overflow:hidden; }
+  .progress-fill { height:100%; border-radius:999px; transition:width .4s; }
+  .ring-soft { box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 4px 12px rgba(15,23,42,.04); }
+</style>
+</head>
+<body class="min-h-screen">
+<div class="max-w-7xl mx-auto p-6 lg:p-10">
+
+  <!-- Header -->
+  <div class="mb-8">
+    <p class="text-xs text-slate-500 font-medium tracking-wider uppercase mb-2">Dashboard Redesign · ปริมาณการขายแยกตามพื้นที่ของ Dealer</p>
+    <h1 class="text-3xl font-bold text-slate-900">3 แนวทางออกแบบใหม่</h1>
+    <p class="text-slate-600 mt-1">เปรียบเทียบดีไซน์ที่ปรับเรื่องการอ่านง่าย · insight อัตโนมัติ · chart รูปแบบใหม่ · layout</p>
+  </div>
+
+  <!-- Version selector -->
+  <div class="flex flex-wrap gap-2 mb-6 p-1.5 bg-white border border-slate-200 rounded-2xl ring-soft inline-flex">
+    <button class="version-tab active" data-tab="v1">V1 · Insight-First</button>
+    <button class="version-tab" data-tab="v2">V2 · Story & Trend</button>
+    <button class="version-tab" data-tab="v3">V3 · Card Grid + Donut</button>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- VERSION 1: INSIGHT-FIRST -->
+  <!-- ============================================ -->
+  <div id="panel-v1" class="version-panel active">
+
+    <div class="soft-card ring-soft p-6 mb-4">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="w-1 h-5 bg-slate-900 rounded-full"></span>
+            <h2 class="text-xl font-semibold">ปริมาณการขายแยกตามพื้นที่ของ Dealer</h2>
+          </div>
+          <p class="text-sm text-slate-500 ml-3">มุมมองรายเดือน · เลือกแท่งเพื่อดูรายละเอียด</p>
+        </div>
+        <div class="flex items-center gap-2 p-1 bg-slate-100 rounded-full">
+          <span class="pill-tab">ทั้งหมด</span>
+          <span class="pill-tab">ปี</span>
+          <span class="pill-tab active">เดือน</span>
+          <span class="pill-tab">วัน</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Insight Banner -->
+    <div class="rounded-2xl p-5 mb-4 ring-soft" style="background:linear-gradient(135deg,#f5f3ff 0%,#ecfeff 100%); border:1px solid #e0e7ff;">
+      <div class="flex items-start gap-3">
+        <div class="shrink-0 w-9 h-9 rounded-xl bg-white flex items-center justify-center ring-1 ring-violet-200">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><path d="M12 2L14.09 8.26L20 9L15 13.27L16.18 19L12 16.27L7.82 19L9 13.27L4 9L9.91 8.26L12 2Z"/></svg>
+        </div>
+        <div class="flex-1">
+          <p class="text-xs font-semibold tracking-wider text-violet-700 uppercase mb-1">Auto Insight · กุมภาพันธ์ 2569</p>
+          <p class="text-sm text-slate-700 leading-relaxed">
+            <strong>CPAC West</strong> นำห่าง <strong class="text-violet-700">+175 m³</strong> คิดเป็น <strong>86%</strong> ของยอดทั้งหมด ·
+            มี Dealer หลัก 3 ราย โดย <strong>บ.วรวิทย์วัสดุก่อสร้าง</strong> ครองส่วนแบ่งสูงสุด 82% ·
+            ยอดเดือนนี้ <span class="arrow-down font-semibold">↓ 30%</span> เทียบกับ มี.ค. ที่ผ่านมา
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPI cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+      <div class="soft-card ring-soft p-5">
+        <p class="text-xs text-slate-500 font-medium mb-1">Volume รวม</p>
+        <p class="num text-3xl font-bold">245 <span class="text-base font-medium text-slate-500">m³</span></p>
+        <p class="text-xs mt-2 flex items-center gap-1"><span class="arrow-down font-semibold">↓ 2%</span><span class="text-slate-500">vs เดือนก่อน</span></p>
+      </div>
+      <div class="soft-card ring-soft p-5">
+        <p class="text-xs text-slate-500 font-medium mb-1">พื้นที่นำสูงสุด</p>
+        <p class="text-lg font-bold flex items-center gap-2"><span class="legend-dot" style="background:var(--c-west)"></span>CPAC West</p>
+        <p class="num text-xs mt-2 text-slate-500">210 m³ · 86% ของทั้งหมด</p>
+      </div>
+      <div class="soft-card ring-soft p-5">
+        <p class="text-xs text-slate-500 font-medium mb-1">Dealer · Group</p>
+        <p class="num text-3xl font-bold">3 <span class="text-slate-300">/</span> 3</p>
+        <p class="text-xs mt-2 text-slate-500">รายผู้ค้า · กลุ่ม</p>
+      </div>
+      <div class="soft-card ring-soft p-5">
+        <p class="text-xs text-slate-500 font-medium mb-1">Dealer อันดับ 1</p>
+        <p class="text-sm font-bold truncate">บ.วรวิทย์วัสดุก่อสร้าง</p>
+        <p class="num text-xs mt-2 text-slate-500">200 m³ · 82%</p>
+      </div>
+    </div>
+
+    <!-- Main chart -->
+    <div class="soft-card ring-soft p-6 mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <p class="text-sm font-semibold text-slate-700">แนวโน้มรายเดือน · stacked by region</p>
+        <div class="flex flex-wrap gap-2 text-xs">
+          <span class="chip bg-emerald-50 text-emerald-700"><span class="legend-dot" style="background:var(--c-east)"></span>East</span>
+          <span class="chip bg-blue-50 text-blue-700"><span class="legend-dot" style="background:var(--c-metro)"></span>Metro</span>
+          <span class="chip bg-cyan-50 text-cyan-700"><span class="legend-dot" style="background:var(--c-north)"></span>North</span>
+          <span class="chip bg-teal-50 text-teal-700"><span class="legend-dot" style="background:var(--c-ne)"></span>Northeast</span>
+          <span class="chip bg-violet-50 text-violet-700"><span class="legend-dot" style="background:var(--c-west)"></span>West</span>
+          <span class="chip bg-amber-50 text-amber-700"><span class="legend-dot" style="background:var(--c-south)"></span>South Chain</span>
+        </div>
+      </div>
+      <div style="height:280px"><canvas id="v1-chart"></canvas></div>
+    </div>
+
+    <!-- Two-column breakdown -->
+    <div class="grid lg:grid-cols-5 gap-4">
+      <div class="soft-card ring-soft p-6 lg:col-span-3">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-sm font-semibold text-slate-700">แยกตามภูมิภาค · กุมภาพันธ์ 2569</p>
+          <span class="text-xs text-slate-400">เรียงจากมากไปน้อย</span>
+        </div>
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between items-baseline mb-1.5">
+              <div class="flex items-center gap-2">
+                <span class="legend-dot" style="background:var(--c-west)"></span>
+                <span class="text-sm font-medium">CPAC West</span>
+                <span class="chip" style="background:#ecfdf5;color:#047857;font-size:10px;padding:2px 8px">+175 m³</span>
+              </div>
+              <div class="flex items-baseline gap-2"><span class="num text-sm font-bold">210</span><span class="text-xs text-slate-400">m³ · 86%</span></div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:86%; background:var(--c-west)"></div></div>
+          </div>
+          <div>
+            <div class="flex justify-between items-baseline mb-1.5">
+              <div class="flex items-center gap-2">
+                <span class="legend-dot" style="background:var(--c-ne)"></span>
+                <span class="text-sm font-medium">CPAC Northeast</span>
+              </div>
+              <div class="flex items-baseline gap-2"><span class="num text-sm font-bold">35</span><span class="text-xs text-slate-400">m³ · 14%</span></div>
+            </div>
+            <div class="progress-track"><div class="progress-fill" style="width:14%; background:var(--c-ne)"></div></div>
+          </div>
+          <div class="opacity-40">
+            <div class="flex justify-between items-baseline mb-1.5">
+              <div class="flex items-center gap-2">
+                <span class="legend-dot bg-slate-300"></span>
+                <span class="text-sm font-medium text-slate-500">East · Metro · North · South</span>
+              </div>
+              <div class="flex items-baseline gap-2"><span class="num text-sm font-medium text-slate-500">0</span><span class="text-xs text-slate-400">m³</span></div>
+            </div>
+            <div class="progress-track"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="soft-card ring-soft p-6 lg:col-span-2">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-sm font-semibold text-slate-700">Top Dealers</p>
+          <span class="chip" style="background:#0f172a;color:#fff;font-size:10px">3 ราย</span>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50">
+            <div class="num shrink-0 w-7 h-7 rounded-lg bg-amber-100 text-amber-700 font-bold text-sm flex items-center justify-center">1</div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium truncate">บ.วรวิทย์วัสดุก่อสร้าง</p>
+              <div class="progress-track mt-1.5"><div class="progress-fill" style="width:82%; background:var(--c-west)"></div></div>
+            </div>
+            <div class="text-right shrink-0"><p class="num text-sm font-bold">200</p><p class="text-xs text-slate-400">m³</p></div>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50">
+            <div class="num shrink-0 w-7 h-7 rounded-lg bg-slate-100 text-slate-700 font-bold text-sm flex items-center justify-center">2</div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium truncate">บ.เคแพค อินเตอร์เทรด</p>
+              <div class="progress-track mt-1.5"><div class="progress-fill" style="width:14%; background:var(--c-ne)"></div></div>
+            </div>
+            <div class="text-right shrink-0"><p class="num text-sm font-bold">35</p><p class="text-xs text-slate-400">m³</p></div>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50">
+            <div class="num shrink-0 w-7 h-7 rounded-lg bg-orange-100 text-orange-700 font-bold text-sm flex items-center justify-center">3</div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium truncate">บ.พี.เอ็น.วัสดุก่อสร้าง จก.</p>
+              <div class="progress-track mt-1.5"><div class="progress-fill" style="width:4%; background:var(--c-west)"></div></div>
+            </div>
+            <div class="text-right shrink-0"><p class="num text-sm font-bold">10</p><p class="text-xs text-slate-400">m³</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- VERSION 2: STORY & TREND -->
+  <!-- ============================================ -->
+  <div id="panel-v2" class="version-panel">
+
+    <div class="soft-card ring-soft overflow-hidden mb-4">
+      <div class="p-6 border-b border-slate-100">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p class="text-xs text-slate-500 font-medium tracking-wider uppercase mb-1">ปริมาณการขายแยกตามพื้นที่ของ Dealer</p>
+            <div class="flex items-baseline gap-3">
+              <span class="num text-5xl font-bold">245</span>
+              <span class="text-lg text-slate-500 font-medium">m³</span>
+              <span class="chip" style="background:#fef2f2;color:#dc2626">↓ 30% vs มี.ค.</span>
+            </div>
+            <p class="text-sm text-slate-600 mt-1">กุมภาพันธ์ 2569 · เทียบกับเดือนก่อน 350 m³</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50">← ม.ค.</button>
+            <div class="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-semibold">ก.พ. 2569</div>
+            <button class="px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-600 hover:bg-slate-50">มี.ค. →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <p class="text-sm font-semibold text-slate-700">เส้นแนวโน้มรายภูมิภาค · 4 เดือนล่าสุด</p>
+          <div class="flex items-center gap-2 p-1 bg-slate-100 rounded-full">
+            <span class="pill-tab" style="font-size:11px;padding:5px 12px">ทั้งหมด</span>
+            <span class="pill-tab" style="font-size:11px;padding:5px 12px">ปี</span>
+            <span class="pill-tab active" style="font-size:11px;padding:5px 12px">เดือน</span>
+            <span class="pill-tab" style="font-size:11px;padding:5px 12px">วัน</span>
+          </div>
+        </div>
+        <div style="height:280px"><canvas id="v2-chart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-4 mb-4">
+      <div class="soft-card ring-soft p-5">
+        <p class="text-xs font-semibold text-slate-500 tracking-wider uppercase mb-3">Highlight ของเดือนนี้</p>
+        <div class="space-y-2.5 text-sm">
+          <div class="flex justify-between"><span class="text-slate-600">พื้นที่ที่โตที่สุด (MoM)</span><span class="font-semibold flex items-center gap-1"><span class="legend-dot" style="background:var(--c-west)"></span>West <span class="arrow-up">+175</span></span></div>
+          <div class="flex justify-between"><span class="text-slate-600">พื้นที่ที่ลดลงที่สุด</span><span class="font-semibold flex items-center gap-1"><span class="legend-dot" style="background:var(--c-metro)"></span>Metro <span class="arrow-down">−225</span></span></div>
+          <div class="flex justify-between"><span class="text-slate-600">สัดส่วน West เพิ่มขึ้น</span><span class="font-semibold">14% → 86%</span></div>
+          <div class="flex justify-between"><span class="text-slate-600">จำนวน Dealer ที่ใช้งาน</span><span class="font-semibold">3 ราย</span></div>
+        </div>
+      </div>
+      <div class="soft-card ring-soft p-5">
+        <p class="text-xs font-semibold text-slate-500 tracking-wider uppercase mb-3">คำแนะนำเชิงปฏิบัติ</p>
+        <ul class="space-y-2 text-sm text-slate-700">
+          <li class="flex gap-2"><span class="text-violet-500 shrink-0">•</span>ตรวจสอบเหตุที่ Metro หายไปเดือนนี้ — เคย 250 m³ ใน มี.ค.</li>
+          <li class="flex gap-2"><span class="text-violet-500 shrink-0">•</span>West พึ่งพา 1 dealer ถึง 82% ควรกระจายความเสี่ยง</li>
+          <li class="flex gap-2"><span class="text-violet-500 shrink-0">•</span>Northeast เริ่มเข้ามา 35 m³ — โอกาสขยายต่อ</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="soft-card ring-soft overflow-hidden">
+      <div class="flex items-center justify-between p-5 border-b border-slate-100">
+        <p class="text-sm font-semibold text-slate-700">รายละเอียดทั้งหมด</p>
+        <div class="flex gap-2 text-xs">
+          <button class="px-3 py-1.5 rounded-lg bg-slate-100 font-medium">ภูมิภาค</button>
+          <button class="px-3 py-1.5 rounded-lg text-slate-500 hover:bg-slate-50">Dealer</button>
+          <button class="px-3 py-1.5 rounded-lg text-slate-500 hover:bg-slate-50">Group</button>
+        </div>
+      </div>
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 text-xs text-slate-500 uppercase">
+          <tr>
+            <th class="text-left p-3 px-5 font-semibold">ภูมิภาค</th>
+            <th class="text-right p-3 font-semibold">Volume</th>
+            <th class="text-right p-3 font-semibold">สัดส่วน</th>
+            <th class="text-right p-3 font-semibold">vs เดือนก่อน</th>
+            <th class="text-right p-3 px-5 font-semibold">Dealers</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <tr class="hover:bg-slate-50">
+            <td class="p-3 px-5"><span class="flex items-center gap-2"><span class="legend-dot" style="background:var(--c-west)"></span>CPAC West</span></td>
+            <td class="num p-3 text-right font-semibold">210 m³</td>
+            <td class="num p-3 text-right">86%</td>
+            <td class="num p-3 text-right arrow-up font-semibold">+175</td>
+            <td class="num p-3 px-5 text-right">2</td>
+          </tr>
+          <tr class="hover:bg-slate-50">
+            <td class="p-3 px-5"><span class="flex items-center gap-2"><span class="legend-dot" style="background:var(--c-ne)"></span>CPAC Northeast</span></td>
+            <td class="num p-3 text-right font-semibold">35 m³</td>
+            <td class="num p-3 text-right">14%</td>
+            <td class="num p-3 text-right arrow-up font-semibold">+35</td>
+            <td class="num p-3 px-5 text-right">1</td>
+          </tr>
+          <tr class="hover:bg-slate-50 text-slate-400">
+            <td class="p-3 px-5"><span class="flex items-center gap-2"><span class="legend-dot bg-slate-300"></span>CPAC Metro</span></td>
+            <td class="num p-3 text-right">0 m³</td>
+            <td class="num p-3 text-right">0%</td>
+            <td class="num p-3 text-right arrow-down font-semibold">−225</td>
+            <td class="num p-3 px-5 text-right">0</td>
+          </tr>
+          <tr class="hover:bg-slate-50 text-slate-400">
+            <td class="p-3 px-5"><span class="flex items-center gap-2"><span class="legend-dot bg-slate-300"></span>CPAC East · North · South Chain</span></td>
+            <td class="num p-3 text-right">0 m³</td>
+            <td class="num p-3 text-right">0%</td>
+            <td class="num p-3 text-right">—</td>
+            <td class="num p-3 px-5 text-right">0</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ============================================ -->
+  <!-- VERSION 3: CARD GRID + DONUT -->
+  <!-- ============================================ -->
+  <div id="panel-v3" class="version-panel">
+    <div class="soft-card ring-soft p-6 mb-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-semibold">ปริมาณการขายแยกตามพื้นที่ของ Dealer</h2>
+          <p class="text-sm text-slate-500">การ์ดของแต่ละภูมิภาคแสดงยอด + แนวโน้ม · คลิกเพื่อดู Dealer ด้านในแต่ละพื้นที่</p>
+        </div>
+        <div class="flex items-center gap-2 p-1 bg-slate-100 rounded-full">
+          <span class="pill-tab">ทั้งหมด</span>
+          <span class="pill-tab">ปี</span>
+          <span class="pill-tab active">เดือน</span>
+          <span class="pill-tab">วัน</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+      <div class="soft-card ring-soft p-4 relative overflow-hidden" style="border-color:#8b5cf6;background:linear-gradient(135deg,#faf5ff 0%,#fff 60%);">
+        <div class="absolute top-0 right-0 w-20 h-20 rounded-full opacity-10" style="background:var(--c-west)"></div>
+        <div class="flex items-start justify-between mb-2 relative">
+          <div>
+            <p class="text-xs text-slate-500 font-medium">CPAC West</p>
+            <p class="num text-2xl font-bold mt-1">210 <span class="text-sm font-medium text-slate-500">m³</span></p>
+          </div>
+          <span class="chip" style="background:var(--c-west);color:#fff;font-size:10px">#1</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="arrow-up font-semibold">↑ +175 m³</span>
+          <span class="text-slate-500">86% · 2 dealers</span>
+        </div>
+        <div class="mt-3" style="height:36px"><canvas id="spark-west"></canvas></div>
+      </div>
+      <div class="soft-card ring-soft p-4 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-20 h-20 rounded-full opacity-10" style="background:var(--c-ne)"></div>
+        <div class="flex items-start justify-between mb-2 relative">
+          <div>
+            <p class="text-xs text-slate-500 font-medium">CPAC Northeast</p>
+            <p class="num text-2xl font-bold mt-1">35 <span class="text-sm font-medium text-slate-500">m³</span></p>
+          </div>
+          <span class="chip" style="background:#f1f5f9;color:#475569;font-size:10px">#2</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="arrow-up font-semibold">↑ +35 m³</span>
+          <span class="text-slate-500">14% · 1 dealer</span>
+        </div>
+        <div class="mt-3" style="height:36px"><canvas id="spark-ne"></canvas></div>
+      </div>
+      <div class="soft-card p-4 relative overflow-hidden opacity-70" style="border:1px dashed #cbd5e1">
+        <div class="flex items-start justify-between mb-2">
+          <div>
+            <p class="text-xs text-slate-500 font-medium">CPAC Metro</p>
+            <p class="num text-2xl font-bold mt-1 text-slate-400">0 <span class="text-sm font-medium">m³</span></p>
+          </div>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="arrow-down font-semibold">↓ −225 m³</span>
+          <span class="text-slate-500">เคยอยู่ มี.ค.</span>
+        </div>
+        <div class="mt-3" style="height:36px"><canvas id="spark-metro"></canvas></div>
+      </div>
+      <div class="soft-card p-4 relative overflow-hidden opacity-50" style="border:1px dashed #cbd5e1">
+        <div class="flex items-start justify-between mb-2">
+          <div>
+            <p class="text-xs text-slate-500 font-medium">CPAC East</p>
+            <p class="num text-2xl font-bold mt-1 text-slate-400">0 <span class="text-sm font-medium">m³</span></p>
+          </div>
+        </div>
+        <p class="text-xs text-slate-400">ไม่มียอดเดือนนี้</p>
+      </div>
+      <div class="soft-card p-4 relative overflow-hidden opacity-50" style="border:1px dashed #cbd5e1">
+        <div class="flex items-start justify-between mb-2">
+          <div>
+            <p class="text-xs text-slate-500 font-medium">CPAC North</p>
+            <p class="num text-2xl font-bold mt-1 text-slate-400">0 <span class="text-sm font-medium">m³</span></p>
+          </div>
+        </div>
+        <p class="text-xs text-slate-400">ไม่มียอดเดือนนี้</p>
+      </div>
+      <div class="soft-card p-4 relative overflow-hidden opacity-50" style="border:1px dashed #cbd5e1">
+        <div class="flex items-start justify-between mb-2">
+          <div>
+            <p class="text-xs text-slate-500 font-medium">RMC – South Chain</p>
+            <p class="num text-2xl font-bold mt-1 text-slate-400">0 <span class="text-sm font-medium">m³</span></p>
+          </div>
+        </div>
+        <p class="text-xs text-slate-400">ไม่มียอดเดือนนี้</p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-5 gap-4">
+      <div class="soft-card ring-soft p-6 lg:col-span-2">
+        <p class="text-sm font-semibold mb-4">สัดส่วน · ก.พ. 2569</p>
+        <div style="height:240px"><canvas id="v3-donut"></canvas></div>
+        <div class="grid grid-cols-2 gap-2 mt-4 text-xs">
+          <div class="flex items-center gap-2"><span class="legend-dot" style="background:var(--c-west)"></span>West <span class="num font-semibold ml-auto">86%</span></div>
+          <div class="flex items-center gap-2"><span class="legend-dot" style="background:var(--c-ne)"></span>Northeast <span class="num font-semibold ml-auto">14%</span></div>
+        </div>
+      </div>
+
+      <div class="soft-card ring-soft p-6 lg:col-span-3">
+        <div class="flex items-center justify-between mb-4">
+          <p class="text-sm font-semibold">Dealer Leaderboard</p>
+          <div class="flex gap-2 text-xs">
+            <button class="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-medium">ทั้งหมด</button>
+            <button class="px-3 py-1.5 rounded-lg text-slate-500 hover:bg-slate-50">West</button>
+            <button class="px-3 py-1.5 rounded-lg text-slate-500 hover:bg-slate-50">Northeast</button>
+          </div>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-center gap-4 p-3 rounded-xl border border-slate-100 hover:bg-slate-50">
+            <div class="num shrink-0 w-10 h-10 rounded-xl bg-amber-50 text-amber-600 font-bold text-base flex items-center justify-center">1</div>
+            <div class="flex-1">
+              <div class="flex justify-between items-baseline">
+                <p class="text-sm font-semibold">บ.วรวิทย์วัสดุก่อสร้าง</p>
+                <p class="num text-sm font-bold">200 m³</p>
+              </div>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="chip" style="background:#faf5ff;color:#7c3aed;font-size:10px;padding:1px 6px">CPAC West</span>
+                <span class="text-xs text-slate-400">82% ของยอดทั้งหมด</span>
+              </div>
+              <div class="progress-track mt-2"><div class="progress-fill" style="width:82%; background:var(--c-west)"></div></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-4 p-3 rounded-xl border border-slate-100 hover:bg-slate-50">
+            <div class="num shrink-0 w-10 h-10 rounded-xl bg-slate-100 text-slate-600 font-bold text-base flex items-center justify-center">2</div>
+            <div class="flex-1">
+              <div class="flex justify-between items-baseline">
+                <p class="text-sm font-semibold">บ.เคแพค อินเตอร์เทรด</p>
+                <p class="num text-sm font-bold">35 m³</p>
+              </div>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="chip" style="background:#f0fdfa;color:#0f766e;font-size:10px;padding:1px 6px">CPAC Northeast</span>
+                <span class="text-xs text-slate-400">14% ของยอดทั้งหมด</span>
+              </div>
+              <div class="progress-track mt-2"><div class="progress-fill" style="width:14%; background:var(--c-ne)"></div></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-4 p-3 rounded-xl border border-slate-100 hover:bg-slate-50">
+            <div class="num shrink-0 w-10 h-10 rounded-xl bg-orange-50 text-orange-600 font-bold text-base flex items-center justify-center">3</div>
+            <div class="flex-1">
+              <div class="flex justify-between items-baseline">
+                <p class="text-sm font-semibold">บ.พี.เอ็น.วัสดุก่อสร้าง จก.</p>
+                <p class="num text-sm font-bold">10 m³</p>
+              </div>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="chip" style="background:#faf5ff;color:#7c3aed;font-size:10px;padding:1px 6px">CPAC West</span>
+                <span class="text-xs text-slate-400">4% ของยอดทั้งหมด</span>
+              </div>
+              <div class="progress-track mt-2"><div class="progress-fill" style="width:4%; background:var(--c-west)"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-8 grid lg:grid-cols-3 gap-3 text-xs">
+    <div class="soft-card p-4">
+      <p class="font-semibold mb-1">V1 · Insight-First</p>
+      <p class="text-slate-600 leading-relaxed">KPI การ์ด + AI Insight อยู่บนสุด ผู้บริหารเห็นข้อสรุปก่อน แล้วค่อยลึกลงไป chart</p>
+    </div>
+    <div class="soft-card p-4">
+      <p class="font-semibold mb-1">V2 · Story & Trend</p>
+      <p class="text-slate-600 leading-relaxed">เน้นแนวโน้ม 4 เดือนเป็นเส้น เห็นความเปลี่ยนแปลงเปรียบเทียบกันชัด + ตาราง drill-down</p>
+    </div>
+    <div class="soft-card p-4">
+      <p class="font-semibold mb-1">V3 · Card Grid + Donut</p>
+      <p class="text-slate-600 leading-relaxed">ทุกภูมิภาคแสดงเป็นการ์ดเสมอกัน เห็นทันทีว่าใครว่าง ใครมียอด + Leaderboard</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+document.querySelectorAll('.version-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.version-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.version-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+    setTimeout(renderCharts, 50);
+  });
+});
+
+const months = ['ก.พ. 69','มี.ค. 69','เม.ย. 69','พ.ค. 69'];
+const colors = { east:'#10b981', metro:'#3b82f6', north:'#06b6d4', ne:'#14b8a6', west:'#8b5cf6', south:'#f59e0b' };
+const dataByRegion = {
+  west:   [210, 0,   170, 0],
+  ne:     [35,  250, 0,   60],
+  metro:  [0,   0,   100, 100],
+  north:  [0,   0,   0,   70],
+  east:   [0,   0,   0,   72],
+  south:  [0,   0,   74,  0],
+};
+
+let charts = {};
+function destroy(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function renderV1() {
+  const ctx = document.getElementById('v1-chart'); if (!ctx) return;
+  destroy('v1');
+  charts.v1 = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [
+        { label:'West', data:dataByRegion.west, backgroundColor:colors.west, borderRadius:{topLeft:8,topRight:8}, borderSkipped:false, stack:'a' },
+        { label:'Northeast', data:dataByRegion.ne, backgroundColor:colors.ne, stack:'a' },
+        { label:'Metro', data:dataByRegion.metro, backgroundColor:colors.metro, stack:'a' },
+        { label:'North', data:dataByRegion.north, backgroundColor:colors.north, stack:'a' },
+        { label:'East', data:dataByRegion.east, backgroundColor:colors.east, stack:'a' },
+        { label:'South', data:dataByRegion.south, backgroundColor:colors.south, stack:'a' },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ footer:(items)=>'รวม '+items.reduce((s,i)=>s+i.parsed.y,0)+' m³' }}},
+      scales:{ x:{ grid:{display:false}, border:{display:false}}, y:{ beginAtZero:true, grid:{color:'#eef0f4'}, border:{display:false}, ticks:{callback:v=>v+' m³'}}}
+    }
+  });
+}
+
+function renderV2() {
+  const ctx = document.getElementById('v2-chart'); if (!ctx) return;
+  destroy('v2');
+  charts.v2 = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [
+        { label:'West', data:dataByRegion.west, borderColor:colors.west, backgroundColor:colors.west+'22', tension:.3, pointRadius:4, pointBackgroundColor:'#fff', pointBorderWidth:2, fill:true },
+        { label:'Northeast', data:dataByRegion.ne, borderColor:colors.ne, backgroundColor:colors.ne+'22', tension:.3, pointRadius:4, pointBackgroundColor:'#fff', pointBorderWidth:2 },
+        { label:'Metro', data:dataByRegion.metro, borderColor:colors.metro, backgroundColor:colors.metro+'22', tension:.3, pointRadius:4, pointBackgroundColor:'#fff', pointBorderWidth:2, borderDash:[5,5] },
+        { label:'North', data:dataByRegion.north, borderColor:colors.north, tension:.3, pointRadius:4, pointBackgroundColor:'#fff', pointBorderWidth:2, borderDash:[5,5] },
+        { label:'East', data:dataByRegion.east, borderColor:colors.east, tension:.3, pointRadius:4, pointBackgroundColor:'#fff', pointBorderWidth:2, borderDash:[5,5] },
+        { label:'South', data:dataByRegion.south, borderColor:colors.south, tension:.3, pointRadius:4, pointBackgroundColor:'#fff', pointBorderWidth:2, borderDash:[5,5] },
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'bottom', labels:{boxWidth:8, boxHeight:8, usePointStyle:true, pointStyle:'circle', padding:14, font:{size:11}}}},
+      scales:{ x:{grid:{display:false}, border:{display:false}}, y:{beginAtZero:true, grid:{color:'#eef0f4'}, border:{display:false}, ticks:{callback:v=>v+' m³'}}}
+    }
+  });
+}
+
+function renderSpark(id, data, color) {
+  const ctx = document.getElementById(id); if (!ctx) return;
+  destroy(id);
+  charts[id] = new Chart(ctx, {
+    type:'line',
+    data:{ labels:months, datasets:[{ data, borderColor:color, backgroundColor:color+'33', tension:.35, pointRadius:0, fill:true, borderWidth:2 }]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false},tooltip:{enabled:false}}, scales:{x:{display:false},y:{display:false}}}
+  });
+}
+
+function renderV3() {
+  const ctx = document.getElementById('v3-donut'); if (!ctx) return;
+  destroy('v3-donut');
+  charts['v3-donut'] = new Chart(ctx, {
+    type:'doughnut',
+    data:{ labels:['West','Northeast'], datasets:[{ data:[210,35], backgroundColor:[colors.west, colors.ne], borderWidth:0, hoverOffset:8 }]},
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'72%',
+      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:c=>c.label+': '+c.parsed+' m³'}}}
+    }
+  });
+  renderSpark('spark-west', dataByRegion.west, colors.west);
+  renderSpark('spark-ne', dataByRegion.ne, colors.ne);
+  renderSpark('spark-metro', dataByRegion.metro, '#94a3b8');
+}
+
+function renderCharts() {
+  if (document.getElementById('panel-v1').classList.contains('active')) renderV1();
+  if (document.getElementById('panel-v2').classList.contains('active')) renderV2();
+  if (document.getElementById('panel-v3').classList.contains('active')) renderV3();
+}
+
+setTimeout(renderCharts, 100);
+</script>
+</body>
+</html>

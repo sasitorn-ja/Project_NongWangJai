@@ -13,22 +13,23 @@ type MetricCardProps = {
 };
 
 export function MetricCard({ compact = false, icon, label, value, detail, tone = "teal" }: MetricCardProps) {
+  const neutralIcon = "border border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200";
   const tones = {
     teal: {
       card: "border border-[#e5e7eb] bg-white dark:border-slate-800 dark:bg-slate-950",
-      icon: "border border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+      icon: neutralIcon
     },
     green: {
       card: "border border-[#e5e7eb] bg-white dark:border-slate-800 dark:bg-slate-950",
-      icon: "border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300"
+      icon: neutralIcon
     },
     amber: {
       card: "border border-[#e5e7eb] bg-white dark:border-slate-800 dark:bg-slate-950",
-      icon: "border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300"
+      icon: neutralIcon
     },
     rose: {
       card: "border border-[#e5e7eb] bg-white dark:border-slate-800 dark:bg-slate-950",
-      icon: "border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-300"
+      icon: neutralIcon
     }
   };
   const toneClass = tones[tone];

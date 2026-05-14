@@ -320,8 +320,8 @@ export function TopProductsPage({
                   className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-semibold shadow-sm transition-all duration-150",
                     topN === value
-                      ? "border-[#0f766e] bg-[#0f766e] text-white shadow-[0_10px_24px_rgba(15,118,110,0.22)]"
-                      : "border-transparent bg-white text-slate-700 hover:-translate-y-0.5 hover:border-[#c8d7db] hover:bg-[#fdfefe]"
+                      ? "border-slate-950 bg-slate-950 text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)]"
+                      : "border-transparent bg-white text-slate-700 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
                   )}
                   onClick={() => setTopN(value)}
                 >
@@ -335,7 +335,7 @@ export function TopProductsPage({
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard compact icon={<PackageCheck size={16} />} label="Products" value={formatNumber(totalProducts)} detail="จำนวนสินค้าที่อยู่ในผลลัพธ์ปัจจุบัน" />
-        <MetricCard compact icon={<Database size={16} />} label="Orders" value={formatNumber(totalOrders)} detail="จำนวน orders ที่ใช้คำนวณสินค้าขายดี" tone="rose" />
+        <MetricCard compact icon={<Database size={16} />} label="Order Count" value={formatNumber(totalOrders)} detail="จำนวนรายการ order ที่ใช้คำนวณสินค้าขายดี" tone="rose" />
         <MetricCard compact icon={<TrendingUp size={16} />} label="Delivered Qty" value={compactNumber(totalVolume)} detail="ยอดส่งจริงรวมของสินค้าที่ถูกกรอง" tone="green" />
         <MetricCard compact icon={<Users size={16} />} label="Best Seller" value={bestseller?.productCode ?? "-"} detail={bestseller?.productName ?? "ยังไม่มีข้อมูลสินค้า"} tone="amber" />
       </section>

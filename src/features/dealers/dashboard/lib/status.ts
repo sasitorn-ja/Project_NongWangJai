@@ -20,6 +20,15 @@ export function statusText(value: unknown) {
   return key.charAt(0).toUpperCase() + key.slice(1);
 }
 
+export function getOrderStatusKey(value?: string | null): "cancelled" | "confirmed" | "pending" | "other" {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized) return "other";
+  if (normalized.includes("cancel") || normalized.includes("ยกเลิก")) return "cancelled";
+  if (normalized.includes("confirm") || normalized.includes("approved") || normalized.includes("ยืนยัน")) return "confirmed";
+  if (normalized.includes("pending") || normalized.includes("wait") || normalized.includes("รอ")) return "pending";
+  return "other";
+}
+
 export function orderStatusText(value?: string | null) {
   if (!value) return "-";
   return value

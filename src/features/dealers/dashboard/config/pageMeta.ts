@@ -33,5 +33,5 @@ export function getPageSubtitle(page: PageKey) {
   if (page === "customerInsights") {
     return "Top dealer และ site summary จากข้อมูล orders ที่มีอยู่จริง";
   }
-  return "รายการ order จากเส้น API จริง";
+  return "รายการ order";
 }

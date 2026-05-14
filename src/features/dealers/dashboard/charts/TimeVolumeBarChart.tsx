@@ -24,15 +24,15 @@ type TimeBucket = {
 };
 
 const REGION_COLORS: Record<string, string> = {
-  "CPAC Metro": "#2563eb",
+  "CPAC Metro": "#3b82f6",
   "CPAC Northeast": "#14b8a6",
-  "CPAC West": "#6366f1",
-  "CPAC North": "#f59e0b",
-  "RMC - South Chain": "#f97316",
-  "CPAC East": "#0f766e"
+  "CPAC West": "#8b5cf6",
+  "CPAC North": "#06b6d4",
+  "RMC - South Chain": "#f59e0b",
+  "CPAC East": "#10b981"
 };
 
-const FALLBACK_COLORS = ["#2563eb", "#14b8a6", "#6366f1", "#f59e0b", "#f97316", "#0f766e", "#e11d48", "#7c3aed"];
+const FALLBACK_COLORS = ["#3b82f6", "#14b8a6", "#8b5cf6", "#06b6d4", "#f59e0b", "#10b981", "#e11d48", "#7c3aed"];
 
 function getRegionColor(region: string, allRegions: string[]) {
   return REGION_COLORS[region] ?? FALLBACK_COLORS[allRegions.indexOf(region) % FALLBACK_COLORS.length];
@@ -152,58 +152,238 @@ function EmptyState() {
   );
 }
 
-function StatChip({ label, value }: { label: string; value: string }) {
+function StatChip({ label, value, tone }: { label: string; value: string; tone?: "default" | "accent" }) {
   return (
-    <div className="flex items-center gap-2 rounded-full border border-[#e5e7eb] bg-white px-3 py-1.5 dark:border-slate-700 dark:bg-slate-900">
-      <span className="text-[11px] font-semibold text-slate-400">{label}</span>
-      <span className="text-sm font-bold text-slate-900 dark:text-slate-100">{value}</span>
+    <div
+      className={cn(
+        "flex items-center gap-2 rounded-full border px-3 py-1.5",
+        tone === "accent"
+          ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/40"
+          : "border-[#e5e7eb] bg-white dark:border-slate-700 dark:bg-slate-900"
+      )}
+    >
+      <span className={cn("text-[11px] font-semibold", tone === "accent" ? "text-emerald-600" : "text-slate-400")}>{label}</span>
+      <span className={cn("text-sm font-bold", tone === "accent" ? "text-emerald-700" : "text-slate-900 dark:text-slate-100")}>
+        {value}
+      </span>
     </div>
   );
 }
 
-function RegionRow({
-  color,
-  gap,
-  index,
-  max,
-  name,
-  share,
-  unit,
-  value
-}: {
-  color: string;
-  gap?: number;
-  index: number;
-  max: number;
-  name: string;
-  share: number;
-  unit: string;
-  value: number;
-}) {
+// Sparkline – plain SVG, no deps
+function Sparkline({ values, color, height = 28 }: { values: number[]; color: string; height?: number }) {
+  if (!values.length) return null;
+  const max = Math.max(...values, 1);
+  const min = 0;
+  const w = 100;
+  const h = height;
+  const stepX = values.length > 1 ? w / (values.length - 1) : 0;
+  const pts = values.map((v, i) => {
+    const y = h - ((v - min) / (max - min || 1)) * (h - 4) - 2;
+    return `${i * stepX},${y}`;
+  });
+  const lastX = (values.length - 1) * stepX;
+  const lastY = h - ((values[values.length - 1] - min) / (max - min || 1)) * (h - 4) - 2;
+  const areaPath = `M0,${h} L${pts.join(" L")} L${lastX},${h} Z`;
+
   return (
-    <div className="group grid grid-cols-[22px_minmax(0,1fr)_90px] items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/60">
-      <span className="text-[11px] font-bold text-slate-400">{index + 1}</span>
-      <div className="min-w-0 space-y-1">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-          <span className="truncate text-xs font-semibold text-slate-700 dark:text-slate-300" title={name}>{name}</span>
-          {gap !== undefined && gap > 0 && index === 0 && (
-            <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
-              +{compactNumber(gap)}
-            </span>
+    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-full w-full">
+      <defs>
+        <linearGradient id={`spark-${color.replace("#", "")}`} x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={areaPath} fill={`url(#spark-${color.replace("#", "")})`} />
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={pts.join(" ")}
+        vectorEffect="non-scaling-stroke"
+      />
+      {/* Final dot */}
+      <circle cx={lastX} cy={lastY} r="1.6" fill={color} />
+    </svg>
+  );
+}
+
+// Donut – inline SVG with segments + hover state
+function Donut({
+  segments,
+  size = 180,
+  hoveredIdx,
+  onHover
+}: {
+  segments: { color: string; value: number; label: string }[];
+  size?: number;
+  hoveredIdx: number | null;
+  onHover: (idx: number | null) => void;
+}) {
+  const total = segments.reduce((s, x) => s + x.value, 0) || 1;
+  const radius = size / 2;
+  const innerR = radius * 0.72;
+  const cx = radius;
+  const cy = radius;
+
+  const segmentRanges = segments.reduce<{ start: number; end: number }[]>((arr, seg) => {
+    const prev = arr.length ? arr[arr.length - 1].end : 0;
+    arr.push({ start: prev, end: prev + seg.value });
+    return arr;
+  }, []);
+
+  const paths = segments.map((seg, idx) => {
+    const { start: startVal, end: endVal } = segmentRanges[idx];
+    const start = (startVal / total) * Math.PI * 2 - Math.PI / 2;
+    const end = (endVal / total) * Math.PI * 2 - Math.PI / 2;
+    const x1 = cx + radius * Math.cos(start);
+    const y1 = cy + radius * Math.sin(start);
+    const x2 = cx + radius * Math.cos(end);
+    const y2 = cy + radius * Math.sin(end);
+    const x3 = cx + innerR * Math.cos(end);
+    const y3 = cy + innerR * Math.sin(end);
+    const x4 = cx + innerR * Math.cos(start);
+    const y4 = cy + innerR * Math.sin(start);
+    const large = end - start > Math.PI ? 1 : 0;
+    const isHovered = hoveredIdx === idx;
+    const isDimmed = hoveredIdx !== null && !isHovered;
+    const commonProps = {
+      style: {
+        transition: "opacity .15s, transform .15s",
+        opacity: isDimmed ? 0.35 : 1,
+        cursor: "pointer",
+        transformOrigin: `${cx}px ${cy}px`,
+        transform: isHovered ? "scale(1.03)" : "scale(1)"
+      } as React.CSSProperties,
+      onMouseEnter: () => onHover(idx),
+      onMouseLeave: () => onHover(null)
+    };
+
+    // single-segment full circle fallback
+    if (segments.length === 1 || seg.value === total) {
+      return (
+        <g key={idx} {...commonProps}>
+          <circle cx={cx} cy={cy} r={(radius + innerR) / 2} fill="none" stroke={seg.color} strokeWidth={radius - innerR} />
+        </g>
+      );
+    }
+    const d = [
+      `M ${x1} ${y1}`,
+      `A ${radius} ${radius} 0 ${large} 1 ${x2} ${y2}`,
+      `L ${x3} ${y3}`,
+      `A ${innerR} ${innerR} 0 ${large} 0 ${x4} ${y4}`,
+      "Z"
+    ].join(" ");
+    return (
+      <path key={idx} d={d} fill={seg.color} {...commonProps}>
+        <title>{`${seg.label}: ${compactNumber(seg.value)} (${Math.round((seg.value / total) * 100)}%)`}</title>
+      </path>
+    );
+  });
+
+  return (
+    <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
+      {paths}
+    </svg>
+  );
+}
+
+function RegionCard({
+  active,
+  color,
+  current,
+  dealerCount,
+  delta,
+  isLeader,
+  name,
+  rank,
+  share,
+  trend,
+  unit
+}: {
+  active: boolean;
+  color: string;
+  current: number;
+  dealerCount: number;
+  delta: number | null;
+  isLeader: boolean;
+  name: string;
+  rank: number;
+  share: number;
+  trend: number[];
+  unit: string;
+}) {
+  if (!active) {
+    return (
+      <div className="relative overflow-hidden rounded-2xl border border-dashed border-[#d9e3e6] bg-[#fbfcfd] p-3 opacity-60 dark:border-slate-800 dark:bg-slate-950/40">
+        <div className="flex items-start justify-between">
+          <div className="min-w-0">
+            <p className="truncate text-[11px] font-semibold text-slate-400" title={name}>{name}</p>
+            <p className="mt-1 text-xl font-bold text-slate-400">
+              0 <span className="text-xs font-semibold">{unit}</span>
+            </p>
+          </div>
+        </div>
+        <p className="mt-2 text-[10px] font-medium text-slate-400">ไม่มียอดในช่วงนี้</p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-2xl border bg-white p-3 transition-shadow hover:shadow-md dark:bg-slate-950",
+        isLeader ? "border-transparent ring-1" : "border-[#e5e7eb] dark:border-slate-800"
+      )}
+      style={isLeader ? { boxShadow: `inset 0 0 0 1.5px ${color}55`, background: `linear-gradient(135deg, ${color}10 0%, #ffffff 60%)` } : undefined}
+    >
+      {/* Subtle bg orb */}
+      <div
+        className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full opacity-10"
+        style={{ backgroundColor: color }}
+      />
+      <div className="relative flex items-start justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+            <p className="truncate text-[11px] font-semibold text-slate-500" title={name}>{name}</p>
+          </div>
+          <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
+            {compactNumber(current)}
+            <span className="ml-1 text-xs font-semibold text-slate-400">{unit}</span>
+          </p>
+        </div>
+        <span
+          className={cn(
+            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
+            isLeader ? "text-white" : "bg-slate-100 text-slate-500 dark:bg-slate-800"
           )}
-        </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-          <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{ backgroundColor: color, width: `${Math.max((value / max) * 100, 2)}%` }}
-          />
-        </div>
+          style={isLeader ? { backgroundColor: color } : undefined}
+        >
+          #{rank}
+        </span>
       </div>
-      <div className="text-right">
-        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{compactNumber(value)} {unit}</span>
-        <span className="ml-1 text-[10px] font-semibold text-slate-400">({Math.round(share)}%)</span>
+
+      <div className="relative mt-2 flex items-center justify-between text-[10px] font-semibold">
+        {delta !== null && delta !== 0 ? (
+          <span className={delta > 0 ? "text-emerald-600" : "text-rose-600"}>
+            {delta > 0 ? "↑" : "↓"} {compactNumber(Math.abs(delta))} {unit}
+          </span>
+        ) : (
+          <span className="text-slate-400">—</span>
+        )}
+        <span className="text-slate-400">
+          {Math.round(share)}% · {dealerCount} dealer{dealerCount === 1 ? "" : "s"}
+        </span>
       </div>
+
+      {trend.length > 1 && (
+        <div className="relative mt-2 h-7">
+          <Sparkline values={trend} color={color} height={28} />
+        </div>
+      )}
     </div>
   );
 }
@@ -212,18 +392,36 @@ function RegionRow({
 export function TimeVolumeBarChart({ dealers, range, unit = "m3" }: { dealers: Dealer[]; range: ChartRange; unit?: string }) {
   const buckets = useMemo(() => buildBuckets(dealers, range), [dealers, range]);
   const [activeKey, setActiveKey] = useState("");
+  const [dealerRegionFilter, setDealerRegionFilter] = useState<string>("");
+  const [hoveredDonutIdx, setHoveredDonutIdx] = useState<number | null>(null);
+  const [showAllDealers, setShowAllDealers] = useState(false);
 
   const defaultBucket = range === "all"
     ? buckets.find((b) => b.value > 0) ?? buckets[0]
     : [...buckets].reverse().find((b) => b.value > 0) ?? buckets[buckets.length - 1];
 
   const activeBucket = buckets.find((b) => b.key === activeKey) ?? defaultBucket;
+  const activeIndex = activeBucket ? buckets.findIndex((b) => b.key === activeBucket.key) : -1;
+  const prevBucket = activeIndex > 0 ? buckets[activeIndex - 1] : undefined;
 
   const regions = useMemo(
     () => [...new Set(dealers.map((d) => d.region).filter(Boolean))].sort((a, b) => a.localeCompare(b, "th")),
     [dealers]
   );
 
+  // Per-region trend across all buckets
+  const regionTrends = useMemo(() => {
+    const map = new Map<string, number[]>();
+    regions.forEach((region) => {
+      map.set(
+        region,
+        buckets.map((b) => b.regions.find((r) => r.name === region)?.value ?? 0)
+      );
+    });
+    return map;
+  }, [buckets, regions]);
+
+  // Active comparison set (per current view)
   const comparisonRegions: RegionSlice[] = range === "all"
     ? buckets.filter((b) => b.value > 0).map((b) => ({
         color: b.regions[0]?.color ?? getRegionColor(b.label, buckets.map((x) => x.label)),
@@ -233,7 +431,6 @@ export function TimeVolumeBarChart({ dealers, range, unit = "m3" }: { dealers: D
     : activeBucket?.regions ?? [];
 
   const comparisonTotal = comparisonRegions.reduce((s, r) => s + r.value, 0);
-  const regionMax = Math.max(...comparisonRegions.map((r) => r.value), 1);
   const maxValue = Math.max(...buckets.map((b) => b.value), 1);
   const CHART_H = 200;
   const TICK_COUNT = 4;
@@ -250,7 +447,49 @@ export function TimeVolumeBarChart({ dealers, range, unit = "m3" }: { dealers: D
 
   if (!buckets.length) return <EmptyState />;
 
-  const gap = comparisonRegions.length >= 2 ? comparisonRegions[0].value - comparisonRegions[1].value : undefined;
+  const regionRanks = new Map(
+    regions
+      .map((region) => ({
+        name: region,
+        value: activeBucket?.regions.find((r) => r.name === region)?.value ?? 0
+      }))
+      .filter((region) => region.value > 0)
+      .sort((a, b) => b.value - a.value)
+      .map((region, index) => [region.name, index + 1])
+  );
+
+  // Region cards: keep legend order stable so hover/period changes do not move cards.
+  const regionCards = regions
+    .map((region) => {
+      const current = activeBucket?.regions.find((r) => r.name === region)?.value ?? 0;
+      const previous = prevBucket?.regions.find((r) => r.name === region)?.value ?? 0;
+      const dealerCount = activeBucket?.dealerList.filter((d) => d.region === region).length ?? 0;
+      const share = comparisonTotal > 0 ? (current / comparisonTotal) * 100 : 0;
+      return {
+        active: current > 0,
+        color: getRegionColor(region, regions),
+        current,
+        dealerCount,
+        delta: prevBucket ? current - previous : null,
+        name: region,
+        rank: regionRanks.get(region) ?? 0,
+        share,
+        trend: regionTrends.get(region) ?? []
+      };
+    });
+
+  const leaderName = regionCards.find((c) => c.rank === 1)?.name;
+
+  // Donut segments (active regions in current bucket)
+  const donutSegments = comparisonRegions.map((r) => ({ color: r.color, label: r.name, value: r.value }));
+
+  // Filtered dealers for leaderboard
+  const filteredDealers = dealerRegionFilter
+    ? (activeBucket?.dealerList.filter((d) => d.region === dealerRegionFilter) ?? [])
+    : (activeBucket?.dealerList ?? []);
+  const dealerLeaderboardMax = filteredDealers[0]?.volume ?? 1;
+
+  const dealerFilterRegions = regionCards.filter((c) => c.active).map((c) => c.name);
 
   return (
     <div className="space-y-4">
@@ -264,10 +503,9 @@ export function TimeVolumeBarChart({ dealers, range, unit = "m3" }: { dealers: D
         ))}
       </div>
 
-      {/* Bar chart */}
+      {/* Bar chart (period navigator) */}
       <div className="overflow-x-auto rounded-2xl border border-[#e5e7eb] bg-[#fbfcfd] p-4 dark:border-slate-800 dark:bg-slate-950/60">
         <div className="grid min-w-[640px] grid-cols-[48px_minmax(0,1fr)] gap-2">
-          {/* Y-axis */}
           <div className="relative" style={{ height: CHART_H }}>
             {ticks.map((tick, i) => (
               <div
@@ -280,7 +518,6 @@ export function TimeVolumeBarChart({ dealers, range, unit = "m3" }: { dealers: D
             ))}
           </div>
 
-          {/* Bars */}
           <div className="relative" style={{ height: CHART_H }}>
             {ticks.map((_, i) => (
               <div
@@ -306,18 +543,16 @@ export function TimeVolumeBarChart({ dealers, range, unit = "m3" }: { dealers: D
                     onClick={() => setActiveKey(bucket.key)}
                     onMouseEnter={() => setActiveKey(bucket.key)}
                   >
-                    {/* Hover bg */}
-                    <div className={cn(
-                      "absolute inset-x-0 bottom-0 rounded-xl transition-colors",
-                      isActive ? "bg-slate-100/80 dark:bg-slate-800/60" : "bg-transparent group-hover:bg-slate-50 dark:group-hover:bg-slate-900/40"
-                    )} style={{ top: "-4px" }} />
-
-                    {/* Value label */}
+                    <div
+                      className={cn(
+                        "absolute inset-x-0 bottom-0 rounded-xl transition-colors",
+                        isActive ? "bg-slate-100/80 dark:bg-slate-800/60" : "bg-transparent group-hover:bg-slate-50 dark:group-hover:bg-slate-900/40"
+                      )}
+                      style={{ top: "-4px" }}
+                    />
                     <div className="relative mb-1 text-center text-[10px] font-bold leading-none text-slate-600 dark:text-slate-300">
                       {bucket.value > 0 ? compactNumber(bucket.value) : ""}
                     </div>
-
-                    {/* Stacked bar */}
                     <div
                       className={cn(
                         "relative flex w-full flex-col-reverse overflow-hidden rounded-t-lg transition-all",
@@ -345,8 +580,7 @@ export function TimeVolumeBarChart({ dealers, range, unit = "m3" }: { dealers: D
             </div>
           </div>
 
-          {/* X-axis labels */}
-          <div /> {/* spacer */}
+          <div />
           <div
             className="grid gap-1.5 px-1 pt-2"
             style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(32px, 1fr))` }}
@@ -364,11 +598,11 @@ export function TimeVolumeBarChart({ dealers, range, unit = "m3" }: { dealers: D
         </div>
       </div>
 
-      {/* Detail panel */}
+      {/* ─── V3 Detail Panel ──────────────────────────────────────────────── */}
       {activeBucket && (
-        <div className="rounded-2xl border border-[#e5e7eb] bg-white dark:border-slate-800 dark:bg-slate-950">
-          {/* Header strip */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#f0f2f4] px-4 py-3 dark:border-slate-800">
+        <>
+          {/* Period header strip */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
             <div>
               <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                 {range === "all" ? "ภูมิภาค" : "ช่วงที่เลือก"}
@@ -379,94 +613,234 @@ export function TimeVolumeBarChart({ dealers, range, unit = "m3" }: { dealers: D
               <StatChip label="Volume" value={`${compactNumber(activeBucket.value)} ${unit}`} />
               <StatChip label="Dealers" value={formatNumber(activeBucket.dealers)} />
               <StatChip label="Groups" value={formatNumber(activeBucket.groups)} />
-              {gap !== undefined && comparisonRegions.length >= 2 && (
-                <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 dark:bg-emerald-950/40">
-                  <span className="text-[11px] font-semibold text-emerald-600">อันดับ 1 นำห่าง</span>
-                  <span className="text-sm font-bold text-emerald-700">+{compactNumber(gap)} {unit}</span>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Body: region breakdown + top dealers */}
-          <div className="grid divide-y divide-[#f0f2f4] dark:divide-slate-800 lg:grid-cols-[minmax(0,1fr)_280px] lg:divide-x lg:divide-y-0">
-            {/* Region breakdown */}
-            <div className="p-3">
-              <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                {range === "all" ? "ภูมิภาคทั้งหมด" : "แยกตามภูมิภาค"}
-              </p>
-              {comparisonRegions.length > 0 ? (
-                <div className="grid gap-0.5 sm:grid-cols-2">
-                  {comparisonRegions.map((region, i) => (
-                    <RegionRow
-                      key={region.name}
-                      color={region.color}
-                      gap={i === 0 ? gap : undefined}
-                      index={i}
-                      max={regionMax}
-                      name={region.name}
-                      share={comparisonTotal > 0 ? (region.value / comparisonTotal) * 100 : 0}
-                      unit={unit}
-                      value={region.value}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="py-4 text-center text-sm font-medium text-slate-400">ช่วงนี้ยังไม่มี volume จากภูมิภาคใด</p>
-              )}
+          {/* Region cards grid (one card per region) */}
+          {regions.length > 0 && (
+            <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6">
+              {regionCards.map((card) => (
+                <RegionCard
+                  key={card.name}
+                  active={card.active}
+                  color={card.color}
+                  current={card.current}
+                  dealerCount={card.dealerCount}
+                  delta={card.delta}
+                  isLeader={card.name === leaderName}
+                  name={card.name}
+                  rank={card.rank}
+                  share={card.share}
+                  trend={card.trend}
+                  unit={unit}
+                />
+              ))}
             </div>
+          )}
 
-            {/* Top dealers */}
-            <div className="p-3">
-              <p className="mb-1 px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                Top Dealers
-                <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 dark:bg-slate-800">
-                  {activeBucket.dealerList.length}
+          {/* Donut + Leaderboard split */}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
+            {/* Donut */}
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 dark:border-slate-800 dark:bg-slate-950 lg:col-span-2">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  สัดส่วน · {activeBucket.periodLabel}
+                </p>
+                <span className="text-[10px] font-semibold text-slate-400">
+                  {comparisonRegions.length} {range === "all" ? "ภูมิภาค" : "พื้นที่"}
                 </span>
-              </p>
-              {activeBucket.dealerList.length > 0 ? (
-                <div className="space-y-0.5">
-                  {activeBucket.dealerList.slice(0, 6).map((dealer, i) => {
-                    const color = getRegionColor(dealer.region, regions);
-                    const share = activeBucket.value > 0 ? (dealer.volume / activeBucket.value) * 100 : 0;
-                    return (
-                      <div
-                        key={dealer.dealerId}
-                        className="grid grid-cols-[18px_minmax(0,1fr)_64px] items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                      >
-                        <span className="text-[10px] font-bold text-slate-400">{i + 1}</span>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-                            <span className="truncate text-xs font-semibold text-slate-700 dark:text-slate-300" title={dealer.name}>
-                              {dealer.name}
+              </div>
+
+              {donutSegments.length > 0 ? (
+                <>
+                  <div className="relative mx-auto" style={{ maxWidth: 200 }}>
+                    <Donut
+                      segments={donutSegments}
+                      size={180}
+                      hoveredIdx={hoveredDonutIdx}
+                      onHover={setHoveredDonutIdx}
+                    />
+                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
+                      {hoveredDonutIdx !== null && donutSegments[hoveredDonutIdx] ? (
+                        <>
+                          <div className="flex items-center gap-1">
+                            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: donutSegments[hoveredDonutIdx].color }} />
+                            <span className="max-w-[120px] truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                              {donutSegments[hoveredDonutIdx].label}
                             </span>
                           </div>
-                          <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{ backgroundColor: color, width: `${Math.max(share, 2)}%` }}
-                            />
-                          </div>
+                          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                            {compactNumber(donutSegments[hoveredDonutIdx].value)}
+                          </span>
+                          <span className="text-[11px] font-bold" style={{ color: donutSegments[hoveredDonutIdx].color }}>
+                            {Math.round((donutSegments[hoveredDonutIdx].value / comparisonTotal) * 100)}%
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Total</span>
+                          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                            {compactNumber(comparisonTotal)}
+                          </span>
+                          <span className="text-[10px] font-semibold text-slate-400">{unit}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
+                    {donutSegments.map((seg) => {
+                      const pct = comparisonTotal > 0 ? (seg.value / comparisonTotal) * 100 : 0;
+                      return (
+                        <div key={seg.label} className="flex items-center gap-1.5 text-[11px]">
+                          <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: seg.color }} />
+                          <span className="min-w-0 flex-1 truncate font-semibold text-slate-600 dark:text-slate-300" title={seg.label}>
+                            {seg.label}
+                          </span>
+                          <span className="shrink-0 font-bold text-slate-800 dark:text-slate-200">{Math.round(pct)}%</span>
                         </div>
-                        <div className="text-right text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                          {compactNumber(dealer.volume)} {unit}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {activeBucket.dealerList.length > 6 && (
-                    <p className="px-2 pt-1 text-[10px] font-semibold text-slate-400">
-                      +{activeBucket.dealerList.length - 6} dealers อื่นๆ
-                    </p>
-                  )}
-                </div>
+                      );
+                    })}
+                  </div>
+                </>
               ) : (
-                <p className="py-4 text-center text-xs font-medium text-slate-400">ไม่มี dealer ในช่วงนี้</p>
+                <p className="py-10 text-center text-xs font-medium text-slate-400">ไม่มีข้อมูลในช่วงนี้</p>
               )}
             </div>
+
+            {/* Leaderboard */}
+            <div className="rounded-2xl border border-[#e5e7eb] bg-white dark:border-slate-800 dark:bg-slate-950 lg:col-span-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0f2f4] px-4 py-3 dark:border-slate-800">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  Dealer Leaderboard
+                  <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 dark:bg-slate-800">
+                    {filteredDealers.length}
+                  </span>
+                </p>
+                {dealerFilterRegions.length > 1 && (
+                  <div className="flex flex-wrap items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setDealerRegionFilter("")}
+                      className={cn(
+                        "rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors",
+                        dealerRegionFilter === ""
+                          ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                          : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      )}
+                    >
+                      ทั้งหมด
+                    </button>
+                    {dealerFilterRegions.map((region) => {
+                      const c = getRegionColor(region, regions);
+                      const isActive = dealerRegionFilter === region;
+                      return (
+                        <button
+                          key={region}
+                          type="button"
+                          onClick={() => { setDealerRegionFilter(region); setShowAllDealers(false); }}
+                          className={cn(
+                            "flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors",
+                            isActive ? "text-white" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          )}
+                          style={isActive ? { backgroundColor: c } : undefined}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: isActive ? "#fff" : c }} />
+                          {region}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+              <div className="p-2">
+                {filteredDealers.length > 0 ? (
+                  <div
+                    className={cn(
+                      "space-y-0.5",
+                      showAllDealers && filteredDealers.length > 6 && "max-h-[340px] overflow-y-auto pr-1"
+                    )}
+                  >
+                    {(showAllDealers ? filteredDealers : filteredDealers.slice(0, 6)).map((dealer, i) => {
+                      const color = getRegionColor(dealer.region, regions);
+                      const share = activeBucket.value > 0 ? (dealer.volume / activeBucket.value) * 100 : 0;
+                      const barShare = dealerLeaderboardMax > 0 ? (dealer.volume / dealerLeaderboardMax) * 100 : 0;
+                      return (
+                        <div
+                          key={dealer.dealerId}
+                          className="grid grid-cols-[32px_minmax(0,1fr)_72px] items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
+                        >
+                          <span
+                            className={cn(
+                              "flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold",
+                              i === 0
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                                : i === 1
+                                  ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                  : i === 2
+                                    ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+                                    : "bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400"
+                            )}
+                          >
+                            {i + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <span className="truncate text-xs font-semibold text-slate-800 dark:text-slate-200" title={dealer.name}>
+                                {dealer.name}
+                              </span>
+                            </div>
+                            <div className="mt-0.5 flex items-center gap-2 text-[10px] font-semibold text-slate-400">
+                              <span
+                                className="rounded-full px-1.5 py-0.5"
+                                style={{ backgroundColor: `${color}15`, color }}
+                              >
+                                {dealer.region}
+                              </span>
+                              <span>{Math.round(share)}% ของยอด</span>
+                            </div>
+                            <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{ backgroundColor: color, width: `${Math.max(barShare, 2)}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                              {compactNumber(dealer.volume)}
+                            </p>
+                            <p className="text-[10px] font-semibold text-slate-400">{unit}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="py-8 text-center text-xs font-medium text-slate-400">ไม่มี dealer ในช่วงนี้</p>
+                )}
+                {filteredDealers.length > 6 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllDealers((v) => !v)}
+                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#d9e3e6] py-2 text-[11px] font-semibold text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900/40"
+                  >
+                    {showAllDealers ? (
+                      <>
+                        <span>ย่อกลับ (แสดง 6 อันดับแรก)</span>
+                        <span className="text-xs">▴</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>ดูทั้งหมด · +{filteredDealers.length - 6} dealers อื่นๆ</span>
+                        <span className="text-xs">▾</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

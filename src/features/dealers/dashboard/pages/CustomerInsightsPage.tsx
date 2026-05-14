@@ -200,7 +200,7 @@ export function CustomerInsightsPage({
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={<Users size={18} />} label="Customers" value={formatNumber(totalCustomers)} detail={currentDealer?.dealer_name ?? "จำนวนลูกค้าในข้อมูล orders ที่กรองอยู่"} />
         <MetricCard icon={<Database size={18} />} label="Sites" value={formatNumber(totalSites)} detail="นับจาก site code/site id ที่ไม่ซ้ำ" tone="rose" />
-        <MetricCard icon={<TrendingUp size={18} />} label="Ordered Qty" value={compactNumber(totalOrdered)} detail="ยอดสั่งรวมจาก orders ที่กรองอยู่" tone="amber" />
+        <MetricCard icon={<TrendingUp size={18} />} label="Ordered Volume" value={compactNumber(totalOrdered)} detail="ปริมาณที่สั่งรวมจาก orders ที่กรองอยู่" tone="amber" />
         <MetricCard icon={<PackageCheck size={18} />} label="Delivered Qty" value={compactNumber(totalDelivered)} detail="ยอดส่งจริงรวมจาก orders ที่กรองอยู่" tone="green" />
       </section>
 

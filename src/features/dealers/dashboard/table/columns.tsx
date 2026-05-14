@@ -36,10 +36,10 @@ export function statusColumn<T extends { status?: unknown }>(): DataColumn<T> {
     render: (value) => (
       <span
         className={cn(
-          "inline-flex rounded-md px-2.5 py-0.5 text-xs font-semibold",
-          getDealerStatusKey(value) === "active" && "bg-emerald-100 text-emerald-700",
-          getDealerStatusKey(value) === "idle" && "bg-amber-100 text-amber-700",
-          getDealerStatusKey(value) === "new" && "bg-sky-100 text-sky-700"
+          "inline-flex rounded-md px-2.5 py-0.5 text-xs font-semibold ring-1",
+          getDealerStatusKey(value) === "active" && "bg-emerald-50 text-emerald-700 ring-emerald-200",
+          getDealerStatusKey(value) === "idle" && "bg-amber-50 text-amber-700 ring-amber-200",
+          getDealerStatusKey(value) === "new" && "bg-sky-50 text-sky-700 ring-sky-200"
         )}
       >
         {statusText(value)}

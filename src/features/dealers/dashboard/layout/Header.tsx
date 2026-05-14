@@ -34,7 +34,7 @@ export function Header({
           <div className="flex items-center gap-2 md:hidden">
             <button
               aria-label="Open menu"
-              className="flex h-10 w-10 items-center justify-center rounded-md border border-[#d5e0e3] bg-white text-slate-700 shadow-sm hover:bg-[#f2f6f7] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="flex h-10 w-10 items-center justify-center rounded-md border border-[#d5e0e3] bg-white text-slate-700 shadow-sm outline-none hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
               onClick={onOpenMobileNav}
               type="button"
             >
@@ -42,7 +42,7 @@ export function Header({
             </button>
           </div>
           <button
-            className="hidden h-9 w-9 items-center justify-center rounded-md border border-[#d5e0e3] bg-white text-slate-700 shadow-sm hover:bg-[#f2f6f7] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 md:flex"
+            className="hidden h-9 w-9 items-center justify-center rounded-md border border-[#d5e0e3] bg-white text-slate-700 shadow-sm outline-none hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 md:flex"
             onClick={onToggleCollapsed}
             title={collapsed ? "ขยายเมนู" : "ย่อเมนู"}
             type="button"
@@ -57,7 +57,7 @@ export function Header({
 
         <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-end">
           <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-            <span className="inline-flex h-10 items-center rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-black uppercase tracking-[0.2em] text-red-600 shadow-sm">
+            <span className="inline-flex h-10 items-center rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs font-black uppercase tracking-[0.2em] text-slate-700 shadow-sm">
               Test
             </span>
           </div>

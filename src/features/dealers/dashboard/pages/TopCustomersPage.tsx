@@ -285,8 +285,8 @@ export function TopCustomersPage({
                   className={cn(
                     "flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-semibold shadow-sm transition-all duration-150",
                     topN === value
-                      ? "border-[#0f766e] bg-[#0f766e] text-white shadow-[0_10px_24px_rgba(15,118,110,0.22)]"
-                      : "border-transparent bg-white text-slate-700 hover:-translate-y-0.5 hover:border-[#c8d7db] hover:bg-[#fdfefe]"
+                      ? "border-slate-950 bg-slate-950 text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)]"
+                      : "border-transparent bg-white text-slate-700 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
                   )}
                   onClick={() => setTopN(value)}
                 >

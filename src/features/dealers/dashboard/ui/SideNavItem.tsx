@@ -18,7 +18,7 @@ export function SideNavItem({
   return (
     <button
       className={cn(
-        "flex h-10 w-full items-center gap-2.5 rounded-xl px-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950",
+        "flex h-10 w-full items-center gap-2.5 rounded-xl px-3 text-sm font-semibold text-slate-600 outline-none transition-colors hover:bg-slate-100 hover:text-slate-950 focus-visible:ring-2 focus-visible:ring-slate-300",
         selected && "bg-slate-100 text-slate-950"
       )}
       onClick={onClick}

@@ -1,5 +1,7 @@
 import { Search } from "lucide-react";
 
+import { DropdownSelect } from "./DropdownSelect";
+
 export function FilterBar({
   region,
   regions,
@@ -28,28 +30,24 @@ export function FilterBar({
           onChange={(event) => setSearch(event.target.value)}
         />
       </label>
-      <select
-        className="h-9 w-full rounded-md border border-[#d5e0e3] bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+      <DropdownSelect
+        buttonClassName="h-9 rounded-md text-sm font-semibold"
+        options={[{ label: "ทุกภูมิภาค", value: "all" }, ...regions.map((item) => ({ label: item, value: item }))]}
         value={region}
-        onChange={(event) => setRegion(event.target.value)}
-      >
-        <option value="all">ทุกภูมิภาค</option>
-        {regions.map((item) => (
-          <option key={item} value={item}>
-            {item}
-          </option>
-        ))}
-      </select>
-      <select
-        className="h-9 w-full rounded-md border border-[#d5e0e3] bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 sm:col-span-2 xl:col-span-1"
+        onChange={setRegion}
+      />
+      <DropdownSelect
+        buttonClassName="h-9 rounded-md text-sm font-semibold"
+        className="sm:col-span-2 xl:col-span-1"
+        options={[
+          { label: "ทุกสถานะ", value: "all" },
+          { label: "Active", value: "active" },
+          { label: "Idle", value: "idle" },
+          { label: "New", value: "new" }
+        ]}
         value={status}
-        onChange={(event) => setStatus(event.target.value)}
-      >
-        <option value="all">ทุกสถานะ</option>
-        <option value="active">Active</option>
-        <option value="idle">Idle</option>
-        <option value="new">New</option>
-      </select>
+        onChange={setStatus}
+      />
     </div>
   );
 }

@@ -2,10 +2,11 @@ import { useMemo } from "react";
 import { PackageCheck, Search, TrendingUp, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
 import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
 import { dateText } from "../lib/dates";
-import { orderStatusText } from "../lib/status";
+import { getOrderStatusKey, orderStatusText } from "../lib/status";
 import type { DataColumn } from "../table/types";
 import { MetricCard } from "../ui/MetricCard";
 import { DealerPicker } from "../filters/DealerPicker";
@@ -107,11 +108,22 @@ export function OrdersPage({
       key: "status",
       sortAccessor: (record) => record.status?.order ?? "",
       width: 140,
-      render: (_, record) => (
-        <span className="inline-flex rounded-md bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-700">
-          {orderStatusText(record.status?.order)}
-        </span>
-      )
+      render: (_, record) => {
+        const statusKey = getOrderStatusKey(record.status?.order);
+        return (
+          <span
+            className={cn(
+              "inline-flex rounded-md px-2.5 py-0.5 text-xs font-semibold ring-1",
+              statusKey === "cancelled" && "bg-rose-50 text-rose-700 ring-rose-200",
+              statusKey === "confirmed" && "bg-emerald-50 text-emerald-700 ring-emerald-200",
+              statusKey === "pending" && "bg-amber-50 text-amber-700 ring-amber-200",
+              statusKey === "other" && "bg-slate-100 text-slate-700 ring-slate-200"
+            )}
+          >
+            {orderStatusText(record.status?.order)}
+          </span>
+        );
+      }
     }
   ];
 
@@ -126,8 +138,8 @@ export function OrdersPage({
       />
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard icon={<PackageCheck size={18} />} label="Orders" value={formatNumber(dealerOrders.length)} detail={selectedDealer?.dealer_name ?? "จำนวน order ทั้งหมดที่กรองอยู่"} />
-        <MetricCard icon={<TrendingUp size={18} />} label="Ordered Qty" value={compactNumber(totalOrdered)} detail="ยอดสั่งรวมจาก order ทั้งหมด" tone="amber" />
+        <MetricCard icon={<PackageCheck size={18} />} label="Order Count" value={formatNumber(dealerOrders.length)} detail={selectedDealer?.dealer_name ?? "จำนวนรายการ order ที่กรองอยู่"} />
+        <MetricCard icon={<TrendingUp size={18} />} label="Ordered Volume" value={compactNumber(totalOrdered)} detail="ปริมาณที่สั่งรวมจาก order ทั้งหมด" tone="amber" />
         <MetricCard icon={<PackageCheck size={18} />} label="Delivered Qty" value={compactNumber(totalDelivered)} detail="ยอดส่งจริงรวมจาก order ทั้งหมด" tone="green" />
         <MetricCard icon={<Users size={18} />} label="Unique Sites" value={formatNumber(uniqueSites)} detail={`นับจาก site code ที่ไม่ซ้ำใน ${formatNumber(dealerOrders.length)} orders ของ dealer นี้`} tone="rose" />
       </section>
@@ -139,8 +151,8 @@ export function OrdersPage({
               <CardTitle className="text-lg">Orders ของ Dealer</CardTitle>
               <p className="mt-1 text-xs font-medium text-slate-500">
                 {selectedDealer
-                  ? `แสดงรายการ order ของ ${selectedDealer.dealer_name} จากเส้น API จริง`
-                  : "แสดงรายการ order ของ dealer ที่เลือกจากเส้น API จริง"}
+                  ? `แสดงรายการ order ของ ${selectedDealer.dealer_name}`
+                  : "แสดงรายการ order ของ dealer ที่เลือก"}
               </p>
             </div>
             <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
