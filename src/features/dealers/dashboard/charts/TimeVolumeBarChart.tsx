@@ -51,13 +51,27 @@ function addMonths(d: Date, n: number) { return new Date(d.getFullYear(), d.getM
 function dateKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
 function monthKey(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; }
 function yearKey(d: Date) { return String(d.getFullYear()); }
+function dateFromMonthKey(value: string) {
+  const [year, month] = value.split("-").map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return null;
+  return new Date(year, month - 1, 1);
+}
+function dateFromDateKey(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  return new Date(year, month - 1, day);
+}
 
 function fmt(d: Date, opts: Intl.DateTimeFormatOptions) {
   return new Intl.DateTimeFormat("th-TH", opts).format(d);
 }
 
 // ── bucket builder ────────────────────────────────────────────────────────────
-function buildBuckets(dealers: Dealer[], range: ChartRange): TimeBucket[] {
+function buildBuckets(
+  dealers: Dealer[],
+  range: ChartRange,
+  focusRange?: { from?: string; to?: string }
+): TimeBucket[] {
   const allRegions = [...new Set(dealers.map((d) => d.region).filter(Boolean))].sort((a, b) => a.localeCompare(b, "th"));
 
   if (range === "all") {
@@ -91,10 +105,23 @@ function buildBuckets(dealers: Dealer[], range: ChartRange): TimeBucket[] {
   if (range === "year") {
     for (let c = startOfYear(earliest); c <= startOfYear(latest); c = new Date(c.getFullYear() + 1, 0, 1)) starts.push(c);
   } else if (range === "month") {
-    for (let c = startOfMonth(earliest); c <= startOfMonth(latest); c = addMonths(c, 1)) starts.push(c);
+    const rawFrom = focusRange?.from ? dateFromMonthKey(focusRange.from) : null;
+    const rawTo = focusRange?.to ? dateFromMonthKey(focusRange.to) : null;
+    const from = startOfMonth(rawFrom ?? earliest);
+    const to = startOfMonth(rawTo ?? latest);
+    const start = from <= to ? from : to;
+    const end = from <= to ? to : from;
+    for (let c = start; c <= end; c = addMonths(c, 1)) starts.push(c);
   } else {
-    const daysInMonth = endOfMonth(latest).getDate();
-    starts = Array.from({ length: daysInMonth }, (_, i) => addDays(startOfMonth(latest), i));
+    const rawFrom = focusRange?.from ? dateFromDateKey(focusRange.from) : null;
+    const rawTo = focusRange?.to ? dateFromDateKey(focusRange.to) : null;
+    const defaultStart = startOfMonth(latest);
+    const defaultEnd = endOfMonth(latest);
+    const from = startOfDay(rawFrom ?? defaultStart);
+    const to = startOfDay(rawTo ?? defaultEnd);
+    const start = from <= to ? from : to;
+    const end = from <= to ? to : from;
+    for (let c = start; c <= end; c = addDays(c, 1)) starts.push(c);
   }
 
   const buckets: TimeBucket[] = starts.map((start) => {
@@ -389,8 +416,20 @@ function RegionCard({
 }
 
 // ── main export ───────────────────────────────────────────────────────────────
-export function TimeVolumeBarChart({ dealers, range, unit = "m3" }: { dealers: Dealer[]; range: ChartRange; unit?: string }) {
-  const buckets = useMemo(() => buildBuckets(dealers, range), [dealers, range]);
+export type ChartFocusRange = { from?: string; to?: string };
+
+export function TimeVolumeBarChart({
+  dealers,
+  focusRange,
+  range,
+  unit = "m3"
+}: {
+  dealers: Dealer[];
+  focusRange?: ChartFocusRange;
+  range: ChartRange;
+  unit?: string;
+}) {
+  const buckets = useMemo(() => buildBuckets(dealers, range, focusRange), [dealers, focusRange?.from, focusRange?.to, range]);
   const [activeKey, setActiveKey] = useState("");
   const [dealerRegionFilter, setDealerRegionFilter] = useState<string>("");
   const [hoveredDonutIdx, setHoveredDonutIdx] = useState<number | null>(null);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Layers3, MapPin, PackageCheck, TrendingUp, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,13 +6,13 @@ import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
 import type { ApiState, Dealer } from "@/features/dealers/types";
 import type { PageKey } from "../config/pageMeta";
-import { dateText } from "../lib/dates";
+import { dateText, parseDateValue } from "../lib/dates";
 import { groupByRegion } from "../lib/regions";
 import type { DataColumn } from "../table/types";
 import { ToggleGroup } from "../ui/ToggleGroup";
 import { FilterBar } from "../filters/FilterBar";
 import { DataTable } from "../table/DataTable";
-import { TimeVolumeBarChart, type ChartRange } from "../charts/TimeVolumeBarChart";
+import { TimeVolumeBarChart, type ChartFocusRange, type ChartRange } from "../charts/TimeVolumeBarChart";
 import { dealerColumn, statusColumn, regionPill, VolumeCell, ApiErrorBanner } from "../table/columns";
 
 type DashboardPageProps = {
@@ -128,10 +128,53 @@ function KpiStrip({
   );
 }
 
+function inputDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function inputMonthKey(date: Date) {
+  return inputDateKey(date).slice(0, 7);
+}
+
+function dateFromInput(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  return new Date(year, month - 1, day);
+}
+
 export function DashboardPage(props: DashboardPageProps) {
   const [chartRange, setChartRange] = useState<ChartRange>("all");
+  const [monthFrom, setMonthFrom] = useState("");
+  const [monthTo, setMonthTo] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const volumeUnit =
     props.filteredDealers.find((dealer) => dealer.unit)?.unit ?? props.topDealer?.unit ?? "m3";
+
+  const chartDates = useMemo(
+    () =>
+      props.filteredDealers
+        .map((dealer) => parseDateValue(dealer.last_active_at ?? dealer.updated_at))
+        .filter((date): date is Date => Boolean(date))
+        .sort((a, b) => a.getTime() - b.getTime()),
+    [props.filteredDealers]
+  );
+  const earliestDateKey = chartDates[0] ? inputDateKey(chartDates[0]) : "";
+  const latestDateKey = chartDates[chartDates.length - 1] ? inputDateKey(chartDates[chartDates.length - 1]) : "";
+  const earliestMonthKey = chartDates[0] ? inputMonthKey(chartDates[0]) : "";
+  const latestMonthKey = chartDates[chartDates.length - 1] ? inputMonthKey(chartDates[chartDates.length - 1]) : "";
+  const latestDateValue = latestDateKey ? dateFromInput(latestDateKey) : null;
+  const defaultDayFrom = latestDateValue ? inputDateKey(new Date(latestDateValue.getFullYear(), latestDateValue.getMonth(), 1)) : "";
+  const defaultDayTo = latestDateValue ? inputDateKey(new Date(latestDateValue.getFullYear(), latestDateValue.getMonth() + 1, 0)) : "";
+  const chartFocusRange: ChartFocusRange | undefined =
+    chartRange === "month"
+      ? { from: monthFrom || earliestMonthKey, to: monthTo || latestMonthKey }
+      : chartRange === "day"
+        ? { from: dateFrom || defaultDayFrom, to: dateTo || defaultDayTo }
+        : undefined;
 
   // Top region from regionRows (sorted by volume desc in groupByRegion)
   const topRegionRow = props.regionRows[0];
@@ -216,21 +259,77 @@ export function DashboardPage(props: DashboardPageProps) {
                   </p>
                 </div>
               </div>
-              <ToggleGroup
-                ariaLabel="ช่วงเวลากราฟ"
-                options={[
-                  { value: "all", label: "ทั้งหมด" },
-                  { value: "year", label: "ปี" },
-                  { value: "month", label: "เดือน" },
-                  { value: "day", label: "วัน" }
-                ]}
-                value={chartRange}
-                onChange={setChartRange}
-              />
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                {chartRange === "month" && (
+                  <div className="flex flex-wrap items-center gap-1.5 rounded-[18px] border border-[#d9e3e6] bg-[#fbfcfd] p-1 dark:border-slate-800 dark:bg-slate-950">
+                    <span className="px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">ช่วงกราฟ</span>
+                    <label className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold text-slate-400">จาก</span>
+                      <input
+                        type="month"
+                        className="h-8 rounded-[14px] border border-[#d5e0e3] bg-white px-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                        min={earliestMonthKey}
+                        max={latestMonthKey}
+                        value={monthFrom || earliestMonthKey}
+                        onChange={(event) => setMonthFrom(event.target.value)}
+                      />
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold text-slate-400">ถึง</span>
+                      <input
+                        type="month"
+                        className="h-8 rounded-[14px] border border-[#d5e0e3] bg-white px-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                        min={earliestMonthKey}
+                        max={latestMonthKey}
+                        value={monthTo || latestMonthKey}
+                        onChange={(event) => setMonthTo(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                )}
+                {chartRange === "day" && (
+                  <div className="flex flex-wrap items-center gap-1.5 rounded-[18px] border border-[#d9e3e6] bg-[#fbfcfd] p-1 dark:border-slate-800 dark:bg-slate-950">
+                    <span className="px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">ช่วงกราฟ</span>
+                    <label className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold text-slate-400">จาก</span>
+                      <input
+                        type="date"
+                        className="h-8 rounded-[14px] border border-[#d5e0e3] bg-white px-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                        min={earliestDateKey}
+                        max={latestDateKey}
+                        value={dateFrom || defaultDayFrom}
+                        onChange={(event) => setDateFrom(event.target.value)}
+                      />
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-semibold text-slate-400">ถึง</span>
+                      <input
+                        type="date"
+                        className="h-8 rounded-[14px] border border-[#d5e0e3] bg-white px-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                        min={earliestDateKey}
+                        max={latestDateKey}
+                        value={dateTo || defaultDayTo}
+                        onChange={(event) => setDateTo(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                )}
+                <ToggleGroup
+                  ariaLabel="ช่วงเวลากราฟ"
+                  options={[
+                    { value: "all", label: "ทั้งหมด" },
+                    { value: "year", label: "ปี" },
+                    { value: "month", label: "เดือน" },
+                    { value: "day", label: "วัน" }
+                  ]}
+                  value={chartRange}
+                  onChange={setChartRange}
+                />
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <TimeVolumeBarChart dealers={props.filteredDealers} range={chartRange} unit={volumeUnit} />
+            <TimeVolumeBarChart dealers={props.filteredDealers} focusRange={chartFocusRange} range={chartRange} unit={volumeUnit} />
           </CardContent>
         </Card>
       </section>
