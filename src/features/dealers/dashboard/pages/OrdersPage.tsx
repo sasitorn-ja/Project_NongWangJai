@@ -8,7 +8,7 @@ import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
 import { dateText } from "../lib/dates";
 import { getOrderStatusKey, orderStatusText } from "../lib/status";
 import type { DataColumn } from "../table/types";
-import { MetricCard } from "../ui/MetricCard";
+import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
 import { DealerPicker } from "../filters/DealerPicker";
 import { DataTable } from "../table/DataTable";
 
@@ -137,11 +137,45 @@ export function OrdersPage({
         title="เลือก Dealer หรือดูรายการ Order ทั้งหมด"
       />
 
-      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <MetricCard icon={<PackageCheck size={18} />} label="Order Count" value={formatNumber(dealerOrders.length)} detail={selectedDealer?.dealer_name ?? "จำนวนรายการ order ที่กรองอยู่"} />
-        <MetricCard icon={<TrendingUp size={18} />} label="Ordered Volume" value={compactNumber(totalOrdered)} detail="ปริมาณที่สั่งรวมจาก order ทั้งหมด" tone="amber" />
-        <MetricCard icon={<PackageCheck size={18} />} label="Delivered Volume" value={compactNumber(totalDelivered)} detail="ปริมาณส่งจริงรวมจาก order ทั้งหมด" tone="green" />
-        <MetricCard icon={<Users size={18} />} label="Unique Sites" value={formatNumber(uniqueSites)} detail={`นับจาก site code ที่ไม่ซ้ำใน ${formatNumber(dealerOrders.length)} orders ของ dealer นี้`} tone="rose" />
+      <section className="grid grid-cols-1">
+        <SummaryKpiStrip
+          items={[
+            {
+              detail: selectedDealer?.dealer_name ?? "จำนวนรายการ order ที่กรองอยู่",
+              icon: <PackageCheck size={14} />,
+              label: "Order Count",
+              value: formatNumber(dealerOrders.length)
+            },
+            {
+              detail: "ปริมาณที่สั่งรวมจาก order ทั้งหมด",
+              icon: <TrendingUp size={14} />,
+              label: "Ordered Volume",
+              value: (
+                <>
+                  {compactNumber(totalOrdered)}{" "}
+                  <span className="text-xs font-semibold text-slate-400">m3</span>
+                </>
+              )
+            },
+            {
+              detail: "ปริมาณส่งจริงรวมจาก order ทั้งหมด",
+              icon: <PackageCheck size={14} />,
+              label: "Delivered Volume",
+              value: (
+                <>
+                  {compactNumber(totalDelivered)}{" "}
+                  <span className="text-xs font-semibold text-slate-400">m3</span>
+                </>
+              )
+            },
+            {
+              detail: `นับจาก site code ที่ไม่ซ้ำใน ${formatNumber(dealerOrders.length)} orders`,
+              icon: <Users size={14} />,
+              label: "Unique Sites",
+              value: formatNumber(uniqueSites)
+            }
+          ]}
+        />
       </section>
 
       <Card className="dashboard-card overflow-hidden">
