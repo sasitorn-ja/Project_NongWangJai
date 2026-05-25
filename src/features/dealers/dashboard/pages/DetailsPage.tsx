@@ -561,10 +561,10 @@ export function DetailsPage(props: DetailsPageProps) {
           <CardHeader className="border-b border-[#d9e3e6]">
             <CardTitle className="flex items-center gap-2 text-lg">
               <BarChart3 size={18} />
-              {isAllDealers ? "Customer Insight" : "Group Delivered Volume"}
+              {isAllDealers ? "Customer Insight" : "ยอดส่งมอบรายกลุ่ม"}
             </CardTitle>
             <p className="text-xs font-medium text-slate-500">
-              {isAllDealers ? "Top customers จากรายการ order ทั้งหมดที่กรองอยู่" : "Delivered Volume เทียบกับ Booked Volume ของกลุ่มใน dealer ที่เลือก"}
+              {isAllDealers ? "Top customers จากรายการ order ทั้งหมดที่กรองอยู่" : "เทียบยอดส่งมอบจริงกับยอดจองของแต่ละกลุ่ม ในดีลเลอร์ที่เลือก"}
             </p>
           </CardHeader>
           <CardContent>

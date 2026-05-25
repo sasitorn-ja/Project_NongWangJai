@@ -73,27 +73,27 @@ export function GroupVolumeInsights({
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <InsightMiniCard
-          label="Delivered Volume lead groups"
+          label="กลุ่มที่ส่งมอบเกินจอง"
           value={formatNumber(deliveredLeadCount)}
           detail={`จาก ${formatNumber(totalGroups)} กลุ่ม`}
           tone="green"
         />
         <InsightMiniCard
-          label="Booked Volume lead groups"
+          label="กลุ่มที่จองเกินส่งมอบ"
           value={formatNumber(bookedLeadCount)}
           detail={`จาก ${formatNumber(totalGroups)} กลุ่ม`}
           tone="blue"
         />
         <InsightMiniCard
-          label="Balanced groups"
+          label="กลุ่มที่ส่งมอบเท่าจอง"
           value={formatNumber(balancedCount)}
-          detail="ส่งจริงเท่ากับจอง"
+          detail="ยอดส่งมอบเท่ากับยอดจอง"
           tone="slate"
         />
         <InsightMiniCard
-          label="Top 3 delivered share"
+          label="สัดส่วน 3 อันดับแรก"
           value={formatPercent(topDeliveredShare)}
-          detail={`ของ Delivered Volume รวม ${formatNumber(totalDelivered)} ${unit}`}
+          detail={`ของยอดส่งมอบรวม ${formatNumber(totalDelivered)} ${unit}`}
           tone="amber"
         />
       </div>
@@ -102,11 +102,11 @@ export function GroupVolumeInsights({
         <div className="rounded-[22px] border border-[#e5e7eb] bg-[#fbfcfd] p-4 dark:border-slate-800 dark:bg-slate-950/60">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-sm font-semibold text-slate-900">Top delivered groups</div>
-              <div className="mt-1 text-xs font-medium text-slate-500">สรุปกลุ่มที่มี Delivered Volume สูงสุด โดยไม่ทำซ้ำรายละเอียดตารางด้านล่าง</div>
+              <div className="text-sm font-semibold text-slate-900">กลุ่มที่ส่งมอบสูงสุด</div>
+              <div className="mt-1 text-xs font-medium text-slate-500">กลุ่มที่มียอดส่งมอบสูงสุด (ไม่ซ้ำกับตารางด้านล่าง)</div>
             </div>
             <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-              {formatNumber(groups.length)} shown
+              แสดง {formatNumber(groups.length)} กลุ่ม
             </span>
           </div>
 
@@ -137,7 +137,7 @@ export function GroupVolumeInsights({
 
                   <div className="mt-3 grid gap-1.5">
                     <div className="flex items-center justify-between gap-3 text-[11px] font-medium text-slate-500">
-                      <span>Delivered Volume</span>
+                      <span>ยอดส่งมอบ</span>
                       <span>{formatPercent(deliveredRatio)}</span>
                     </div>
                     <div className="h-2 rounded-full bg-slate-100">
@@ -147,7 +147,7 @@ export function GroupVolumeInsights({
                       />
                     </div>
                     <div className="flex items-center justify-between gap-3 text-[11px] font-medium text-slate-500">
-                      <span>Booked Volume</span>
+                      <span>ยอดจอง</span>
                       <span>{formatPercent(bookedRatio)}</span>
                     </div>
                     <div className="h-2 rounded-full bg-slate-100">
@@ -165,7 +165,7 @@ export function GroupVolumeInsights({
 
         <div className="space-y-3">
           <div className="rounded-[22px] border border-emerald-100 bg-emerald-50/70 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-            <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Delivered Volume leader</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">กลุ่มส่งมอบสูงสุด</div>
             <div className="mt-2 text-base font-semibold text-slate-950">{deliveredLeader?.group_name ?? "-"}</div>
             <div className="mt-1 text-2xl font-semibold leading-none text-slate-950">
               {formatNumber(deliveredLeader?.delivered_volume ?? 0)} {deliveredLeader?.unit || unit}
@@ -173,7 +173,7 @@ export function GroupVolumeInsights({
           </div>
 
           <div className="rounded-[22px] border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/50 dark:bg-blue-950/20">
-            <div className="text-xs font-semibold uppercase tracking-wide text-blue-700">Booked Volume leader</div>
+            <div className="text-xs font-semibold uppercase tracking-wide text-blue-700">กลุ่มยอดจองสูงสุด</div>
             <div className="mt-2 text-base font-semibold text-slate-950">{bookedLeader?.group_name ?? "-"}</div>
             <div className="mt-1 text-2xl font-semibold leading-none text-slate-950">
               {formatNumber(bookedLeader?.booked_volume ?? 0)} {bookedLeader?.unit || unit}
@@ -181,7 +181,7 @@ export function GroupVolumeInsights({
           </div>
 
           <div className="rounded-[22px] border border-[#e5e7eb] bg-white p-4 dark:border-slate-800 dark:bg-slate-950/70">
-            <div className="text-sm font-semibold text-slate-900">Overall pair mix</div>
+            <div className="text-sm font-semibold text-slate-900">ภาพรวมส่งมอบ–จอง</div>
             <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-100">
               <div className="flex h-full">
                 <div
@@ -200,13 +200,13 @@ export function GroupVolumeInsights({
             </div>
             <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
               <div>
-                <div className="text-xs font-medium text-slate-500">Delivered Volume</div>
+                <div className="text-xs font-medium text-slate-500">ยอดส่งมอบรวม</div>
                 <div className="mt-1 font-semibold text-slate-900">
                   {formatNumber(totalDelivered)} {unit}
                 </div>
               </div>
               <div>
-                <div className="text-xs font-medium text-slate-500">Booked Volume</div>
+                <div className="text-xs font-medium text-slate-500">ยอดจองรวม</div>
                 <div className="mt-1 font-semibold text-slate-900">
                   {formatNumber(totalBooked)} {unit}
                 </div>
