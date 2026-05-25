@@ -31,14 +31,17 @@ function StatusBadge({ status }: { status?: string | null }) {
   );
 }
 
-function siteDisplayText(record: OrderItem) {
-  const siteName = record.site?.site_name ?? "-";
-  const siteCode = record.site?.site_code;
-
-  return siteCode ? `${siteName} | ${siteCode}` : siteName;
+function customerSiteLines(record: OrderItem) {
+  return {
+    customerName: record.customer?.name ?? "-",
+    siteCode: record.site?.site_code ?? "-",
+    siteName: record.site?.site_name ?? "-"
+  };
 }
 
 function MobileOrderCard({ record }: { record: OrderItem }) {
+  const customerSite = customerSiteLines(record);
+
   return (
     <div className="border-b border-[#edf1f2] px-4 py-3 last:border-b-0">
       {/* Product name + status */}
@@ -62,12 +65,16 @@ function MobileOrderCard({ record }: { record: OrderItem }) {
           <span className="ml-1 shrink-0 text-[10px] text-slate-400">{record.dealer_code}</span>
         </div>
         <div className="flex items-baseline gap-1 text-xs">
-          <span className="w-16 shrink-0 text-slate-400">Site</span>
-          <span className="font-medium text-slate-700 truncate">{siteDisplayText(record)}</span>
+          <span className="w-16 shrink-0 text-slate-400">ลูกค้า</span>
+          <span className="font-medium text-slate-700 truncate">{customerSite.customerName}</span>
         </div>
         <div className="flex items-baseline gap-1 text-xs">
-          <span className="w-16 shrink-0 text-slate-400">ลูกค้า</span>
-          <span className="font-medium text-slate-700 truncate">{record.customer?.name ?? "-"}</span>
+          <span className="w-16 shrink-0 text-slate-400">Site Code</span>
+          <span className="font-medium text-slate-700 truncate">{customerSite.siteCode}</span>
+        </div>
+        <div className="flex items-baseline gap-1 text-xs">
+          <span className="w-16 shrink-0 text-slate-400">Site</span>
+          <span className="font-medium text-slate-700 truncate">{customerSite.siteName}</span>
         </div>
         <div className="flex items-baseline gap-1 text-xs">
           <span className="w-16 shrink-0 text-slate-400">เทเวลา</span>
@@ -163,12 +170,17 @@ export function OrdersPage({
       key: "customer-site",
       sortAccessor: (record) => `${record.site?.site_name ?? ""} ${record.customer?.name ?? ""}`,
       width: 310,
-      render: (_, record) => (
-        <div>
-          <div className="font-semibold text-slate-950">{siteDisplayText(record)}</div>
-          <div className="text-xs font-medium text-slate-500">{record.customer?.name ?? "-"}</div>
-        </div>
-      )
+      render: (_, record) => {
+        const customerSite = customerSiteLines(record);
+
+        return (
+          <div>
+            <div className="font-semibold text-slate-950">{customerSite.customerName}</div>
+            <div className="text-xs font-semibold text-slate-600">{customerSite.siteCode}</div>
+            <div className="text-xs font-medium text-slate-500">{customerSite.siteName}</div>
+          </div>
+        );
+      }
     },
     {
       title: "Ordered Volume",

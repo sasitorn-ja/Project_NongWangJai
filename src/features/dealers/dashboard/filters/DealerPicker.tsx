@@ -101,15 +101,7 @@ export function DealerPicker({
             <span className="min-w-0">
               {selectedDealer ? (
                 <span className="block">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-700 ring-1 ring-sky-100">
-                      ID {selectedDealer.dealer_id}
-                    </span>
-                    <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-100">
-                      {selectedDealer.dealer_code}
-                    </span>
-                  </span>
-                  <span className="mt-0.5 block truncate text-[12px] font-semibold text-slate-900">
+                  <span className="block truncate text-[12px] font-semibold text-slate-900">
                     {selectedDealer.dealer_name}
                   </span>
                 </span>
@@ -199,22 +191,8 @@ export function DealerPicker({
                         {isSelected ? <Check size={16} className="text-slate-950" /> : null}
                       </span>
                       <span className="min-w-0">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className={cn(
-                            "rounded-full px-2 py-0.5 text-[11px] font-bold ring-1",
-                            isSelected ? "bg-white/80 text-sky-700 ring-sky-100" : "bg-sky-50 text-sky-700 ring-sky-100"
-                          )}>
-                            ID {dealer.dealer_id}
-                          </span>
-                          <span className={cn(
-                            "rounded-full px-2 py-0.5 text-[11px] font-bold ring-1",
-                            isSelected ? "bg-white/80 text-emerald-700 ring-emerald-100" : "bg-emerald-50 text-emerald-700 ring-emerald-100"
-                          )}>
-                            {dealer.dealer_code}
-                          </span>
-                        </span>
                         <span className={cn(
-                          "mt-1 block line-clamp-2 text-sm font-semibold leading-5",
+                          "block line-clamp-2 text-sm font-semibold leading-5",
                           isSelected ? "text-slate-950" : "text-slate-800"
                         )}>
                           {dealer.dealer_name}
