@@ -136,7 +136,7 @@ export function OrdersPage({
       title: "Order",
       key: "order",
       sortAccessor: (record) => `${record.order?.product_name ?? ""} ${record.order?.order_no ?? ""} ${record.order?.product_sku ?? ""}`,
-      width: 300,
+      width: 230,
       render: (_, record) => (
         <div>
           <div className="font-semibold text-slate-950">{record.order?.product_name ?? "-"}</div>
@@ -150,7 +150,7 @@ export function OrdersPage({
       title: "Dealer",
       key: "dealer",
       sortAccessor: (record) => record.dealer_name,
-      width: 240,
+      width: 190,
       render: (_, record) => (
         <div>
           <div className="font-semibold text-slate-950">{record.dealer_name}</div>
@@ -162,7 +162,7 @@ export function OrdersPage({
       title: "Customer / Site",
       key: "customer-site",
       sortAccessor: (record) => `${record.site?.site_name ?? ""} ${record.customer?.name ?? ""}`,
-      width: 280,
+      width: 310,
       render: (_, record) => (
         <div>
           <div className="font-semibold text-slate-950">{siteDisplayText(record)}</div>
@@ -175,7 +175,7 @@ export function OrdersPage({
       key: "ordered",
       align: "right",
       sortAccessor: (record) => record.quantity?.ordered ?? 0,
-      width: 130,
+      width: 110,
       render: (_, record) => `${formatNumber(record.quantity?.ordered ?? 0)} ${record.quantity?.unit ?? "-"}`
     },
     {
@@ -183,21 +183,21 @@ export function OrdersPage({
       key: "delivered",
       align: "right",
       sortAccessor: (record) => record.quantity?.delivered ?? 0,
-      width: 130,
+      width: 110,
       render: (_, record) => `${formatNumber(record.quantity?.delivered ?? 0)} ${record.quantity?.unit ?? "-"}`
     },
     {
       title: "Pour Time",
       dataIndex: "pour_datetime",
       key: "pour_datetime",
-      width: 190,
+      width: 150,
       render: dateText
     },
     {
       title: "สถานะ",
       key: "status",
       sortAccessor: (record) => record.status?.order ?? "",
-      width: 140,
+      width: 100,
       render: (_, record) => {
         const statusKey = getOrderStatusKey(record.status?.order);
         return (
@@ -388,7 +388,7 @@ export function OrdersPage({
                 .filter(Boolean)
                 .join("-")
             }
-            minWidth={1410}
+            minWidth={0}
             pageSize={10}
           />
         </CardContent>
