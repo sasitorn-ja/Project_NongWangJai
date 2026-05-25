@@ -31,6 +31,13 @@ function StatusBadge({ status }: { status?: string | null }) {
   );
 }
 
+function siteDisplayText(record: OrderItem) {
+  const siteName = record.site?.site_name ?? "-";
+  const siteCode = record.site?.site_code;
+
+  return siteCode ? `${siteName} | ${siteCode}` : siteName;
+}
+
 function MobileOrderCard({ record }: { record: OrderItem }) {
   return (
     <div className="border-b border-[#edf1f2] px-4 py-3 last:border-b-0">
@@ -55,15 +62,12 @@ function MobileOrderCard({ record }: { record: OrderItem }) {
           <span className="ml-1 shrink-0 text-[10px] text-slate-400">{record.dealer_code}</span>
         </div>
         <div className="flex items-baseline gap-1 text-xs">
-          <span className="w-16 shrink-0 text-slate-400">ลูกค้า</span>
-          <span className="font-medium text-slate-700 truncate">{record.customer?.name ?? "-"}</span>
+          <span className="w-16 shrink-0 text-slate-400">Site</span>
+          <span className="font-medium text-slate-700 truncate">{siteDisplayText(record)}</span>
         </div>
         <div className="flex items-baseline gap-1 text-xs">
-          <span className="w-16 shrink-0 text-slate-400">Site</span>
-          <span className="font-medium text-slate-700 truncate">
-            {record.site?.site_name ?? "-"}
-            {record.site?.site_code ? <span className="ml-1 text-slate-400">({record.site.site_code})</span> : null}
-          </span>
+          <span className="w-16 shrink-0 text-slate-400">ลูกค้า</span>
+          <span className="font-medium text-slate-700 truncate">{record.customer?.name ?? "-"}</span>
         </div>
         <div className="flex items-baseline gap-1 text-xs">
           <span className="w-16 shrink-0 text-slate-400">เทเวลา</span>
@@ -157,14 +161,12 @@ export function OrdersPage({
     {
       title: "Customer / Site",
       key: "customer-site",
-      sortAccessor: (record) => `${record.customer?.name ?? ""} ${record.site?.site_name ?? ""}`,
+      sortAccessor: (record) => `${record.site?.site_name ?? ""} ${record.customer?.name ?? ""}`,
       width: 280,
       render: (_, record) => (
         <div>
-          <div className="font-semibold text-slate-950">{record.customer?.name ?? "-"}</div>
-          <div className="text-xs font-medium text-slate-500">
-            {(record.site?.site_name ?? "-")} | {(record.site?.site_code ?? "-")}
-          </div>
+          <div className="font-semibold text-slate-950">{siteDisplayText(record)}</div>
+          <div className="text-xs font-medium text-slate-500">{record.customer?.name ?? "-"}</div>
         </div>
       )
     },

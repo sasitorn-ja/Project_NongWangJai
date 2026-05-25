@@ -1,4 +1,4 @@
-import cpacLogo from "@/assets/cpac-logo.jpg";
+import cpacLogo from "@/assets/cpac-logo.png";
 
 import type { PageKey } from "../config/pageMeta";
 import { DASHBOARD_NAV_ITEMS } from "../config/navigation";
@@ -18,7 +18,7 @@ export function Sidebar({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center gap-3 px-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#d9e3e6] bg-white p-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#d9e3e6]/70 bg-transparent shadow-sm dark:border-slate-700">
           <img src={cpacLogo} alt="CPAC" className="h-full w-full object-contain" />
         </div>
         {(!collapsed || mobileNavOpen) && (
