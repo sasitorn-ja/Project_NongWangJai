@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Layers3, MapPin, PackageCheck, TrendingUp, Users } from "lucide-react";
+import { ChevronDown, Filter, Layers3, MapPin, PackageCheck, TrendingUp, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
@@ -12,7 +12,7 @@ import type { DataColumn } from "../table/types";
 import { ToggleGroup } from "../ui/ToggleGroup";
 import { FilterBar } from "../filters/FilterBar";
 import { DataTable } from "../table/DataTable";
-import { TimeVolumeBarChart, type ChartFocusRange, type ChartRange } from "../charts/TimeVolumeBarChart";
+import { TimeVolumeBarChart, RegionFilterPanel, type ChartFocusRange, type ChartRange } from "../charts/TimeVolumeBarChart";
 import { dealerColumn, statusColumn, regionPill, VolumeCell, ApiErrorBanner } from "../table/columns";
 
 type DashboardPageProps = {
@@ -55,17 +55,19 @@ function KpiStrip({
   totalVolume: number;
   unit: string;
 }) {
-  const items: {
-    accent: string;
+	  const items: {
+	    bgIcon: string;
+    textColor: string;
     detail: string;
     icon: React.ReactNode;
     label: string;
     value: React.ReactNode;
   }[] = [
     {
-      accent: "bg-slate-100 text-slate-700",
+      bgIcon: "bg-indigo-50 dark:bg-indigo-950/30",
+      textColor: "text-indigo-600 dark:text-indigo-400",
       detail: `${formatNumber(totalVolume)} ${unit} ทั้งหมด`,
-      icon: <PackageCheck size={14} />,
+      icon: <PackageCheck size={20} />,
       label: "Total Delivered Volume",
       value: (
         <>
@@ -75,9 +77,10 @@ function KpiStrip({
       )
     },
     {
-      accent: "bg-slate-100 text-slate-700",
+      bgIcon: "bg-teal-50 dark:bg-teal-950/30",
+      textColor: "text-teal-600 dark:text-teal-400",
       detail: `${activeDealersCount} / ${totalDealersCount} ราย active`,
-      icon: <Users size={14} />,
+      icon: <Users size={20} />,
       label: "Active Dealers",
       value: (
         <>
@@ -87,19 +90,21 @@ function KpiStrip({
       )
     },
     {
-      accent: "bg-slate-100 text-slate-700",
+      bgIcon: "bg-purple-50 dark:bg-purple-950/30",
+      textColor: "text-purple-600 dark:text-purple-400",
       detail: "จำนวนกลุ่มรวม",
-      icon: <Layers3 size={14} />,
+      icon: <Layers3 size={20} />,
       label: "Total Groups",
       value: formatNumber(totalGroups)
     },
     {
-      accent: "bg-slate-100 text-slate-700",
+      bgIcon: "bg-amber-50 dark:bg-amber-950/30",
+      textColor: "text-amber-600 dark:text-amber-400",
       detail: topRegion ? `${Math.round(topRegionShare)}% ของยอด` : "ยังไม่มีข้อมูล",
-      icon: <MapPin size={14} />,
+      icon: <MapPin size={20} />,
       label: "Top Region",
       value: (
-        <span className="text-base font-bold leading-tight">
+        <span className="text-sm font-bold leading-tight">
           {topRegion ?? "—"}
         </span>
       )
@@ -107,23 +112,21 @@ function KpiStrip({
   ];
 
   return (
-    <div className="rounded-2xl border border-[#e5e7eb] bg-white shadow-panel dark:border-slate-800 dark:bg-slate-950">
-      <div className="grid grid-cols-2 divide-y divide-[#eef0f4] sm:grid-cols-4 sm:divide-y-0 sm:divide-x dark:divide-slate-800">
-        {items.map((item) => (
-          <div key={item.label} className="flex items-center gap-3 px-4 py-3">
-            <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", item.accent)}>
-              {item.icon}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold text-slate-500">{item.label}</p>
-              <p className="mt-0.5 truncate text-[22px] font-bold leading-none text-slate-900 dark:text-slate-100">
-                {item.value}
-              </p>
-              <p className="mt-1 truncate text-[11px] font-medium text-slate-400">{item.detail}</p>
-            </div>
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {items.map((item) => (
+        <div key={item.label} className="flex items-center gap-3 rounded-xl border border-[#e5e7eb] bg-white px-3.5 py-3 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900">
+          <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", item.bgIcon, item.textColor)}>
+            {item.icon}
           </div>
-        ))}
-      </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-slate-500">{item.label}</p>
+            <p className="mt-0.5 truncate text-xl font-bold leading-none text-slate-900 dark:text-slate-100">
+              {item.value}
+            </p>
+            <p className="mt-1 truncate text-[11px] font-medium text-slate-400">{item.detail}</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -151,8 +154,25 @@ export function DashboardPage(props: DashboardPageProps) {
   const [monthTo, setMonthTo] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [selectedRegions, setSelectedRegions] = useState<string[] | null>(null);
+  const [regionFilterOpen, setRegionFilterOpen] = useState(false);
   const volumeUnit =
     props.filteredDealers.find((dealer) => dealer.unit)?.unit ?? props.topDealer?.unit ?? "m3";
+
+  // Region list + per-region volumes for the toolbar filter
+  const allRegions = useMemo(
+    () => [...new Set(props.filteredDealers.map((d) => d.region).filter(Boolean))].sort((a, b) => a.localeCompare(b, "th")),
+    [props.filteredDealers]
+  );
+  const regionTotalVolumes = useMemo(() => {
+    const map = new Map<string, number>();
+    props.filteredDealers.forEach((d) => {
+      if (!d.region) return;
+      map.set(d.region, (map.get(d.region) ?? 0) + d.volume);
+    });
+    return map;
+  }, [props.filteredDealers]);
+  const selectedRegionCount = (selectedRegions ?? allRegions).length;
 
   const chartDates = useMemo(
     () =>
@@ -229,109 +249,127 @@ export function DashboardPage(props: DashboardPageProps) {
         </section>
       )}
 
-      {/* Compact KPI strip */}
-      <section className="grid grid-cols-1">
-        <KpiStrip
-          activeDealersCount={activeDealersCount}
-          activeRate={props.activeRate}
-          topRegion={topRegionRow?.region ?? null}
-          topRegionShare={topRegionShare}
-          totalDealersCount={props.filteredDealers.length}
-          totalGroups={props.totalGroups}
-          totalVolume={props.totalVolume}
-          unit={volumeUnit}
-        />
-      </section>
+      {/* Bento KPIs */}
+      <KpiStrip
+        activeDealersCount={activeDealersCount}
+        activeRate={props.activeRate}
+        topRegion={topRegionRow?.region ?? null}
+        topRegionShare={topRegionShare}
+        totalDealersCount={props.filteredDealers.length}
+        totalGroups={props.totalGroups}
+        totalVolume={props.totalVolume}
+        unit={volumeUnit}
+      />
 
-      {/* Hero chart card */}
-      <section className="grid grid-cols-1 gap-3">
-        <Card className="dashboard-card">
-          <CardHeader className="border-b border-[#d9e3e6]">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-start gap-2.5">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  <TrendingUp size={16} />
+      {/* Hero charts (rendered as Bento Grid inside TimeVolumeBarChart) */}
+      <section className="grid grid-cols-1">
+        <TimeVolumeBarChart
+          dealers={props.filteredDealers}
+          focusRange={chartFocusRange}
+          range={chartRange}
+          selectedRegions={selectedRegions}
+          unit={volumeUnit}
+          headerControls={
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {chartRange === "month" && (
+                <div className="flex flex-wrap items-center gap-1.5 rounded-[18px] border border-[#d9e3e6] bg-[#fbfcfd] p-1 dark:border-slate-800 dark:bg-slate-950">
+                  <span className="px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">ช่วงกราฟ</span>
+                  <label className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-semibold text-slate-400">จาก</span>
+                    <input
+                      type="month"
+                      className="h-8 rounded-[14px] border border-[#d5e0e3] bg-white px-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                      min={earliestMonthKey}
+                      max={latestMonthKey}
+                      value={monthFrom || earliestMonthKey}
+                      onChange={(event) => setMonthFrom(event.target.value)}
+                    />
+                  </label>
+                  <label className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-semibold text-slate-400">ถึง</span>
+                    <input
+                      type="month"
+                      className="h-8 rounded-[14px] border border-[#d5e0e3] bg-white px-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                      min={earliestMonthKey}
+                      max={latestMonthKey}
+                      value={monthTo || latestMonthKey}
+                      onChange={(event) => setMonthTo(event.target.value)}
+                    />
+                  </label>
                 </div>
-                <div>
-                  <CardTitle className="text-base">ปริมาณการขายแยกตามพื้นที่ของ Dealer</CardTitle>
-                  <p className="mt-0.5 text-[11px] font-medium text-slate-500">
-                    เริ่มจากทั้งหมดก่อน แล้วค่อยเปลี่ยนเป็นปี/เดือน/วันเมื่ออยากดูช่วงเวลา · สีในแท่งแยกตามภูมิภาค
-                  </p>
+              )}
+              {chartRange === "day" && (
+                <div className="flex flex-wrap items-center gap-1.5 rounded-[18px] border border-[#d9e3e6] bg-[#fbfcfd] p-1 dark:border-slate-800 dark:bg-slate-950">
+                  <span className="px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">ช่วงกราฟ</span>
+                  <label className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-semibold text-slate-400">จาก</span>
+                    <input
+                      type="date"
+                      className="h-8 rounded-[14px] border border-[#d5e0e3] bg-white px-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                      min={earliestDateKey}
+                      max={latestDateKey}
+                      value={dateFrom || defaultDayFrom}
+                      onChange={(event) => setDateFrom(event.target.value)}
+                    />
+                  </label>
+                  <label className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-semibold text-slate-400">ถึง</span>
+                    <input
+                      type="date"
+                      className="h-8 rounded-[14px] border border-[#d5e0e3] bg-white px-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                      min={earliestDateKey}
+                      max={latestDateKey}
+                      value={dateTo || defaultDayTo}
+                      onChange={(event) => setDateTo(event.target.value)}
+                    />
+                  </label>
                 </div>
-              </div>
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                {chartRange === "month" && (
-                  <div className="flex flex-wrap items-center gap-1.5 rounded-[18px] border border-[#d9e3e6] bg-[#fbfcfd] p-1 dark:border-slate-800 dark:bg-slate-950">
-                    <span className="px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">ช่วงกราฟ</span>
-                    <label className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-semibold text-slate-400">จาก</span>
-                      <input
-                        type="month"
-                        className="h-8 rounded-[14px] border border-[#d5e0e3] bg-white px-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
-                        min={earliestMonthKey}
-                        max={latestMonthKey}
-                        value={monthFrom || earliestMonthKey}
-                        onChange={(event) => setMonthFrom(event.target.value)}
-                      />
-                    </label>
-                    <label className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-semibold text-slate-400">ถึง</span>
-                      <input
-                        type="month"
-                        className="h-8 rounded-[14px] border border-[#d5e0e3] bg-white px-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
-                        min={earliestMonthKey}
-                        max={latestMonthKey}
-                        value={monthTo || latestMonthKey}
-                        onChange={(event) => setMonthTo(event.target.value)}
-                      />
-                    </label>
-                  </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setRegionFilterOpen((v) => !v)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors",
+                  regionFilterOpen
+                    ? "border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    : "border-[#d9e3e6] bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
                 )}
-                {chartRange === "day" && (
-                  <div className="flex flex-wrap items-center gap-1.5 rounded-[18px] border border-[#d9e3e6] bg-[#fbfcfd] p-1 dark:border-slate-800 dark:bg-slate-950">
-                    <span className="px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">ช่วงกราฟ</span>
-                    <label className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-semibold text-slate-400">จาก</span>
-                      <input
-                        type="date"
-                        className="h-8 rounded-[14px] border border-[#d5e0e3] bg-white px-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
-                        min={earliestDateKey}
-                        max={latestDateKey}
-                        value={dateFrom || defaultDayFrom}
-                        onChange={(event) => setDateFrom(event.target.value)}
-                      />
-                    </label>
-                    <label className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-semibold text-slate-400">ถึง</span>
-                      <input
-                        type="date"
-                        className="h-8 rounded-[14px] border border-[#d5e0e3] bg-white px-2 text-xs font-semibold text-slate-800 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
-                        min={earliestDateKey}
-                        max={latestDateKey}
-                        value={dateTo || defaultDayTo}
-                        onChange={(event) => setDateTo(event.target.value)}
-                      />
-                    </label>
-                  </div>
-                )}
-                <ToggleGroup
-                  ariaLabel="ช่วงเวลากราฟ"
-                  options={[
-                    { value: "all", label: "ทั้งหมด" },
-                    { value: "year", label: "ปี" },
-                    { value: "month", label: "เดือน" },
-                    { value: "day", label: "วัน" }
-                  ]}
-                  value={chartRange}
-                  onChange={setChartRange}
+              >
+                <Filter size={13} />
+                ภูมิภาค
+                <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-500 dark:bg-slate-800">
+                  {selectedRegionCount}/{allRegions.length}
+                </span>
+                <ChevronDown size={13} className={cn("transition-transform", regionFilterOpen && "rotate-180")} />
+              </button>
+              <ToggleGroup
+                ariaLabel="ช่วงเวลากราฟ"
+                options={[
+                  { value: "all", label: "ทั้งหมด" },
+                  { value: "year", label: "ปี" },
+                  { value: "month", label: "เดือน" },
+                  { value: "day", label: "วัน" }
+                ]}
+                value={chartRange}
+                onChange={setChartRange}
+              />
+            </div>
+          }
+          regionFilterPanel={
+            regionFilterOpen && (
+              <div className="pb-3 border-b border-[#eef0f4] dark:border-slate-800 mb-2">
+                <RegionFilterPanel
+                  allRegions={allRegions}
+                  regionTotalVolumes={regionTotalVolumes}
+                  selectedRegions={selectedRegions}
+                  onChange={setSelectedRegions}
+                  totalAllVolume={props.totalVolume}
+                  unit={volumeUnit}
                 />
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <TimeVolumeBarChart dealers={props.filteredDealers} focusRange={chartFocusRange} range={chartRange} unit={volumeUnit} />
-          </CardContent>
-        </Card>
+            )
+          }
+        />
       </section>
 
       {/* Dealer table */}
@@ -341,7 +379,7 @@ export function DashboardPage(props: DashboardPageProps) {
             <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(400px,620px)] xl:items-center">
               <div>
                 <CardTitle className="text-base">ภาพรวม Dealer ทั้งหมด</CardTitle>
-                <p className="mt-0.5 max-w-xl text-[11px] font-medium leading-5 text-slate-500">
+                <p className="mt-0.5 max-w-xl text-xs font-medium leading-5 text-slate-500">
                   ดูปริมาณคอนกรีตส่งจริงรวม จำนวนกลุ่ม วันที่ใช้งานล่าสุด และสถานะ dealer
                 </p>
               </div>

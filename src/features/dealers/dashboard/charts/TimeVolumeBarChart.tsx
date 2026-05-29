@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { TrendingUp } from "lucide-react";
 
 import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
 import type { Dealer } from "@/features/dealers/types";
+import { DropdownSelect } from "../filters/DropdownSelect";
 import { parseDateValue } from "../lib/dates";
+import { getRegionColor } from "../lib/regions";
 
 export type ChartRange = "all" | "year" | "month" | "day";
 
@@ -22,21 +25,6 @@ type TimeBucket = {
   start: Date;
   value: number;
 };
-
-const REGION_COLORS: Record<string, string> = {
-  "CPAC Metro": "#3b82f6",
-  "CPAC Northeast": "#14b8a6",
-  "CPAC West": "#8b5cf6",
-  "CPAC North": "#06b6d4",
-  "RMC - South Chain": "#f59e0b",
-  "CPAC East": "#10b981"
-};
-
-const FALLBACK_COLORS = ["#3b82f6", "#14b8a6", "#8b5cf6", "#06b6d4", "#f59e0b", "#10b981", "#e11d48", "#7c3aed"];
-
-function getRegionColor(region: string, allRegions: string[]) {
-  return REGION_COLORS[region] ?? FALLBACK_COLORS[allRegions.indexOf(region) % FALLBACK_COLORS.length];
-}
 
 // ── date helpers ──────────────────────────────────────────────────────────────
 function startOfDay(d: Date) { const r = new Date(d); r.setHours(0, 0, 0, 0); return r; }
@@ -107,10 +95,10 @@ function buildBuckets(
   } else if (range === "month") {
     const rawFrom = focusRange?.from ? dateFromMonthKey(focusRange.from) : null;
     const rawTo = focusRange?.to ? dateFromMonthKey(focusRange.to) : null;
-    const from = startOfMonth(rawFrom ?? earliest);
-    const to = startOfMonth(rawTo ?? latest);
+    const from = startOfYear(rawFrom ?? rawTo ?? latest);
+    const to = startOfYear(rawTo ?? rawFrom ?? latest);
     const start = from <= to ? from : to;
-    const end = from <= to ? to : from;
+    const end = from <= to ? endOfYear(to) : endOfYear(from);
     for (let c = start; c <= end; c = addMonths(c, 1)) starts.push(c);
   } else {
     const rawFrom = focusRange?.from ? dateFromDateKey(focusRange.from) : null;
@@ -172,75 +160,17 @@ function buildBuckets(
 // ── sub-components ────────────────────────────────────────────────────────────
 function EmptyState() {
   return (
-    <div className="flex h-[300px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#d9e3e6] bg-[#fbfcfc]">
+    <div className="flex h-[220px] flex-col items-center justify-center gap-2">
       <div className="text-sm font-semibold text-slate-600">ไม่มีข้อมูลสำหรับแสดงกราฟ</div>
       <div className="text-xs font-medium text-slate-400">ยังไม่มีวันที่ใช้งานล่าสุดสำหรับ dealer ที่เลือก</div>
     </div>
   );
 }
 
-function StatChip({ label, value, tone }: { label: string; value: string; tone?: "default" | "accent" }) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-2 rounded-full border px-3 py-1.5",
-        tone === "accent"
-          ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-950/40"
-          : "border-[#e5e7eb] bg-white dark:border-slate-700 dark:bg-slate-900"
-      )}
-    >
-      <span className={cn("text-[11px] font-semibold", tone === "accent" ? "text-emerald-600" : "text-slate-400")}>{label}</span>
-      <span className={cn("text-sm font-bold", tone === "accent" ? "text-emerald-700" : "text-slate-900 dark:text-slate-100")}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-// Sparkline – plain SVG, no deps
-function Sparkline({ values, color, height = 28 }: { values: number[]; color: string; height?: number }) {
-  if (!values.length) return null;
-  const max = Math.max(...values, 1);
-  const min = 0;
-  const w = 100;
-  const h = height;
-  const stepX = values.length > 1 ? w / (values.length - 1) : 0;
-  const pts = values.map((v, i) => {
-    const y = h - ((v - min) / (max - min || 1)) * (h - 4) - 2;
-    return `${i * stepX},${y}`;
-  });
-  const lastX = (values.length - 1) * stepX;
-  const lastY = h - ((values[values.length - 1] - min) / (max - min || 1)) * (h - 4) - 2;
-  const areaPath = `M0,${h} L${pts.join(" L")} L${lastX},${h} Z`;
-
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-full w-full">
-      <defs>
-        <linearGradient id={`spark-${color.replace("#", "")}`} x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.25" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <path d={areaPath} fill={`url(#spark-${color.replace("#", "")})`} />
-      <polyline
-        fill="none"
-        stroke={color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        points={pts.join(" ")}
-        vectorEffect="non-scaling-stroke"
-      />
-      {/* Final dot */}
-      <circle cx={lastX} cy={lastY} r="1.6" fill={color} />
-    </svg>
-  );
-}
-
 // Donut – inline SVG with segments + hover state
 function Donut({
   segments,
-  size = 180,
+  size = 150,
   hoveredIdx,
   onHover
 }: {
@@ -288,7 +218,6 @@ function Donut({
       onMouseLeave: () => onHover(null)
     };
 
-    // single-segment full circle fallback
     if (segments.length === 1 || seg.value === total) {
       return (
         <g key={idx} {...commonProps}>
@@ -317,100 +246,71 @@ function Donut({
   );
 }
 
-function RegionCard({
-  active,
-  color,
-  current,
-  dealerCount,
-  delta,
-  isLeader,
-  name,
-  rank,
-  share,
-  trend,
-  unit
+// ── region filter (rendered by parent in the toolbar) ───────────────────────────
+export function RegionFilterPanel({
+  allRegions,
+  regionTotalVolumes,
+  selectedRegions,
+  onChange,
+  totalAllVolume,
+  unit = "m3"
 }: {
-  active: boolean;
-  color: string;
-  current: number;
-  dealerCount: number;
-  delta: number | null;
-  isLeader: boolean;
-  name: string;
-  rank: number;
-  share: number;
-  trend: number[];
-  unit: string;
+  allRegions: string[];
+  regionTotalVolumes: Map<string, number>;
+  selectedRegions: string[] | null;
+  onChange: (next: string[] | null) => void;
+  totalAllVolume: number;
+  unit?: string;
 }) {
-  if (!active) {
-    return (
-      <div className="relative overflow-hidden rounded-2xl border border-dashed border-[#d9e3e6] bg-[#fbfcfd] p-3 opacity-60 dark:border-slate-800 dark:bg-slate-950/40">
-        <div className="flex items-start justify-between">
-          <div className="min-w-0">
-            <p className="truncate text-[11px] font-semibold text-slate-400" title={name}>{name}</p>
-            <p className="mt-1 text-xl font-bold text-slate-400">
-              0 <span className="text-xs font-semibold">{unit}</span>
-            </p>
-          </div>
-        </div>
-        <p className="mt-2 text-[10px] font-medium text-slate-400">ไม่มียอดในช่วงนี้</p>
-      </div>
-    );
-  }
+  const effective = selectedRegions ?? allRegions;
+  const selectedSet = new Set(effective);
+  const selectedVolume = allRegions
+    .filter((r) => selectedSet.has(r))
+    .reduce((s, r) => s + (regionTotalVolumes.get(r) ?? 0), 0);
+  const selectedPercent = totalAllVolume > 0 ? (selectedVolume / totalAllVolume) * 100 : 0;
+
+  const toggle = (region: string) => {
+    const current = selectedRegions ?? allRegions;
+    if (current.includes(region)) onChange(current.filter((r) => r !== region));
+    else onChange([...current, region]);
+  };
 
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-2xl border bg-white p-3 transition-shadow hover:shadow-md dark:bg-slate-950",
-        isLeader ? "border-transparent ring-1" : "border-[#e5e7eb] dark:border-slate-800"
-      )}
-      style={isLeader ? { boxShadow: `inset 0 0 0 1.5px ${color}55`, background: `linear-gradient(135deg, ${color}10 0%, #ffffff 60%)` } : undefined}
-    >
-      {/* Subtle bg orb */}
-      <div
-        className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full opacity-10"
-        style={{ backgroundColor: color }}
-      />
-      <div className="relative flex items-start justify-between">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-            <p className="truncate text-[11px] font-semibold text-slate-500" title={name}>{name}</p>
-          </div>
-          <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {compactNumber(current)}
-            <span className="ml-1 text-xs font-semibold text-slate-400">{unit}</span>
-          </p>
-        </div>
-        <span
-          className={cn(
-            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
-            isLeader ? "text-white" : "bg-slate-100 text-slate-500 dark:bg-slate-800"
-          )}
-          style={isLeader ? { backgroundColor: color } : undefined}
-        >
-          #{rank}
+    <div className="rounded-xl bg-slate-50/70 px-3 py-2.5 dark:bg-slate-900/40">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold text-slate-500">
+          เลือกภูมิภาค · {selectedSet.size}/{allRegions.length} · {compactNumber(selectedVolume)} {unit} ({Math.round(selectedPercent)}%)
         </span>
-      </div>
-
-      <div className="relative mt-2 flex items-center justify-between text-[10px] font-semibold">
-        {delta !== null && delta !== 0 ? (
-          <span className={delta > 0 ? "text-emerald-600" : "text-rose-600"}>
-            {delta > 0 ? "↑" : "↓"} {compactNumber(Math.abs(delta))} {unit}
-          </span>
-        ) : (
-          <span className="text-slate-400">—</span>
-        )}
-        <span className="text-slate-400">
-          {Math.round(share)}% · {dealerCount} dealer{dealerCount === 1 ? "" : "s"}
-        </span>
-      </div>
-
-      {trend.length > 1 && (
-        <div className="relative mt-2 h-7">
-          <Sparkline values={trend} color={color} height={28} />
+        <div className="flex gap-1.5">
+          <button type="button" onClick={() => onChange(null)} className="rounded-md px-2 py-0.5 text-[11px] font-semibold text-slate-500 hover:bg-white dark:hover:bg-slate-800">
+            ทั้งหมด
+          </button>
+          <button type="button" onClick={() => onChange([])} className="rounded-md px-2 py-0.5 text-[11px] font-semibold text-slate-500 hover:bg-white dark:hover:bg-slate-800">
+            ล้าง
+          </button>
         </div>
-      )}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {allRegions.map((region) => {
+          const active = selectedSet.has(region);
+          const color = getRegionColor(region, allRegions);
+          return (
+            <button
+              key={region}
+              type="button"
+              onClick={() => toggle(region)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all",
+                active ? "text-white" : "bg-white text-slate-500 hover:text-slate-700 dark:bg-slate-900 dark:text-slate-400"
+              )}
+              style={active ? { backgroundColor: color } : undefined}
+            >
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: active ? "#fff" : color }} />
+              {region}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -422,61 +322,37 @@ export function TimeVolumeBarChart({
   dealers,
   focusRange,
   range,
-  unit = "m3"
+  selectedRegions = null,
+  unit = "m3",
+  headerControls,
+  regionFilterPanel
 }: {
   dealers: Dealer[];
   focusRange?: ChartFocusRange;
   range: ChartRange;
+  selectedRegions?: string[] | null;
   unit?: string;
+  headerControls?: React.ReactNode;
+  regionFilterPanel?: React.ReactNode;
 }) {
   const [activeKey, setActiveKey] = useState("");
   const [dealerRegionFilter, setDealerRegionFilter] = useState<string>("");
   const [hoveredDonutIdx, setHoveredDonutIdx] = useState<number | null>(null);
   const [showAllDealers, setShowAllDealers] = useState(false);
 
-  // Region filter state: null = all regions selected (default)
-  const [selectedRegions, setSelectedRegions] = useState<string[] | null>(null);
-
-  // Full region list (for filter chips) — derived from unfiltered dealers
   const allRegions = useMemo(
     () => [...new Set(dealers.map((d) => d.region).filter(Boolean))].sort((a, b) => a.localeCompare(b, "th")),
     [dealers]
   );
 
-  // Effective selected regions (null = all)
   const effectiveSelectedRegions = selectedRegions ?? allRegions;
   const selectedRegionSet = useMemo(() => new Set(effectiveSelectedRegions), [effectiveSelectedRegions]);
 
-  // Dealers filtered by selected regions
   const visibleDealers = useMemo(() => {
     if (selectedRegionSet.size === allRegions.length) return dealers;
     if (selectedRegionSet.size === 0) return [];
     return dealers.filter((d) => selectedRegionSet.has(d.region));
   }, [dealers, selectedRegionSet, allRegions]);
-
-  // All-time volume per region (for chip labels)
-  const regionTotalVolumes = useMemo(() => {
-    const map = new Map<string, number>();
-    dealers.forEach((d) => {
-      if (!d.region) return;
-      map.set(d.region, (map.get(d.region) ?? 0) + d.volume);
-    });
-    return map;
-  }, [dealers]);
-
-  const totalAllVolume = useMemo(() => dealers.reduce((s, d) => s + d.volume, 0), [dealers]);
-  const totalSelectedVolume = useMemo(() => visibleDealers.reduce((s, d) => s + d.volume, 0), [visibleDealers]);
-  const selectedPercent = totalAllVolume > 0 ? (totalSelectedVolume / totalAllVolume) * 100 : 0;
-
-  const toggleRegion = (region: string) => {
-    setSelectedRegions((prev) => {
-      const current = prev ?? allRegions;
-      if (current.includes(region)) return current.filter((r) => r !== region);
-      return [...current, region];
-    });
-  };
-  const selectAllRegions = () => setSelectedRegions(null);
-  const clearAllRegions = () => setSelectedRegions([]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const buckets = useMemo(() => buildBuckets(visibleDealers, range, focusRange), [visibleDealers, focusRange?.from, focusRange?.to, range]);
@@ -486,28 +362,12 @@ export function TimeVolumeBarChart({
     : [...buckets].reverse().find((b) => b.value > 0) ?? buckets[buckets.length - 1];
 
   const activeBucket = buckets.find((b) => b.key === activeKey) ?? defaultBucket;
-  const activeIndex = activeBucket ? buckets.findIndex((b) => b.key === activeBucket.key) : -1;
-  const prevBucket = activeIndex > 0 ? buckets[activeIndex - 1] : undefined;
 
-  // Active regions for chart-internal use (cards/colors) — only selected ones
   const regions = useMemo(
     () => [...new Set(visibleDealers.map((d) => d.region).filter(Boolean))].sort((a, b) => a.localeCompare(b, "th")),
     [visibleDealers]
   );
 
-  // Per-region trend across all buckets
-  const regionTrends = useMemo(() => {
-    const map = new Map<string, number[]>();
-    regions.forEach((region) => {
-      map.set(
-        region,
-        buckets.map((b) => b.regions.find((r) => r.name === region)?.value ?? 0)
-      );
-    });
-    return map;
-  }, [buckets, regions]);
-
-  // Active comparison set (per current view)
   const comparisonRegions: RegionSlice[] = range === "all"
     ? buckets.filter((b) => b.value > 0).map((b) => ({
         color: b.regions[0]?.color ?? getRegionColor(b.label, buckets.map((x) => x.label)),
@@ -517,8 +377,11 @@ export function TimeVolumeBarChart({
     : activeBucket?.regions ?? [];
 
   const comparisonTotal = comparisonRegions.reduce((s, r) => s + r.value, 0);
+  const rankedRegions = [...comparisonRegions].sort((a, b) => b.value - a.value);
+  const rankMax = rankedRegions[0]?.value ?? 1;
+
   const maxValue = Math.max(...buckets.map((b) => b.value), 1);
-  const CHART_H = 200;
+  const CHART_H = 150;
   const TICK_COUNT = 4;
   const ticks = Array.from({ length: TICK_COUNT + 1 }, (_, i) => maxValue * (1 - i / TICK_COUNT));
 
@@ -531,481 +394,287 @@ export function TimeVolumeBarChart({
     return undefined;
   }, [activeKey, buckets, defaultBucket]);
 
-  const RegionFilter = (
-    <div className="rounded-2xl border border-[#e2e8f0] bg-gradient-to-b from-slate-50 to-white px-4 py-3 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
-      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-baseline gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">เลือกภูมิภาคที่จะดู</span>
-          <span className="text-[11px] font-semibold text-slate-400">·</span>
-          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-            {selectedRegionSet.size} / {allRegions.length} พื้นที่
-          </span>
-        </div>
-        <div className="flex gap-1.5">
-          <button
-            type="button"
-            onClick={selectAllRegions}
-            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-          >
-            เลือกทั้งหมด
-          </button>
-          <button
-            type="button"
-            onClick={clearAllRegions}
-            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-          >
-            ล้างการเลือก
-          </button>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {allRegions.map((region) => {
-          const active = selectedRegionSet.has(region);
-          const color = getRegionColor(region, allRegions);
-          const vol = regionTotalVolumes.get(region) ?? 0;
-          return (
-            <button
-              key={region}
-              type="button"
-              onClick={() => toggleRegion(region)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all",
-                active
-                  ? "text-white shadow-sm"
-                  : "border border-dashed border-slate-300 bg-white text-slate-500 hover:border-slate-400 hover:text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
-              )}
-              style={active ? { backgroundColor: color } : undefined}
-            >
-              {active ? (
-                <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3">
-                  <polyline points="3,8.5 7,12.5 13,4.5" />
-                </svg>
-              ) : (
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-              )}
-              <span>{region}</span>
-              <span className={active ? "opacity-80" : "text-slate-400"}>· {compactNumber(vol)}</span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-slate-200/60 pt-2.5 text-[11px] dark:border-slate-700/60">
-        <span>
-          <span className="font-semibold uppercase tracking-wider text-slate-400">รวมที่เลือก: </span>
-          <strong className="font-bold text-slate-900 dark:text-slate-100">{compactNumber(totalSelectedVolume)} {unit}</strong>
-        </span>
-        <span>
-          <span className="font-semibold uppercase tracking-wider text-slate-400">Dealers: </span>
-          <strong className="font-bold text-slate-900 dark:text-slate-100">{formatNumber(visibleDealers.length)}</strong>
-        </span>
-        <span>
-          <span className="font-semibold uppercase tracking-wider text-slate-400">% จากยอดทั้งหมด: </span>
-          <strong className="font-bold text-slate-900 dark:text-slate-100">{Math.round(selectedPercent)}%</strong>
-        </span>
-        {selectedRegionSet.size === 0 && (
-          <span className="ml-auto text-amber-600 font-semibold">⚠ ยังไม่ได้เลือกภูมิภาค — กดปุ่ม "เลือกทั้งหมด" เพื่อดูข้อมูล</span>
-        )}
-      </div>
-    </div>
-  );
-
-  if (!buckets.length) {
+  if (selectedRegionSet.size === 0) {
     return (
-      <div className="space-y-4">
-        {RegionFilter}
-        <EmptyState />
+      <div className="flex h-[220px] flex-col items-center justify-center gap-1 text-center">
+        <div className="text-sm font-semibold text-amber-600">ยังไม่ได้เลือกภูมิภาค</div>
+        <div className="text-xs font-medium text-slate-400">กดปุ่ม "ทั้งหมด" ในตัวกรองด้านบนเพื่อดูข้อมูล</div>
       </div>
     );
   }
 
-  const regionRanks = new Map(
-    regions
-      .map((region) => ({
-        name: region,
-        value: activeBucket?.regions.find((r) => r.name === region)?.value ?? 0
-      }))
-      .filter((region) => region.value > 0)
-      .sort((a, b) => b.value - a.value)
-      .map((region, index) => [region.name, index + 1])
-  );
+  if (!buckets.length) return <EmptyState />;
 
-  // Region cards: keep legend order stable so hover/period changes do not move cards.
-  const regionCards = regions
-    .map((region) => {
-      const current = activeBucket?.regions.find((r) => r.name === region)?.value ?? 0;
-      const previous = prevBucket?.regions.find((r) => r.name === region)?.value ?? 0;
-      const dealerCount = activeBucket?.dealerList.filter((d) => d.region === region).length ?? 0;
-      const share = comparisonTotal > 0 ? (current / comparisonTotal) * 100 : 0;
-      return {
-        active: current > 0,
-        color: getRegionColor(region, regions),
-        current,
-        dealerCount,
-        delta: prevBucket ? current - previous : null,
-        name: region,
-        rank: regionRanks.get(region) ?? 0,
-        share,
-        trend: regionTrends.get(region) ?? []
-      };
-    });
+  const donutSegments = rankedRegions.map((r) => ({ color: r.color, label: r.name, value: r.value }));
 
-  const leaderName = regionCards.find((c) => c.rank === 1)?.name;
-
-  // Donut segments (active regions in current bucket)
-  const donutSegments = comparisonRegions.map((r) => ({ color: r.color, label: r.name, value: r.value }));
-
-  // Filtered dealers for leaderboard
+  const dealerFilterRegions = rankedRegions.map((r) => r.name);
   const filteredDealers = dealerRegionFilter
     ? (activeBucket?.dealerList.filter((d) => d.region === dealerRegionFilter) ?? [])
     : (activeBucket?.dealerList ?? []);
   const dealerLeaderboardMax = filteredDealers[0]?.volume ?? 1;
 
-  const dealerFilterRegions = regionCards.filter((c) => c.active).map((c) => c.name);
-
   return (
-    <div className="space-y-4">
-      {/* Region filter (chip pills) */}
-      {RegionFilter}
-
-      {/* Bar chart (period navigator) */}
-      <div className="overflow-x-auto rounded-2xl border border-[#e5e7eb] bg-[#fbfcfd] p-4 dark:border-slate-800 dark:bg-slate-950/60">
-        <div className="grid min-w-[640px] grid-cols-[48px_minmax(0,1fr)] gap-2">
-          <div className="relative" style={{ height: CHART_H }}>
-            {ticks.map((tick, i) => (
-              <div
-                key={i}
-                className="absolute right-2 text-right text-[10px] font-semibold text-slate-400"
-                style={{ top: `${(i / TICK_COUNT) * 100}%`, transform: "translateY(-50%)" }}
-              >
-                {compactNumber(tick)}
-              </div>
-            ))}
+    <div className="space-y-3">
+      {/* ── Period navigator (time ranges) — full width on top ── */}
+      {range !== "all" && (
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <div className="mb-3">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+              แนวโน้มปริมาณการส่งมอบราย{range === "year" ? "ปี" : range === "month" ? "เดือน" : "วัน"}
+            </h4>
+            <p className="text-[11px] text-slate-400">แสดงแนวโน้มของทุกภูมิภาคเปรียบเทียบกันตามสัดส่วนการส่งมอบ</p>
           </div>
-
-          <div className="relative" style={{ height: CHART_H }}>
-            {ticks.map((_, i) => (
-              <div
-                key={i}
-                className="absolute inset-x-0 h-px bg-[#edf2f4] dark:bg-slate-800"
-                style={{ top: `${(i / TICK_COUNT) * 100}%` }}
-              />
-            ))}
-            <div
-              className="grid h-full items-end gap-1.5 px-1"
-              style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(32px, 1fr))` }}
-            >
-              {buckets.map((bucket) => {
-                const isActive = bucket.key === activeBucket?.key;
-                const barH = bucket.value > 0 ? Math.max((bucket.value / maxValue) * 100, 2) : 0;
-                return (
-                  <button
-                    key={bucket.key}
-                    aria-pressed={isActive}
-                    className="group relative flex h-full flex-col justify-end outline-none"
-                    title={`${bucket.periodLabel}: ${formatNumber(bucket.value)} ${unit}`}
-                    type="button"
-                    onClick={() => setActiveKey(bucket.key)}
-                    onMouseEnter={() => setActiveKey(bucket.key)}
-                  >
-                    <div
-                      className={cn(
-                        "absolute inset-x-0 bottom-0 rounded-xl transition-colors",
-                        isActive ? "bg-slate-100/80 dark:bg-slate-800/60" : "bg-transparent group-hover:bg-slate-50 dark:group-hover:bg-slate-900/40"
-                      )}
-                      style={{ top: "-4px" }}
-                    />
-                    <div className="relative mb-1 text-center text-[10px] font-bold leading-none text-slate-600 dark:text-slate-300">
-                      {bucket.value > 0 ? compactNumber(bucket.value) : ""}
-                    </div>
-                    <div
-                      className={cn(
-                        "relative flex w-full flex-col-reverse overflow-hidden rounded-t-lg transition-all",
-                        isActive ? "ring-2 ring-slate-700 ring-offset-1 dark:ring-slate-400" : ""
-                      )}
-                      style={{ height: `${barH}%` }}
-                    >
-                      {bucket.regions.map((region) => (
-                        <div
-                          key={region.name}
-                          className="w-full border-t border-white/20 transition-opacity group-hover:opacity-90"
-                          style={{
-                            backgroundColor: region.color,
-                            height: `${Math.max((region.value / Math.max(bucket.value, 1)) * 100, 2)}%`
-                          }}
-                        />
-                      ))}
-                      {bucket.value === 0 && (
-                        <div className="w-full rounded-full bg-slate-200 dark:bg-slate-700" style={{ height: "3px" }} />
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div />
-          <div
-            className="grid gap-1.5 px-1 pt-2"
-            style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(32px, 1fr))` }}
-          >
-            {buckets.map((bucket) => (
-              <div
-                key={bucket.key}
-                className="truncate text-center text-[10px] font-semibold text-slate-400"
-                title={bucket.periodLabel}
-              >
-                {bucket.label}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ─── V3 Detail Panel ──────────────────────────────────────────────── */}
-      {activeBucket && (
-        <>
-          {/* Period header strip */}
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
-            <div>
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                {range === "all" ? "ภูมิภาค" : "ช่วงที่เลือก"}
-              </span>
-              <p className="mt-0.5 text-sm font-bold text-slate-900 dark:text-slate-100">{activeBucket.periodLabel}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <StatChip label="Delivered Volume" value={`${compactNumber(activeBucket.value)} ${unit}`} />
-              <StatChip label="Dealers" value={formatNumber(activeBucket.dealers)} />
-              <StatChip label="Groups" value={formatNumber(activeBucket.groups)} />
-            </div>
-          </div>
-
-          {/* Region cards grid (one card per region) */}
-          {regions.length > 0 && (
-            <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6">
-              {regionCards.map((card) => (
-                <RegionCard
-                  key={card.name}
-                  active={card.active}
-                  color={card.color}
-                  current={card.current}
-                  dealerCount={card.dealerCount}
-                  delta={card.delta}
-                  isLeader={card.name === leaderName}
-                  name={card.name}
-                  rank={card.rank}
-                  share={card.share}
-                  trend={card.trend}
-                  unit={unit}
-                />
+          <div className="grid min-w-[420px] grid-cols-[40px_minmax(0,1fr)] gap-2">
+            <div className="relative" style={{ height: CHART_H }}>
+              {ticks.map((tick, i) => (
+                <div
+                  key={i}
+                  className="absolute right-1 text-right text-[10px] font-semibold text-slate-400"
+                  style={{ top: `${(i / TICK_COUNT) * 100}%`, transform: "translateY(-50%)" }}
+                >
+                  {compactNumber(tick)}
+                </div>
               ))}
             </div>
-          )}
-
-          {/* Donut + Leaderboard split */}
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
-            {/* Donut */}
-            <div className="rounded-2xl border border-[#e5e7eb] bg-white p-4 dark:border-slate-800 dark:bg-slate-950 lg:col-span-2">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                  สัดส่วน · {activeBucket.periodLabel}
-                </p>
-                <span className="text-[10px] font-semibold text-slate-400">
-                  {comparisonRegions.length} {range === "all" ? "ภูมิภาค" : "พื้นที่"}
-                </span>
-              </div>
-
-              {donutSegments.length > 0 ? (
-                <>
-                  <div className="relative mx-auto" style={{ maxWidth: 200 }}>
-                    <Donut
-                      segments={donutSegments}
-                      size={180}
-                      hoveredIdx={hoveredDonutIdx}
-                      onHover={setHoveredDonutIdx}
-                    />
-                    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
-                      {hoveredDonutIdx !== null && donutSegments[hoveredDonutIdx] ? (
-                        <>
-                          <div className="flex items-center gap-1">
-                            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: donutSegments[hoveredDonutIdx].color }} />
-                            <span className="max-w-[120px] truncate text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                              {donutSegments[hoveredDonutIdx].label}
-                            </span>
-                          </div>
-                          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                            {compactNumber(donutSegments[hoveredDonutIdx].value)}
-                          </span>
-                          <span className="text-[11px] font-bold" style={{ color: donutSegments[hoveredDonutIdx].color }}>
-                            {Math.round((donutSegments[hoveredDonutIdx].value / comparisonTotal) * 100)}%
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Total</span>
-                          <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                            {compactNumber(comparisonTotal)}
-                          </span>
-                          <span className="text-[10px] font-semibold text-slate-400">{unit}</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
-                    {donutSegments.map((seg) => {
-                      const pct = comparisonTotal > 0 ? (seg.value / comparisonTotal) * 100 : 0;
-                      return (
-                        <div key={seg.label} className="flex items-center gap-1.5 text-[11px]">
-                          <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: seg.color }} />
-                          <span className="min-w-0 flex-1 truncate font-semibold text-slate-600 dark:text-slate-300" title={seg.label}>
-                            {seg.label}
-                          </span>
-                          <span className="shrink-0 font-bold text-slate-800 dark:text-slate-200">{Math.round(pct)}%</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              ) : (
-                <p className="py-10 text-center text-xs font-medium text-slate-400">ไม่มีข้อมูลในช่วงนี้</p>
-              )}
-            </div>
-
-            {/* Leaderboard */}
-            <div className="rounded-2xl border border-[#e5e7eb] bg-white dark:border-slate-800 dark:bg-slate-950 lg:col-span-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0f2f4] px-4 py-3 dark:border-slate-800">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                  Dealer Leaderboard
-                  <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 dark:bg-slate-800">
-                    {filteredDealers.length}
-                  </span>
-                </p>
-                {dealerFilterRegions.length > 1 && (
-                  <div className="flex flex-wrap items-center gap-1">
+            <div className="relative" style={{ height: CHART_H }}>
+              {ticks.map((_, i) => (
+                <div key={i} className="absolute inset-x-0 h-px bg-[#edf2f4] dark:bg-slate-800" style={{ top: `${(i / TICK_COUNT) * 100}%` }} />
+              ))}
+              <div className="grid h-full items-end gap-1 px-1" style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(20px, 1fr))` }}>
+	                {buckets.map((bucket) => {
+	                  const isActive = bucket.key === activeBucket?.key;
+	                  const barH = bucket.value > 0 ? Math.max((bucket.value / maxValue) * 100, 2) : 0;
+	                  const displayBarH = bucket.value > 0 ? barH : range === "month" ? 14 : 0;
+	                  return (
                     <button
+                      key={bucket.key}
+                      aria-pressed={isActive}
+                      className="group relative flex h-full flex-col justify-end outline-none"
+                      title={`${bucket.periodLabel}: ${formatNumber(bucket.value)} ${unit}`}
                       type="button"
-                      onClick={() => setDealerRegionFilter("")}
-                      className={cn(
-                        "rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors",
-                        dealerRegionFilter === ""
-                          ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
-                          : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-                      )}
+                      onClick={() => setActiveKey(bucket.key)}
+                      onMouseEnter={() => setActiveKey(bucket.key)}
                     >
-                      ทั้งหมด
+                      <div className="relative mb-1 text-center text-[9px] font-bold leading-none text-slate-500 dark:text-slate-300">
+                        {bucket.value > 0 ? compactNumber(bucket.value) : ""}
+                      </div>
+                      <div
+                        className={cn(
+                          "relative flex w-full flex-col-reverse overflow-hidden rounded-t-md transition-all",
+                          isActive ? "ring-2 ring-slate-700 ring-offset-1 dark:ring-slate-400" : ""
+                        )}
+	                        style={{ height: `${displayBarH}%` }}
+	                      >
+                        {bucket.regions.map((region) => (
+                          <div
+                            key={region.name}
+                            className="w-full border-t border-white/20 transition-opacity group-hover:opacity-90"
+                            style={{ backgroundColor: region.color, height: `${Math.max((region.value / Math.max(bucket.value, 1)) * 100, 2)}%` }}
+                          />
+                        ))}
+	                        {bucket.value === 0 && (
+	                          <div
+	                            className={cn(
+	                              "w-full rounded-t-md",
+	                              range === "month" ? "bg-slate-200/80 dark:bg-slate-700/80" : "bg-slate-200 dark:bg-slate-700"
+	                            )}
+	                            style={{ height: "100%" }}
+	                          />
+	                        )}
+	                      </div>
                     </button>
-                    {dealerFilterRegions.map((region) => {
-                      const c = getRegionColor(region, regions);
-                      const isActive = dealerRegionFilter === region;
-                      return (
-                        <button
-                          key={region}
-                          type="button"
-                          onClick={() => { setDealerRegionFilter(region); setShowAllDealers(false); }}
-                          className={cn(
-                            "flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors",
-                            isActive ? "text-white" : "text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-                          )}
-                          style={isActive ? { backgroundColor: c } : undefined}
-                        >
-                          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: isActive ? "#fff" : c }} />
-                          {region}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                  );
+                })}
               </div>
-              <div className="p-2">
-                {filteredDealers.length > 0 ? (
-                  <div
-                    className={cn(
-                      "space-y-0.5",
-                      showAllDealers && filteredDealers.length > 6 && "max-h-[340px] overflow-y-auto pr-1"
-                    )}
-                  >
-                    {(showAllDealers ? filteredDealers : filteredDealers.slice(0, 6)).map((dealer, i) => {
-                      const color = getRegionColor(dealer.region, regions);
-                      const share = activeBucket.value > 0 ? (dealer.volume / activeBucket.value) * 100 : 0;
-                      const barShare = dealerLeaderboardMax > 0 ? (dealer.volume / dealerLeaderboardMax) * 100 : 0;
-                      return (
-                        <div
-                          key={dealer.dealerId}
-                          className="grid grid-cols-[32px_minmax(0,1fr)_72px] items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                        >
-                          <span
-                            className={cn(
-                              "flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold",
-                              i === 0
-                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-                                : i === 1
-                                  ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                                  : i === 2
-                                    ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
-                                    : "bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400"
-                            )}
-                          >
-                            {i + 1}
-                          </span>
-                          <div className="min-w-0">
-                            <div className="flex items-baseline justify-between gap-2">
-                              <span className="truncate text-xs font-semibold text-slate-800 dark:text-slate-200" title={dealer.name}>
-                                {dealer.name}
-                              </span>
-                            </div>
-                            <div className="mt-0.5 flex items-center gap-2 text-[10px] font-semibold text-slate-400">
-                              <span
-                                className="rounded-full px-1.5 py-0.5"
-                                style={{ backgroundColor: `${color}15`, color }}
-                              >
-                                {dealer.region}
-                              </span>
-                              <span>{Math.round(share)}% ของยอด</span>
-                            </div>
-                            <div className="mt-1 h-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                              <div
-                                className="h-full rounded-full transition-all duration-500"
-                                style={{ backgroundColor: color, width: `${Math.max(barShare, 2)}%` }}
-                              />
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                              {compactNumber(dealer.volume)}
-                            </p>
-                            <p className="text-[10px] font-semibold text-slate-400">{unit}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="py-8 text-center text-xs font-medium text-slate-400">ไม่มี dealer ในช่วงนี้</p>
-                )}
-                {filteredDealers.length > 6 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowAllDealers((v) => !v)}
-                    className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#d9e3e6] py-2 text-[11px] font-semibold text-slate-500 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900/40"
-                  >
-                    {showAllDealers ? (
-                      <>
-                        <span>ย่อกลับ (แสดง 6 อันดับแรก)</span>
-                        <span className="text-xs">▴</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>ดูทั้งหมด · +{filteredDealers.length - 6} dealers อื่นๆ</span>
-                        <span className="text-xs">▾</span>
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
+            </div>
+            <div />
+            <div className="grid gap-1 px-1 pt-1.5" style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(20px, 1fr))` }}>
+              {buckets.map((bucket) => (
+	                <div key={bucket.key} className="truncate text-center text-[10px] font-semibold text-slate-400" title={bucket.periodLabel}>
+                  {bucket.label}
+                </div>
+              ))}
             </div>
           </div>
-        </>
+        </div>
       )}
+
+      {/* Bento Grid Layout */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+        {/* Card 1 — Ranked regions */}
+        <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between min-h-[260px]">
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0f4] pb-3 mb-3 dark:border-slate-800">
+              <div className="flex items-start gap-2">
+                <div>
+                  <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">ปริมาณการขายแยกตามพื้นที่ของ Dealer</h3>
+                  <p className="mt-0.5 text-[11px] font-medium text-slate-400">
+                    ยอดขายสะสมแยกตามพื้นที่การจัดส่งคอนกรีตของแต่ละภูมิภาค
+                  </p>
+                </div>
+              </div>
+              {headerControls}
+            </div>
+
+            {regionFilterPanel}
+
+            <div className="space-y-3 mt-4">
+              {rankedRegions.length > 0 ? (
+                rankedRegions.map((region, i) => {
+                  const pct = comparisonTotal > 0 ? (region.value / comparisonTotal) * 100 : 0;
+                  const w = (region.value / rankMax) * 100;
+                  return (
+                    <div key={region.name}>
+	                      <div className="mb-1 flex items-baseline justify-between gap-2 text-[13px]">
+                        <span className="min-w-0 truncate text-slate-700 dark:text-slate-200">
+                          <span className="mr-1.5 text-slate-400">{i + 1}</span>
+                          {region.name}
+                        </span>
+                        <span className="shrink-0 font-bold text-slate-800 dark:text-slate-100">
+	                          {compactNumber(region.value)} <span className="text-[11px] font-medium text-slate-400">{unit} · {Math.round(pct)}%</span>
+                        </span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.max(w, 2)}%`, backgroundColor: region.color }} />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="py-6 text-center text-xs font-medium text-slate-400">ไม่มีข้อมูลในช่วงนี้</p>
+              )}
+            </div>
+          </div>
+          
+          <div className="mt-3 rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-[13px] font-medium text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+            ใช้แถบด้านบนเพื่อสลับช่วงเวลา แล้วเลือกภูมิภาคเพื่อเจาะดู dealer ในช่วงนั้น
+          </div>
+        </div>
+
+        {/* Card 2 — Donut */}
+        <div className="lg:col-span-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col">
+	          <div className="border-b border-[#eef0f4] pb-2.5 mb-2 dark:border-slate-800">
+            <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">สัดส่วนพื้นที่ขาย</h3>
+            <p className="mt-0.5 text-[11px] font-medium text-slate-400">สัดส่วนร้อยละจำแนกตามภูมิภาค</p>
+          </div>
+          {donutSegments.length > 0 ? (
+	            <div className="flex flex-col items-center gap-3 my-auto">
+	              <div className="relative shrink-0" style={{ width: 168, height: 168 }}>
+	                <Donut segments={donutSegments} size={168} hoveredIdx={hoveredDonutIdx} onHover={setHoveredDonutIdx} />
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                  {hoveredDonutIdx !== null && donutSegments[hoveredDonutIdx] ? (
+                    <>
+	                      <span className="max-w-[90px] truncate text-[10px] font-semibold text-slate-500">{donutSegments[hoveredDonutIdx].label}</span>
+	                      <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{compactNumber(donutSegments[hoveredDonutIdx].value)}</span>
+                      <span className="text-[10px] font-bold" style={{ color: donutSegments[hoveredDonutIdx].color }}>
+                        {Math.round((donutSegments[hoveredDonutIdx].value / comparisonTotal) * 100)}%
+                      </span>
+                    </>
+                  ) : (
+                    <>
+	                      <span className="text-[10px] font-semibold text-slate-400">Total</span>
+	                      <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{compactNumber(comparisonTotal)}</span>
+	                      <span className="text-[10px] font-semibold text-slate-400">{unit}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+	              <div className="w-full grid grid-cols-2 gap-x-2 gap-y-1 pt-0">
+                {donutSegments.slice(0, 6).map((seg) => {
+                  const pct = comparisonTotal > 0 ? (seg.value / comparisonTotal) * 100 : 0;
+                  return (
+	                    <div key={seg.label} className="flex items-center gap-1.5 text-xs">
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: seg.color }} />
+                      <span className="min-w-0 flex-1 truncate text-slate-500 dark:text-slate-400" title={seg.label}>{seg.label}</span>
+                      <span className="shrink-0 font-bold text-slate-800 dark:text-slate-200">{Math.round(pct)}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <p className="py-8 text-center text-xs font-medium text-slate-400 my-auto">ไม่มีข้อมูลในช่วงนี้</p>
+          )}
+        </div>
+
+        {/* Card 3 — Leaderboard */}
+        <div className="lg:col-span-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between border-b border-[#eef0f4] pb-3 mb-3 dark:border-slate-800">
+              <div>
+                <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">Dealer Leaderboard</h3>
+	                <p className="mt-0.5 text-[11px] font-medium text-slate-400">ยอดขายสูงสุดราย Dealer</p>
+              </div>
+              {dealerFilterRegions.length > 1 && (
+                <DropdownSelect
+	                  buttonClassName="h-9 rounded-lg px-2.5 text-xs font-semibold shadow-none"
+                  className="w-[190px] shrink-0"
+                  menuClassName="left-auto right-0 w-[260px]"
+                  options={[
+                    { label: "ทุกภูมิภาค", value: "" },
+                    ...dealerFilterRegions.map((region) => ({ label: region, value: region }))
+                  ]}
+                  value={dealerRegionFilter}
+                  onChange={(value) => {
+                    setDealerRegionFilter(value);
+                    setShowAllDealers(false);
+                  }}
+                />
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              {filteredDealers.length > 0 ? (
+                <div className={cn("space-y-2", showAllDealers && filteredDealers.length > 5 && "max-h-[220px] overflow-y-auto pr-1")}>
+                  {(showAllDealers ? filteredDealers : filteredDealers.slice(0, 5)).map((dealer, i) => {
+                    const color = getRegionColor(dealer.region, regions);
+                    const share = (activeBucket?.value ?? 0) > 0 ? (dealer.volume / (activeBucket?.value ?? 1)) * 100 : 0;
+                    const barShare = dealerLeaderboardMax > 0 ? (dealer.volume / dealerLeaderboardMax) * 100 : 0;
+                    return (
+                      <div key={dealer.dealerId} className="flex items-center gap-3 border-b border-[#f8fafc] pb-2 last:border-0 last:pb-0 dark:border-slate-900">
+                        <span className={cn(
+	                          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                          i === 0 ? "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
+                            : i === 1 ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                            : i === 2 ? "bg-orange-50 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400"
+                            : "bg-slate-50 text-slate-400 dark:bg-slate-900"
+                        )}>
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+	                          <span className="block truncate text-[13px] font-bold text-slate-800 dark:text-slate-200" title={dealer.name}>{dealer.name}</span>
+                          <div className="mt-1 flex items-center gap-1.5">
+	                            <span className="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide" style={{ backgroundColor: `${color}15`, color }}>{dealer.region.replace("CPAC ", "")}</span>
+                            <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                              <div className="h-full rounded-full" style={{ backgroundColor: color, width: `${Math.max(barShare, 2)}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+	                          <p className="text-[13px] font-bold text-slate-900 dark:text-slate-100">{compactNumber(dealer.volume)}</p>
+	                          <p className="text-[10px] font-semibold text-slate-400">{unit}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="py-6 text-center text-xs font-medium text-slate-400">ไม่มี dealer ในช่วงนี้</p>
+              )}
+            </div>
+          </div>
+          
+          {filteredDealers.length > 5 && (
+            <button
+              type="button"
+              onClick={() => setShowAllDealers((v) => !v)}
+	              className="mt-3 w-full rounded-xl border border-slate-100 dark:border-slate-800 py-2 text-xs font-bold text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900"
+            >
+              {showAllDealers ? "ย่อกลับ" : `ดูทั้งหมด · +${filteredDealers.length - 5} ราย`}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

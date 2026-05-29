@@ -9,6 +9,7 @@ type DropdownSelectProps<T extends string> = {
   className?: string;
   label?: string;
   leading?: ReactNode;
+  menuClassName?: string;
   onChange: (value: T) => void;
   options: Array<{ label: string; value: T }>;
   placeholder?: string;
@@ -22,6 +23,7 @@ export function DropdownSelect<T extends string>({
   className,
   label,
   leading,
+  menuClassName,
   onChange,
   options,
   placeholder = "เลือกข้อมูล",
@@ -108,7 +110,7 @@ export function DropdownSelect<T extends string>({
         </button>
 
         {open ? (
-          <div className="absolute left-0 right-0 z-30 mt-2 overflow-hidden rounded-xl border border-[#d5e0e3] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.14)]">
+          <div className={cn("absolute left-0 right-0 z-30 mt-2 min-w-full overflow-hidden rounded-xl border border-[#d5e0e3] bg-white shadow-[0_18px_45px_rgba(15,23,42,0.14)]", menuClassName)}>
             {searchable ? (
               <div className="border-b border-slate-100 p-2.5">
                 <div className="flex items-center gap-2 rounded-lg border border-[#d5e0e3] bg-white px-3">
@@ -146,7 +148,7 @@ export function DropdownSelect<T extends string>({
                     <span className="flex h-5 items-center justify-center">
                       {isSelected ? <Check size={16} className="text-slate-950" /> : null}
                     </span>
-                    <span className="truncate font-medium">{option.label}</span>
+                    <span className="whitespace-normal break-words font-medium leading-5">{option.label}</span>
                   </button>
                 );
               }) : (

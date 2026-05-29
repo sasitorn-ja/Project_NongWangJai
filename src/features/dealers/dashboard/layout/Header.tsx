@@ -1,6 +1,7 @@
 import { Menu } from "lucide-react";
 
 import { DateRangeToolbar } from "../filters/DateRangeToolbar";
+import { DropdownSelect } from "../filters/DropdownSelect";
 import type { DatePreset } from "../lib/dates";
 import { type PageKey, getPageSubtitle, getPageTitle } from "../config/pageMeta";
 
@@ -40,13 +41,13 @@ export function Header({
 
       {/* ── Mobile layout (hidden on xl+) ── */}
       <div className="xl:hidden">
-        {/* Single row: hamburger | title | TEST | native date select */}
+        {/* Single row: hamburger | title | date filter */}
         <div className="flex items-center gap-2 px-3 py-2.5">
 
           {/* Hamburger */}
           <button
             aria-label="Open menu"
-            className="flex h-9 w-9 flex-none items-center justify-center rounded-md border border-[#d5e0e3] bg-white text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+            className="flex h-9 w-9 flex-none items-center justify-center rounded-md bg-transparent text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             onClick={onOpenMobileNav}
             type="button"
           >
@@ -63,22 +64,13 @@ export function Header({
             </p>
           </div>
 
-          {/* TEST badge */}
-          <span className="flex-none rounded-xl border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-black uppercase tracking-[0.15em] text-red-600">
-            Test
-          </span>
-
-          {/* Native select — no JS event interference, compact on mobile */}
-          <select
-            aria-label="กรองวันที่"
-            className="flex-none h-9 max-w-[120px] cursor-pointer appearance-none rounded-xl border border-[#d5e0e3] bg-white px-2.5 text-xs font-medium text-slate-700 shadow-sm outline-none focus:border-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+	          <DropdownSelect
+            buttonClassName="h-9 rounded-xl px-2.5 text-xs font-medium shadow-sm"
+            className="w-[126px] flex-none"
+            options={DATE_PRESET_OPTIONS}
             value={datePreset}
-            onChange={(e) => setDatePreset(e.target.value as DatePreset)}
-          >
-            {DATE_PRESET_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            onChange={setDatePreset}
+          />
 
         </div>
 
@@ -107,7 +99,7 @@ export function Header({
       <div className="hidden xl:flex xl:items-center xl:justify-between xl:gap-4 xl:px-5 xl:py-3">
         <div className="flex min-w-0 items-center gap-3">
           <button
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-[#d5e0e3] bg-white text-slate-700 shadow-sm outline-none hover:bg-slate-50 focus-visible:ring-2 focus-visible:ring-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-transparent text-slate-700 outline-none hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-300 dark:text-slate-300 dark:hover:bg-slate-800"
             onClick={onToggleCollapsed}
             title={collapsed ? "ขยายเมนู" : "ย่อเมนู"}
             type="button"
@@ -125,10 +117,7 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="inline-flex h-10 items-center rounded-xl border border-red-200 bg-red-50 px-3 text-xs font-black uppercase tracking-[0.2em] text-red-600 shadow-sm">
-            Test
-          </span>
-          <DateRangeToolbar
+	          <DateRangeToolbar
             dateFrom={dateFrom}
             datePreset={datePreset}
             dateTo={dateTo}

@@ -68,7 +68,14 @@ function DealerDashboardApp() {
       )}
 
       {page === "network" && (
-        <NetworkPage dealers={data.filteredDealers} apiState={data.apiState} />
+        <NetworkPage
+          apiState={data.apiState}
+          dealers={data.filteredDealers}
+          onSelectDealer={(dealerId) => {
+            data.setSelectedDealerId(dealerId);
+            setPage("details");
+          }}
+        />
       )}
 
       {page === "groups" && (

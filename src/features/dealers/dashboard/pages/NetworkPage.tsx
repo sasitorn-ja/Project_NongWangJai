@@ -9,18 +9,24 @@ import { getRegionAccent, getRegionLabel } from "../lib/regions";
 function DealerNetworkCard({
   dealer,
   accent,
-  dotClass
+  dotClass,
+  onSelect
 }: {
   dealer: Dealer;
-  accent: "sky" | "emerald" | "amber" | "violet" | "orange" | "teal" | "slate";
+    accent: "sky" | "emerald" | "amber" | "violet" | "cyan" | "teal" | "slate";
   dotClass: string;
+  onSelect: (dealerId: number) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-[#d9e3e6] bg-white p-3 shadow-sm">
+    <button
+      type="button"
+      className="w-full rounded-2xl border border-[#d9e3e6] bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sky-200"
+      onClick={() => onSelect(dealer.dealer_id)}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className={cn("flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-black uppercase", accent === "sky" && "bg-sky-50 text-sky-700", accent === "emerald" && "bg-emerald-50 text-emerald-700", accent === "amber" && "bg-amber-50 text-amber-700", accent === "violet" && "bg-violet-50 text-violet-700", accent === "orange" && "bg-orange-50 text-orange-700", accent === "teal" && "bg-teal-50 text-teal-700", accent === "slate" && "bg-slate-50 text-slate-700")}>
+	            <span className={cn("flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-black uppercase", accent === "sky" && "bg-sky-50 text-sky-700", accent === "emerald" && "bg-emerald-50 text-emerald-700", accent === "amber" && "bg-amber-50 text-amber-700", accent === "violet" && "bg-violet-50 text-violet-700", accent === "cyan" && "bg-cyan-50 text-cyan-700", accent === "teal" && "bg-teal-50 text-teal-700", accent === "slate" && "bg-slate-50 text-slate-700")}>
               {dealer.dealer_name.slice(0, 1)}
             </span>
             <div className="min-w-0">
@@ -50,13 +56,15 @@ function DealerNetworkCard({
           <div className="mt-0.5 font-semibold text-slate-800">{dealer.unit || "m3"}</div>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 
 function RegionNetworkColumn({
+  onSelectDealer,
   region
 }: {
+  onSelectDealer: (dealerId: number) => void;
   region: {
     region: string;
     dealers: Dealer[];
@@ -69,19 +77,19 @@ function RegionNetworkColumn({
   const accentClasses = {
     sky: "border-sky-200 text-sky-700 bg-sky-50",
     emerald: "border-emerald-200 text-emerald-700 bg-emerald-50",
-    amber: "border-amber-200 text-amber-700 bg-amber-50",
-    violet: "border-violet-200 text-violet-700 bg-violet-50",
-    orange: "border-orange-200 text-orange-700 bg-orange-50",
-    teal: "border-teal-200 text-teal-700 bg-teal-50",
+	    amber: "border-amber-200 text-amber-700 bg-amber-50",
+	    violet: "border-violet-200 text-violet-700 bg-violet-50",
+	    cyan: "border-cyan-200 text-cyan-700 bg-cyan-50",
+	    teal: "border-teal-200 text-teal-700 bg-teal-50",
     slate: "border-slate-200 text-slate-700 bg-slate-50"
   } as const;
   const dotClasses = {
     sky: "bg-sky-500",
     emerald: "bg-emerald-500",
-    amber: "bg-amber-500",
-    violet: "bg-violet-500",
-    orange: "bg-orange-500",
-    teal: "bg-teal-500",
+	    amber: "bg-amber-500",
+	    violet: "bg-violet-500",
+	    cyan: "bg-cyan-500",
+	    teal: "bg-teal-500",
     slate: "bg-slate-500"
   } as const;
   const [expanded, setExpanded] = useState(false);
@@ -104,7 +112,13 @@ function RegionNetworkColumn({
       <div className="mx-auto mt-4 h-6 w-px bg-[#d9e7f7]" />
       <div className="space-y-3">
         {visibleDealers.map((dealer) => (
-          <DealerNetworkCard key={dealer.dealer_id} dealer={dealer} accent={accent} dotClass={dotClasses[accent]} />
+          <DealerNetworkCard
+            key={dealer.dealer_id}
+            accent={accent}
+            dealer={dealer}
+            dotClass={dotClasses[accent]}
+            onSelect={onSelectDealer}
+          />
         ))}
         {hiddenCount > 0 ? (
           <button
@@ -120,7 +134,15 @@ function RegionNetworkColumn({
   );
 }
 
-export function NetworkPage({ dealers, apiState }: { dealers: Dealer[]; apiState: ApiState }) {
+export function NetworkPage({
+  apiState,
+  dealers,
+  onSelectDealer
+}: {
+  apiState: ApiState;
+  dealers: Dealer[];
+  onSelectDealer: (dealerId: number) => void;
+}) {
   const uniqueDealers = useMemo(() => {
     const byIdentity = new Map<string, Dealer>();
 
@@ -220,7 +242,7 @@ export function NetworkPage({ dealers, apiState }: { dealers: Dealer[]; apiState
           <div className="h-px w-full bg-[#b7d7f5]" />
           <div className="grid gap-4 pt-6" style={{ gridTemplateColumns: `repeat(${Math.max(regionColumns.length, 1)}, minmax(0, 1fr))` }}>
             {regionColumns.map((region) => (
-              <RegionNetworkColumn key={region.region} region={region} />
+              <RegionNetworkColumn key={region.region} onSelectDealer={onSelectDealer} region={region} />
             ))}
           </div>
         </div>

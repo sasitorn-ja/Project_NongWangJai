@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { formatNumber } from "@/lib/number";
 import type { Dealer } from "@/features/dealers/types";
+import { getRegionColor } from "../lib/regions";
 import { getDealerStatusKey, statusText } from "../lib/status";
 import type { DataColumn } from "./types";
 
@@ -19,8 +20,8 @@ export function dealerColumn<T extends Dealer>(onOpen?: (dealer: T) => void): Da
           {record.dealer_name.slice(0, 1)}
         </div>
         <div className="min-w-0">
-          <div className="truncate font-semibold text-slate-950">{record.dealer_name}</div>
-          <div className="text-xs font-medium text-slate-500">{record.dealer_code}</div>
+	          <div className="truncate text-[15px] font-semibold text-slate-950">{record.dealer_name}</div>
+	          <div className="text-[13px] font-medium text-slate-500">{record.dealer_code}</div>
         </div>
       </button>
     )
@@ -49,7 +50,15 @@ export function statusColumn<T extends { status?: unknown }>(): DataColumn<T> {
 }
 
 export function regionPill(value: string) {
-  return <span className="rounded-md border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">{value}</span>;
+  const color = getRegionColor(value);
+  return (
+    <span
+      className="rounded-md px-2.5 py-1 text-[13px] font-semibold ring-1"
+      style={{ backgroundColor: `${color}14`, color, boxShadow: `inset 0 0 0 1px ${color}24` }}
+    >
+      {value}
+    </span>
+  );
 }
 
 export function VolumeCell({ max, unit, value }: { max: number; unit: string; value: number }) {

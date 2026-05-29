@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, PackageCheck, Search, TrendingUp, Users } from "lucide-react";
+import { ChevronDown, PackageCheck, Search, TrendingUp, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
@@ -9,22 +9,31 @@ import { dateText, parseDateValue } from "../lib/dates";
 import { getOrderStatusKey, orderStatusText } from "../lib/status";
 import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
 import { DealerPicker } from "../filters/DealerPicker";
+import { ShadcnPagination } from "../table/DataTable";
 
 const MOBILE_PAGE_SIZE = 8;
 const DESKTOP_PAGE_SIZE = 15;
 
 type CustomerGroup = {
-  activeOrderCount: number;
   customerCode: string;
   customerKey: string;
   customerName: string;
   latestPour: string | null;
+  openOrderCount: number;
   orderCount: number;
   orders: OrderItem[];
   totalDelivered: number;
   totalOrdered: number;
   uniqueSiteCount: number;
 };
+
+function getOrderDateValue(order: OrderItem) {
+  return parseDateValue(order.pour_datetime ?? order.updated_at ?? order.created_at);
+}
+
+function getOrderDateText(order: OrderItem) {
+  return order.pour_datetime ?? order.updated_at ?? order.created_at ?? null;
+}
 
 function StatusBadge({ status }: { status?: string | null }) {
   const statusKey = getOrderStatusKey(status);
@@ -52,11 +61,11 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
     let group = map.get(key);
     if (!group) {
       group = {
-        activeOrderCount: 0,
         customerCode,
         customerKey: key,
         customerName,
         latestPour: null,
+        openOrderCount: 0,
         orderCount: 0,
         orders: [],
         totalDelivered: 0,
@@ -70,16 +79,16 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
     group.totalOrdered += order.quantity?.ordered ?? 0;
     group.totalDelivered += order.quantity?.delivered ?? 0;
     const statusKey = getOrderStatusKey(order.status?.order);
-    if (statusKey === "confirmed" || statusKey === "pending") group.activeOrderCount += 1;
+    if (statusKey === "confirmed" || statusKey === "pending") group.openOrderCount += 1;
 
-    const candidate = parseDateValue(order.pour_datetime ?? order.updated_at ?? order.created_at);
+    const candidate = getOrderDateValue(order);
     const current = parseDateValue(group.latestPour);
     if (candidate && (!current || candidate > current)) {
-      group.latestPour = order.pour_datetime ?? order.updated_at ?? order.created_at ?? null;
+      group.latestPour = getOrderDateText(order);
     }
   });
 
-  // Compute unique sites per group + sort orders inside each group by pour_datetime desc
+  // Compute unique sites per group + keep the newest order first inside each expanded group.
   const groups = [...map.values()];
   groups.forEach((group) => {
     const sites = new Set<string>();
@@ -88,13 +97,19 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
     });
     group.uniqueSiteCount = sites.size;
     group.orders.sort((a, b) => {
-      const da = parseDateValue(a.pour_datetime ?? a.updated_at ?? a.created_at);
-      const db = parseDateValue(b.pour_datetime ?? b.updated_at ?? b.created_at);
+      const da = getOrderDateValue(a);
+      const db = getOrderDateValue(b);
       return (db?.getTime() ?? 0) - (da?.getTime() ?? 0);
     });
   });
 
-  return groups.sort((a, b) => b.totalOrdered - a.totalOrdered);
+  return groups.sort((a, b) => {
+    const latestDiff = (parseDateValue(b.latestPour)?.getTime() ?? 0) - (parseDateValue(a.latestPour)?.getTime() ?? 0);
+    if (latestDiff !== 0) return latestDiff;
+    if (b.totalOrdered !== a.totalOrdered) return b.totalOrdered - a.totalOrdered;
+    if (b.orderCount !== a.orderCount) return b.orderCount - a.orderCount;
+    return a.customerName.localeCompare(b.customerName, "th");
+  });
 }
 
 function CustomerAccordionRow({
@@ -129,11 +144,14 @@ function CustomerAccordionRow({
             <span>{group.customerCode}</span>
             <span className="text-slate-300">·</span>
             <span>{formatNumber(group.uniqueSiteCount)} sites</span>
-            {group.activeOrderCount > 0 && (
+            {group.openOrderCount > 0 && (
               <>
                 <span className="text-slate-300">·</span>
-                <span className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
-                  {group.activeOrderCount} active
+                <span
+                  className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700"
+                  title="นับเฉพาะ order ที่สถานะรอยืนยันหรือยืนยันแล้ว"
+                >
+                  {group.openOrderCount} รอ/ยืนยัน
                 </span>
               </>
             )}
@@ -151,56 +169,90 @@ function CustomerAccordionRow({
 
       {/* Expanded order list */}
       {expanded && (
-        <div className="border-t border-slate-100 bg-white px-5 pb-3 pt-2">
-          {/* Sub-header */}
-          <div className="grid grid-cols-[1.4fr_1fr_80px_80px_140px_100px] gap-3 border-b border-slate-100 px-3 pb-1.5 pt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            <span>Order / Product</span>
-            <span>Site</span>
-            <span className="text-right">Ordered</span>
-            <span className="text-right">Delivered</span>
-            <span>Pour Time</span>
-            <span>สถานะ</span>
+        <div className="border-t border-slate-100 bg-white px-5 py-3">
+          <div className="max-h-[420px] overflow-auto rounded-lg border border-[#d9e3e6]">
+            <table className="w-full min-w-[1120px] border-collapse text-[15px]">
+              <thead className="sticky top-0 z-10">
+                <tr className="border-b border-[#d9e3e6] bg-[#f6f8f9]">
+                  <th className="w-[38%] border-r border-[#e5e9ec] px-3 py-2.5 text-left text-[13px] font-semibold text-slate-500">
+                    Order / Product
+                  </th>
+                  <th className="w-[28%] border-r border-[#e5e9ec] px-3 py-2.5 text-left text-[13px] font-semibold text-slate-500">
+                    Site
+                  </th>
+                  <th className="w-[9%] border-r border-[#e5e9ec] px-3 py-2.5 text-right text-[13px] font-semibold text-slate-500">
+                    Ordered
+                  </th>
+                  <th className="w-[9%] border-r border-[#e5e9ec] px-3 py-2.5 text-right text-[13px] font-semibold text-slate-500">
+                    Delivered
+                  </th>
+                  <th className="w-[10%] border-r border-[#e5e9ec] px-3 py-2.5 text-left text-[13px] font-semibold text-slate-500">
+                    Pour Time ↓
+                  </th>
+                  <th className="w-[6%] px-3 py-2.5 text-left text-[13px] font-semibold text-slate-500">
+                    สถานะ
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {group.orders.map((order) => {
+                  const rowKey = [
+                    order.order?.order_no,
+                    order.site?.site_code,
+                    order.created_at ?? order.updated_at ?? order.pour_datetime
+                  ]
+                    .filter(Boolean)
+                    .join("-");
+                  return (
+                    <tr
+                      key={rowKey}
+                      className="border-b border-[#edf1f2] transition-colors last:border-b-0 hover:bg-[#f3faf8]"
+                    >
+                      <td className="border-r border-[#edf1f2] px-3 py-2.5 align-middle">
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold text-slate-950" title={order.order?.product_name ?? "-"}>
+                            {order.order?.product_name ?? "-"}
+                          </div>
+                          <div className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
+                            {order.order?.order_no ?? "-"} | {order.order?.product_sku ?? "-"}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="border-r border-[#edf1f2] px-3 py-2.5 align-middle">
+                        <div className="min-w-0">
+                          <div className="truncate text-xs font-semibold text-slate-600" title={order.site?.site_code ?? "-"}>
+                            {order.site?.site_code ?? "-"}
+                          </div>
+                          <div className="mt-0.5 truncate text-sm font-medium text-slate-800" title={order.site?.site_name ?? "-"}>
+                            {order.site?.site_name ?? "-"}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="border-r border-[#edf1f2] px-3 py-2.5 text-right align-middle font-semibold text-slate-800">
+                        {formatNumber(order.quantity?.ordered ?? 0)}
+                        <span className="ml-1 text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span>
+                      </td>
+                      <td
+                        className={cn(
+                          "border-r border-[#edf1f2] px-3 py-2.5 text-right align-middle font-semibold",
+                          (order.quantity?.delivered ?? 0) > 0 ? "text-slate-800" : "text-slate-400"
+                        )}
+                      >
+                        {formatNumber(order.quantity?.delivered ?? 0)}
+                        <span className="ml-1 text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span>
+                      </td>
+                      <td className="border-r border-[#edf1f2] px-3 py-2.5 align-middle text-xs font-medium text-slate-600">
+                        {dateText(getOrderDateText(order))}
+                      </td>
+                      <td className="px-3 py-2.5 align-middle">
+                        <StatusBadge status={order.status?.order} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-          {group.orders.map((order) => {
-            const rowKey = [
-              order.order?.order_no,
-              order.site?.site_code,
-              order.created_at ?? order.updated_at ?? order.pour_datetime
-            ]
-              .filter(Boolean)
-              .join("-");
-            return (
-              <div
-                key={rowKey}
-                className="grid grid-cols-[1.4fr_1fr_80px_80px_140px_100px] gap-3 border-b border-slate-50 px-3 py-2.5 text-sm last:border-b-0 hover:bg-slate-50/50"
-              >
-                <div className="min-w-0">
-                  <div className="truncate font-semibold text-slate-950" title={order.order?.product_name ?? "-"}>
-                    {order.order?.product_name ?? "-"}
-                  </div>
-                  <div className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
-                    {order.order?.order_no ?? "-"} | {order.order?.product_sku ?? "-"}
-                  </div>
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate" title={order.site?.site_name ?? "-"}>{order.site?.site_name ?? "-"}</div>
-                  <div className="text-[11px] font-medium text-slate-500">{order.site?.site_code ?? "-"}</div>
-                </div>
-                <div className="text-right font-semibold text-slate-800">
-                  {formatNumber(order.quantity?.ordered ?? 0)}
-                  <span className="ml-1 text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span>
-                </div>
-                <div className={cn("text-right font-semibold", (order.quantity?.delivered ?? 0) > 0 ? "text-slate-800" : "text-slate-400")}>
-                  {formatNumber(order.quantity?.delivered ?? 0)}
-                  <span className="ml-1 text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span>
-                </div>
-                <div className="text-xs font-medium text-slate-600">{dateText(order.pour_datetime)}</div>
-                <div>
-                  <StatusBadge status={order.status?.order} />
-                </div>
-              </div>
-            );
-          })}
         </div>
       )}
     </div>
@@ -265,11 +317,12 @@ function MobileCustomerCard({
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
                   <div>
                     <div className="text-slate-400">Site</div>
-                    <div className="truncate font-medium text-slate-700">{order.site?.site_name ?? "-"}</div>
+                    <div className="truncate font-semibold text-slate-700">{order.site?.site_code ?? "-"}</div>
+                    <div className="truncate font-medium text-slate-500">{order.site?.site_name ?? "-"}</div>
                   </div>
                   <div>
                     <div className="text-slate-400">เทเวลา</div>
-                    <div className="font-medium text-slate-700">{dateText(order.pour_datetime)}</div>
+                    <div className="font-medium text-slate-700">{dateText(getOrderDateText(order))}</div>
                   </div>
                   <div>
                     <div className="text-slate-400">Ordered</div>
@@ -334,16 +387,10 @@ export function OrdersPage({
   const collapseAll = () => setExpandedCustomers(new Set());
 
   // Desktop pagination
-  const desktopTotalPages = Math.max(Math.ceil(customerGroups.length / DESKTOP_PAGE_SIZE), 1);
-  const desktopStart = customerGroups.length ? (desktopPage - 1) * DESKTOP_PAGE_SIZE + 1 : 0;
-  const desktopEnd = Math.min(desktopPage * DESKTOP_PAGE_SIZE, customerGroups.length);
   const desktopRows = customerGroups.slice((desktopPage - 1) * DESKTOP_PAGE_SIZE, desktopPage * DESKTOP_PAGE_SIZE);
 
   // Mobile pagination
-  const mobileTotalPages = Math.max(Math.ceil(customerGroups.length / MOBILE_PAGE_SIZE), 1);
   const mobileRows = customerGroups.slice((mobilePage - 1) * MOBILE_PAGE_SIZE, mobilePage * MOBILE_PAGE_SIZE);
-  const mobileStart = customerGroups.length ? (mobilePage - 1) * MOBILE_PAGE_SIZE + 1 : 0;
-  const mobileEnd = Math.min(mobilePage * MOBILE_PAGE_SIZE, customerGroups.length);
 
   return (
     <>
@@ -403,7 +450,7 @@ export function OrdersPage({
             <div>
               <CardTitle className="text-base">Order List ของ Dealer</CardTitle>
               <p className="mt-0.5 text-xs font-medium text-slate-500">
-                รวมตามลูกค้า · แตะเพื่อกางดู order ของลูกค้านั้น
+                รวมตามลูกค้า · เรียงตาม Pour ล่าสุดจากใหม่ไปเก่า · แตะเพื่อกางดู order ของลูกค้านั้น
               </p>
             </div>
             <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
@@ -446,30 +493,13 @@ export function OrdersPage({
         </CardContent>
 
         {customerGroups.length > 0 && (
-          <div className="flex items-center justify-between border-t border-[#d9e3e6] bg-white px-4 py-2.5">
-            <span className="text-xs font-semibold text-slate-500">
-              {formatNumber(mobileStart)}–{formatNumber(mobileEnd)} จาก {formatNumber(customerGroups.length)}
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled={mobilePage === 1}
-                onClick={() => setMobilePage((p) => Math.max(p - 1, 1))}
-                className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d5e0e3] bg-white text-slate-700 shadow-sm disabled:opacity-40"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="px-2 text-xs font-semibold text-slate-700">{mobilePage} / {mobileTotalPages}</span>
-              <button
-                type="button"
-                disabled={mobilePage === mobileTotalPages}
-                onClick={() => setMobilePage((p) => Math.min(p + 1, mobileTotalPages))}
-                className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d5e0e3] bg-white text-slate-700 shadow-sm disabled:opacity-40"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
+          <ShadcnPagination
+            currentPage={mobilePage}
+            pageSize={MOBILE_PAGE_SIZE}
+            totalItems={customerGroups.length}
+            totalPages={Math.max(Math.ceil(customerGroups.length / MOBILE_PAGE_SIZE), 1)}
+            onPageChange={setMobilePage}
+          />
         )}
       </Card>
 
@@ -480,7 +510,7 @@ export function OrdersPage({
             <div>
               <CardTitle className="text-lg">Order List ของ Dealer</CardTitle>
               <p className="mt-1 text-xs font-medium text-slate-500">
-                รวมตามลูกค้า · คลิกแถวเพื่อกางดู order ของลูกค้านั้น · กางได้หลายคนพร้อมกัน
+                รวมตามลูกค้า · เรียงตาม Pour ล่าสุดจากใหม่ไปเก่า · คลิกแถวเพื่อกางดู order ของลูกค้านั้น
               </p>
             </div>
             <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
@@ -532,7 +562,7 @@ export function OrdersPage({
           <span className="text-right">Orders</span>
           <span className="text-right">Ordered</span>
           <span className="text-right">Delivered</span>
-          <span>Pour ล่าสุด</span>
+          <span>Pour ล่าสุด ↓</span>
         </div>
 
         <CardContent className="p-0">
@@ -554,30 +584,13 @@ export function OrdersPage({
         </CardContent>
 
         {customerGroups.length > 0 && (
-          <div className="flex items-center justify-between border-t border-[#d9e3e6] bg-white px-5 py-2.5">
-            <span className="text-xs font-semibold text-slate-500">
-              แสดง {formatNumber(desktopStart)}–{formatNumber(desktopEnd)} จาก {formatNumber(customerGroups.length)} ลูกค้า
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled={desktopPage === 1}
-                onClick={() => setDesktopPage((p) => Math.max(p - 1, 1))}
-                className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d5e0e3] bg-white text-slate-700 shadow-sm disabled:opacity-40"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="px-2 text-xs font-semibold text-slate-700">{desktopPage} / {desktopTotalPages}</span>
-              <button
-                type="button"
-                disabled={desktopPage === desktopTotalPages}
-                onClick={() => setDesktopPage((p) => Math.min(p + 1, desktopTotalPages))}
-                className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d5e0e3] bg-white text-slate-700 shadow-sm disabled:opacity-40"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
+          <ShadcnPagination
+            currentPage={desktopPage}
+            pageSize={DESKTOP_PAGE_SIZE}
+            totalItems={customerGroups.length}
+            totalPages={Math.max(Math.ceil(customerGroups.length / DESKTOP_PAGE_SIZE), 1)}
+            onPageChange={setDesktopPage}
+          />
         )}
       </Card>
     </>

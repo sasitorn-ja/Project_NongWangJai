@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — แบบ E (Cyber Dark Mode)</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+Thai:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #090d16;
+  --card: #111827;
+  --card-glow: rgba(59, 130, 246, 0.1);
+  --ink-dark: #f8fafc;
+  --ink-light: #94a3b8;
+  --muted: #64748b;
+  --line: #1f2937;
+  --blue: #3b82f6;
+  --blue-glow: rgba(59, 130, 246, 0.35);
+  --teal: #10b981;
+  --teal-glow: rgba(16, 185, 129, 0.35);
+  --purple: #8b5cf6;
+  --purple-glow: rgba(139, 92, 246, 0.35);
+  --cyan: #06b6d4;
+  --cyan-glow: rgba(6, 182, 212, 0.35);
+  --orange: #f59e0b;
+  --orange-glow: rgba(245, 158, 11, 0.35);
+  --green: #10b981;
+  --chip: #1f2937;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Outfit', 'Noto Sans Thai', sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink-light);
+  padding: 24px;
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.head h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--ink-dark);
+  text-shadow: 0 0 10px rgba(248, 250, 252, 0.1);
+}
+
+.head .sub {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.head .tools {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-dark);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn:hover {
+  border-color: var(--blue);
+  box-shadow: 0 0 10px var(--blue-glow);
+  transform: translateY(-1px);
+}
+
+.btn.test {
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.btn.test:hover {
+  background: rgba(239, 68, 68, 0.15);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.25);
+}
+
+/* Grid Layout */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.c-card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.c-card:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+}
+
+/* KPI style with neon glow and circular progress indicators */
+.kpi {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kpi .info {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi .lbl {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.kpi .val {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--ink-dark);
+  line-height: 1.2;
+  margin: 4px 0;
+}
+
+.kpi .val span {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.kpi .note {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.kpi .note span {
+  color: var(--teal);
+  font-weight: 600;
+}
+
+/* Circle Progress SVG styling */
+.radial-progress {
+  position: relative;
+  width: 55px;
+  height: 55px;
+}
+
+.radial-progress svg {
+  transform: rotate(-90deg);
+  width: 55px;
+  height: 55px;
+}
+
+.radial-progress circle {
+  fill: none;
+  stroke-width: 4;
+}
+
+.radial-progress .bg-circle {
+  stroke: var(--line);
+}
+
+.radial-progress .fg-circle {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s ease-in-out;
+}
+
+.kpi.blue .fg-circle { stroke: var(--blue); filter: drop-shadow(0 0 4px var(--blue)); }
+.kpi.teal .fg-circle { stroke: var(--teal); filter: drop-shadow(0 0 4px var(--teal)); }
+.kpi.purple .fg-circle { stroke: var(--purple); filter: drop-shadow(0 0 4px var(--purple)); }
+.kpi.cyan .fg-circle { stroke: var(--cyan); filter: drop-shadow(0 0 4px var(--cyan)); }
+
+.radial-progress .number {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-dark);
+}
+
+/* Grid columns & rows */
+.span-1 { grid-column: span 1; }
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+.span-4 { grid-column: span 4; }
+
+/* Elements styling */
+.ctitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink-dark);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cdesc {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  margin-bottom: 20px;
+}
+
+/* Glowing progress bar for horizontal bar charts */
+.barrow {
+  margin-bottom: 14px;
+}
+
+.barrow:last-child {
+  margin-bottom: 0;
+}
+
+.barrow .top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  margin-bottom: 6px;
+}
+
+.barrow .top .n {
+  color: var(--ink-light);
+}
+
+.barrow .top b {
+  color: var(--ink-dark);
+  font-weight: 700;
+}
+
+.barrow .top em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 11px;
+}
+
+.track {
+  height: 8px;
+  background: var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: 10px;
+  position: relative;
+}
+
+.fill.blue { background: var(--blue); box-shadow: 0 0 8px var(--blue-glow); }
+.fill.teal { background: var(--teal); box-shadow: 0 0 8px var(--teal-glow); }
+.fill.purple { background: var(--purple); box-shadow: 0 0 8px var(--purple-glow); }
+.fill.cyan { background: var(--cyan); box-shadow: 0 0 8px var(--cyan-glow); }
+.fill.orange { background: var(--orange); box-shadow: 0 0 8px var(--orange-glow); }
+
+/* Donut & Legend layout */
+.donut-container {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-around;
+  margin-top: 10px;
+}
+
+.donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.donut-legend .li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--ink-light);
+}
+
+.donut-legend .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.donut-legend .pct {
+  font-weight: 700;
+  color: var(--ink-dark);
+}
+
+/* Leaderboard */
+.lead-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lead-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(31, 41, 55, 0.3);
+  border: 1px solid var(--line);
+}
+
+.lead-item:hover {
+  border-color: rgba(59, 130, 246, 0.2);
+  background: rgba(31, 41, 55, 0.5);
+}
+
+.lead-item .rank {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lead-item:nth-child(1) .rank { background: rgba(245, 158, 11, 0.2); color: var(--orange); border: 1px solid var(--orange); }
+.lead-item:nth-child(2) .rank { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid #cbd5e1; }
+.lead-item:nth-child(3) .rank { background: rgba(251, 146, 60, 0.2); color: #fdba74; border: 1px solid #fdba74; }
+
+.lead-item .info {
+  flex: 1;
+}
+
+.lead-item .nm {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-dark);
+}
+
+.lead-item .tag {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.lead-item .val {
+  font-weight: 800;
+  color: var(--ink-dark);
+  text-align: right;
+}
+
+.lead-item .val small {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 10px;
+}
+
+/* Cyber Table Styling */
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 14px 16px;
+  border-bottom: 2px solid var(--line);
+}
+
+td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+  color: var(--ink-light);
+}
+
+tr:hover td {
+  background: rgba(31, 41, 55, 0.4);
+  color: var(--ink-dark);
+}
+
+.status {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.status.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--teal);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status.inactive {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.searchbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.searchbar input, .searchbar select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  outline: none;
+  background: var(--card);
+  color: var(--ink-dark);
+  transition: all 0.2s;
+}
+
+.searchbar input:focus, .searchbar select:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 6px var(--blue-glow);
+}
+
+.cyber-mini-bar {
+  height: 6px;
+  background: var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  width: 80px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 10px;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.cyber-mini-bar i {
+  display: block;
+  height: 100%;
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan-glow);
+}
+
+.insight-glow-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ink-dark);
+  font-size: 13px;
+}
+
+.insight-glow-card i {
+  font-size: 20px;
+  filter: drop-shadow(0 0 5px var(--blue-glow));
+}
+
+.badge {
+  background: var(--chip);
+  border: 1px solid var(--line);
+  color: var(--ink-dark);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+}
+
+.seg-pill {
+  display: flex;
+  background: var(--line);
+  border-radius: 10px;
+  padding: 2px;
+}
+
+.seg-pill button {
+  border: none;
+  background: transparent;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.seg-pill button.active {
+  background: var(--card);
+  color: var(--ink-dark);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div>
+    <h1>Dashboard</h1>
+    <div class="sub">ภาพรวมระบบข้อมูลสำหรับผู้แทนจำหน่าย · แบบ E: Cyber Dark Layout</div>
+  </div>
+  <div class="tools">
+    <button class="btn test">TEST SYSTEM</button>
+    <button class="btn">📅 PERIOD: ALL TIME ▾</button>
+  </div>
+</div>
+
+<div class="grid-container">
+  <!-- KPI 1 -->
+  <div class="c-card kpi blue span-1">
+    <div class="info">
+      <span class="lbl">Delivered Volume</span>
+      <span class="val">1.4K <span>m³</span></span>
+      <span class="note"><span>+12%</span> vs last month</span>
+    </div>
+    <div class="radial-progress">
+      <svg>
+        <circle class="bg-circle" cx="27" cy="27" r="23"></circle>
+        <circle class="fg-circle" cx="27" cy="27" r="23" stroke-dashoffset="18"></circle>
+      </svg>
+      <span class="number">82%</span>
+    </div>
+  </div>
+
+  <!-- KPI 2 -->
+  <div class="c-card kpi teal span-1">
+    <div class="info">
+      <span class="lbl">Active Dealers</span>
+      <span class="val">32<span>%</span></span>
+      <span class="note"><span>8 / 25</span> dealers online</span>
+    </div>
+    <div class="radial-progress">
+      <svg>
+        <circle class="bg-circle" cx="27" cy="27" r="23"></circle>
+        <circle class="fg-circle" cx="27" cy="27" r="23" stroke-dashoffset="68"></circle>
+      </svg>
+      <span class="number">32%</span>
+    </div>
+  </div>
+
+  <!-- KPI 3 -->
+  <div class="c-card kpi purple span-1">
+    <div class="info">
+      <span class="lbl">Total Groups</span>
+      <span class="val">99</span>
+      <span class="note"><span>99 active</span> telegram/line</span>
+    </div>
+    <div class="radial-progress">
+      <svg>
+        <circle class="bg-circle" cx="27" cy="27" r="23"></circle>
+        <circle class="fg-circle" cx="27" cy="27" r="23" stroke-dashoffset="5"></circle>
+      </svg>
+      <span class="number">95%</span>
+    </div>
+  </div>
+
+  <!-- KPI 4 -->
+  <div class="c-card kpi cyan span-1">
+    <div class="info">
+      <span class="lbl">Top Region</span>
+      <span class="val" style="font-size: 21px;">CPAC Metro</span>
+      <span class="note"><span>35%</span> of total volume</span>
+    </div>
+    <div class="radial-progress">
+      <svg>
+        <circle class="bg-circle" cx="27" cy="27" r="23"></circle>
+        <circle class="fg-circle" cx="27" cy="27" r="23" stroke-dashoffset="65"></circle>
+      </svg>
+      <span class="number">35%</span>
+    </div>
+  </div>
+
+  <!-- Regional Volume Bar Chart - Span 2 -->
+  <div class="c-card span-2" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div class="ctitle">
+        <span>📈 ปริมาณการขายแยกตามภูมิภาค</span>
+        <div class="seg-pill">
+          <button class="active">ทั้งหมด</button>
+          <button>ปี</button>
+          <button>เดือน</button>
+          <button>วัน</button>
+        </div>
+      </div>
+      <div class="cdesc">ปริมาณส่งมอบสะสมแยกตามภูมิภาค</div>
+      
+      <div style="margin-top: 10px;">
+        <div class="barrow"><div class="top"><span class="n">1 CPAC Metro</span><span><b>477</b> <em>m³ · 35%</em></span></div><div class="track"><div class="fill blue" style="width:100%"></div></div></div>
+        <div class="barrow"><div class="top"><span class="n">2 CPAC Northeast</span><span><b>380</b> <em>m³ · 28%</em></span></div><div class="track"><div class="fill teal" style="width:80%"></div></div></div>
+        <div class="barrow"><div class="top"><span class="n">3 CPAC West</span><span><b>221</b> <em>m³ · 16%</em></span></div><div class="track"><div class="fill purple" style="width:46%"></div></div></div>
+        <div class="barrow"><div class="top"><span class="n">4 CPAC North</span><span><b>186</b> <em>m³ · 14%</em></span></div><div class="track"><div class="fill cyan" style="width:39%"></div></div></div>
+        <div class="barrow"><div class="top"><span class="n">5 RMC - South Chain</span><span><b>76</b> <em>m³ · 6%</em></span></div><div class="track"><div class="fill orange" style="width:16%"></div></div></div>
+        <div class="barrow"><div class="top"><span class="n">6 CPAC East</span><span><b>28</b> <em>m³ · 2%</em></span></div><div class="track"><div class="fill teal" style="width:6%"></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly Trend line Chart - Span 2 -->
+  <div class="c-card span-2">
+    <div class="ctitle">
+      <span>📊 แนวโน้มการส่งมอบรายเดือน</span>
+      <span class="badge">REAL-TIME</span>
+    </div>
+    <div class="cdesc">ยอดเปรียบเทียบระหว่าง CPAC Metro & Northeast</div>
+    <div style="height: 200px; margin-top: 15px;">
+      <canvas id="trendChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Donut Breakdown - Span 1 -->
+  <div class="c-card span-1">
+    <div class="ctitle">สัดส่วนภูมิภาค</div>
+    <div class="cdesc">จำแนกตามยอดส่งมอบ</div>
+    <div class="donut-container">
+      <div style="width:110px;height:110px;position:relative;">
+        <canvas id="donutChart"></canvas>
+      </div>
+      <div class="donut-legend">
+        <div class="li"><span class="dot" style="color:var(--blue); background:var(--blue)"></span>Metro <span class="pct">35%</span></div>
+        <div class="li"><span class="dot" style="color:var(--teal); background:var(--teal)"></span>NE <span class="pct">28%</span></div>
+        <div class="li"><span class="dot" style="color:var(--purple); background:var(--purple)"></span>West <span class="pct">16%</span></div>
+        <div class="li"><span class="dot" style="color:var(--cyan); background:var(--cyan)"></span>North <span class="pct">14%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaderboard - Span 3 -->
+  <div class="c-card span-3">
+    <div class="ctitle">
+      <span>🏆 ดีลเลอร์ยอดสั่งซื้อสูงสุด 5 อันดับแรก</span>
+      <span class="badge">LEADERBOARD</span>
+    </div>
+    <div class="cdesc">คำนวณจากปริมาณคอนกรีตส่งจริงรวมทั้งหมดในระบบ</div>
+    
+    <div class="lead-list" style="display: grid; grid-template-columns: repeat(3, 1fr); gap:12px;">
+      <div class="lead-item">
+        <span class="rank">1</span>
+        <div class="info">
+          <div class="nm" style="font-size:12px;">บ.แม็กซ์โฮมฯ</div>
+          <span class="tag">Northeast</span>
+        </div>
+        <div class="val">250 <span style="font-size:10px;color:var(--muted)">m³</span></div>
+      </div>
+      <div class="lead-item">
+        <span class="rank">2</span>
+        <div class="info">
+          <div class="nm" style="font-size:12px;">บจ.แม็กซ์โฮม เอ็กซ์เพิร์ต</div>
+          <span class="tag">Northeast</span>
+        </div>
+        <div class="val">77 <span style="font-size:10px;color:var(--muted)">m³</span></div>
+      </div>
+      <div class="lead-item">
+        <span class="rank">3</span>
+        <div class="info">
+          <div class="nm" style="font-size:12px;">บ.เคแพค อินเตอร์เทรด</div>
+          <span class="tag">West</span>
+        </div>
+        <div class="val">30 <span style="font-size:10px;color:var(--muted)">m³</span></div>
+      </div>
+    </div>
+    
+    <div class="insight-glow-card">
+      <i>💡</i>
+      <div><b>ระบบวิเคราะห์ยอดส่งมอบ:</b> ภูมิภาคตะวันออกเฉียงเหนือ (Northeast) ครองสถิติดีลเลอร์ที่มีการขยายตัวสูงสุดในช่วง 2 สัปดาห์นี้ โดยมีสัดส่วนการเติบโตเฉลี่ยที่สูงกว่าภูมิภาคอื่นๆ ทั้งหมด 15%</div>
+    </div>
+  </div>
+
+  <!-- Table list - Span 4 -->
+  <div class="c-card span-4">
+    <div class="ctitle" style="margin-bottom: 6px;">
+      <span>📋 ตารางสรุปข้อมูลดีลเลอร์และสถานะการขาย</span>
+      <div class="searchbar">
+        <input type="text" placeholder="🔍 ค้นหาดีลเลอร์...">
+        <select>
+          <option>ภูมิภาคทั้งหมด</option>
+          <option>CPAC Metro</option>
+          <option>CPAC Northeast</option>
+        </select>
+        <select>
+          <option>สถานะทั้งหมด</option>
+          <option>Active</option>
+          <option>Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="cdesc">แสดงภาพรวมข้อมูลเชิงลึกของผู้แทนจำหน่ายรวมถึงสัดส่วนการสั่งซื้อรายบุคคล</div>
+    
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>ดีลเลอร์</th>
+            <th>ภูมิภาค</th>
+            <th>จังหวัด</th>
+            <th>ปริมาณส่งมอบ (Delivered Volume)</th>
+            <th>จำนวนกลุ่ม</th>
+            <th>อัปเดตล่าสุด</th>
+            <th>สถานะระบบ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--ink-dark); font-weight:600;">บ.แม็กซ์โฮม แอนด์ เดคคอร์ จก.</td>
+            <td>CPAC Northeast</td>
+            <td>ขอนแก่น</td>
+            <td>250 m³ <span class="cyber-mini-bar"><i style="width: 100%;"></i></span></td>
+            <td>9 กลุ่ม</td>
+            <td>27 พ.ค. 2026</td>
+            <td><span class="status active">Active</span></td>
+          </tr>
+          <tr>
+            <td style="color:var(--ink-dark); font-weight:600;">บจ.แม็กซ์โฮม เอ็กซ์เพิร์ต</td>
+            <td>CPAC Northeast</td>
+            <td>อุดรธานี</td>
+            <td>77 m³ <span class="cyber-mini-bar"><i style="width: 31%;"></i></span></td>
+            <td>6 กลุ่ม</td>
+            <td>20 พ.ค. 2026</td>
+            <td><span class="status inactive">Inactive</span></td>
+          </tr>
+          <tr>
+            <td style="color:var(--ink-dark); font-weight:600;">บ.เคแพค อินเตอร์เทรด จก.</td>
+            <td>CPAC West</td>
+            <td>กาญจนบุรี</td>
+            <td>30 m³ <span class="cyber-mini-bar"><i style="width: 12%;"></i></span></td>
+            <td>3 กลุ่ม</td>
+            <td>25 พ.ค. 2026</td>
+            <td><span class="status active">Active</span></td>
+          </tr>
+          <tr>
+            <td style="color:var(--ink-dark); font-weight:600;">บจ.ไทยพิพัฒน์ฮาร์ดแวร์</td>
+            <td>CPAC Northeast</td>
+            <td>นครราชสีมา</td>
+            <td>23 m³ <span class="cyber-mini-bar"><i style="width: 9%;"></i></span></td>
+            <td>4 กลุ่ม</td>
+            <td>28 พ.ค. 2026</td>
+            <td><span class="status active">Active</span></td>
+          </tr>
+          <tr>
+            <td style="color:var(--ink-dark); font-weight:600;">บ.ชลรุ่งเรืองนครราชสีมา จก.</td>
+            <td>CPAC Northeast</td>
+            <td>นครราชสีมา</td>
+            <td>12 m³ <span class="cyber-mini-bar"><i style="width: 5%;"></i></span></td>
+            <td>2 กลุ่ม</td>
+            <td>10 พ.ค. 2026</td>
+            <td><span class="status inactive">Inactive</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// Donut chart Setup
+new Chart(document.getElementById('donutChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Metro', 'Northeast', 'West', 'North', 'South', 'East'],
+    datasets: [{
+      data: [35, 28, 16, 14, 6, 2],
+      backgroundColor: ['#3b82f6', '#10b981', '#8b5cf6', '#06b6d4', '#f59e0b', '#10b981'],
+      borderWidth: 0
+    }]
+  },
+  options: {
+    cutout: '72%',
+    plugins: {
+      legend: {
+        display: false
+      }
+    }
+  }
+});
+
+// Line chart Setup
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: ['มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.'],
+    datasets: [
+      {
+        label: 'CPAC Metro',
+        data: [40, 42, 48, 45, 52, 55, 58, 62, 60, 65, 70, 72],
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.05)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: '#3b82f6',
+        pointHoverRadius: 6
+      },
+      {
+        label: 'CPAC Northeast',
+        data: [30, 33, 35, 38, 40, 42, 44, 48, 46, 50, 53, 55],
+        borderColor: '#10b981',
+        backgroundColor: 'transparent',
+        fill: false,
+        tension: 0.4,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: '#10b981',
+        pointHoverRadius: 6
+      }
+    ]
+  },
+  options: {
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          color: '#94a3b8',
+          boxWidth: 10,
+          usePointStyle: true,
+          font: {
+            size: 11,
+            family: 'Outfit'
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        grid: {
+          color: '#1f2937'
+        },
+        ticks: {
+          color: '#94a3b8',
+          font: {
+            size: 10,
+            family: 'Outfit'
+          }
+        }
+      },
+      x: {
+        grid: {
+          display: false
+        },
+        ticks: {
+          color: '#94a3b8',
+          font: {
+            size: 10,
+            family: 'Outfit'
+          }
+        }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>

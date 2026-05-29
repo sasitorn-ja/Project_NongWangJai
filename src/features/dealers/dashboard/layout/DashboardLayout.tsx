@@ -27,7 +27,7 @@ export function DashboardLayout({
   setDateTo: (value: string) => void;
   setPage: (page: PageKey) => void;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {

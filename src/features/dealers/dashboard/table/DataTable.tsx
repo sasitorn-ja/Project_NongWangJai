@@ -99,14 +99,14 @@ export function DataTable<T>({
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-sm" style={{ minWidth }}>
+        <table className="w-full border-collapse text-[15px]" style={{ minWidth }}>
           <thead>
             <tr className="border-b border-[#d9e3e6] bg-[#f6f8f9] dark:border-slate-800 dark:bg-slate-900">
               {columns.map((column) => (
                 <th
                   key={column.key}
                   className={cn(
-                    "border-r border-[#e5e9ec] px-3 py-2.5 text-xs font-semibold text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400",
+	                    "border-r border-[#e5e9ec] px-3 py-2.5 text-[13px] font-semibold text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400",
                     alignClass(column.align)
                   )}
                   style={{ width: column.width }}

@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
+import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
 import type { OrderItem } from "@/features/dealers/types";
 import { parseDateValue } from "../lib/dates";
@@ -14,6 +15,14 @@ type MonthData = {
   orderCount: number;
 };
 
+type TrendRange = 6 | 12 | 0;
+
+const RANGE_OPTIONS: { label: string; value: TrendRange }[] = [
+  { label: "6 เดือน", value: 6 },
+  { label: "12 เดือน", value: 12 },
+  { label: "ทั้งหมด", value: 0 }
+];
+
 function monthKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
@@ -27,7 +36,11 @@ export function MonthlyTrendChart({
   orders: OrderItem[];
   unit?: string;
 }) {
-  const months = useMemo<MonthData[]>(() => {
+  const [range, setRange] = useState<TrendRange>(12);
+  const [showDelivered, setShowDelivered] = useState(true);
+  const [showOrdered, setShowOrdered] = useState(true);
+
+  const allMonths = useMemo<MonthData[]>(() => {
     const map = new Map<string, MonthData>();
     orders.forEach((order) => {
       const date = parseDateValue(order.pour_datetime ?? order.created_at ?? order.updated_at);
@@ -50,6 +63,37 @@ export function MonthlyTrendChart({
     });
     return [...map.values()].sort((a, b) => a.date.getTime() - b.date.getTime());
   }, [orders]);
+
+  // Apply the selected range window
+  const months = useMemo<MonthData[]>(
+    () => (range === 0 ? allMonths : allMonths.slice(-range)),
+    [allMonths, range]
+  );
+
+  const RangeToggle = (
+    <div className="inline-flex gap-0.5 rounded-xl bg-slate-100 p-0.5 dark:bg-slate-800">
+      {RANGE_OPTIONS.map((opt) => {
+        const active = range === opt.value;
+        const disabled = opt.value !== 0 && allMonths.length <= opt.value && range !== opt.value && allMonths.length < opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            disabled={disabled}
+            onClick={() => setRange(opt.value)}
+            className={cn(
+              "rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors",
+              active
+                ? "bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100"
+                : "text-slate-500 hover:text-slate-700 disabled:opacity-40 dark:text-slate-400"
+            )}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   if (loading) {
     return (
@@ -77,7 +121,10 @@ export function MonthlyTrendChart({
   const padB = 40;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
-  const max = Math.max(...months.map((m) => Math.max(m.delivered, m.ordered)), 1);
+  const max = Math.max(
+    ...months.map((m) => Math.max(showDelivered ? m.delivered : 0, showOrdered ? m.ordered : 0)),
+    1
+  );
   const stepX = months.length > 1 ? innerW / (months.length - 1) : innerW;
 
   const xy = (i: number, value: number) => ({
@@ -101,6 +148,12 @@ export function MonthlyTrendChart({
   const momPercent = prev && prev.delivered > 0 ? ((last.delivered - prev.delivered) / prev.delivered) * 100 : null;
   const lastPt = deliveredPts[deliveredPts.length - 1];
 
+  // Fill-rate (delivered / ordered) across the visible window
+  const totalDelivered = months.reduce((s, m) => s + m.delivered, 0);
+  const totalOrdered = months.reduce((s, m) => s + m.ordered, 0);
+  const fillRate = totalOrdered > 0 ? (totalDelivered / totalOrdered) * 100 : 0;
+  const backlog = Math.max(totalOrdered - totalDelivered, 0);
+
   // Y-axis ticks (5 ticks)
   const tickCount = 4;
   const ticks = Array.from({ length: tickCount + 1 }, (_, i) => max * (1 - i / tickCount));
@@ -109,27 +162,42 @@ export function MonthlyTrendChart({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3 text-[11px] font-semibold">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#14b8a6" }} />
-            <span className="text-slate-600 dark:text-slate-300">Delivered Volume</span>
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full border-2 border-dashed" style={{ borderColor: "#2563eb" }} />
-            <span className="text-slate-600 dark:text-slate-300">Ordered Volume</span>
-          </span>
-        </div>
-        {momPercent !== null && (
-          <span
-            className={
-              "rounded-full px-2.5 py-1 text-[11px] font-bold " +
-              (momPercent >= 0
-                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-                : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300")
-            }
+          <button
+            type="button"
+            onClick={() => setShowDelivered((v) => !v)}
+            className={cn("inline-flex items-center gap-1.5 transition-opacity", !showDelivered && "opacity-40")}
           >
-            {momPercent >= 0 ? "↑" : "↓"} {Math.abs(Math.round(momPercent))}% MoM
-          </span>
-        )}
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#14b8a6" }} />
+            <span className={cn("text-slate-600 dark:text-slate-300", !showDelivered && "line-through")}>
+              Delivered Volume
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowOrdered((v) => !v)}
+            className={cn("inline-flex items-center gap-1.5 transition-opacity", !showOrdered && "opacity-40")}
+          >
+            <span className="h-2.5 w-2.5 rounded-full border-2 border-dashed" style={{ borderColor: "#2563eb" }} />
+            <span className={cn("text-slate-600 dark:text-slate-300", !showOrdered && "line-through")}>
+              Ordered Volume
+            </span>
+          </button>
+        </div>
+        <div className="flex items-center gap-2">
+          {momPercent !== null && (
+            <span
+              className={
+                "rounded-full px-2.5 py-1 text-[11px] font-bold " +
+                (momPercent >= 0
+                  ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                  : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300")
+              }
+            >
+              {momPercent >= 0 ? "↑" : "↓"} {Math.abs(Math.round(momPercent))}% MoM
+            </span>
+          )}
+          {RangeToggle}
+        </div>
       </div>
 
       <div className="rounded-2xl border border-[#e5e7eb] bg-[#fbfcfd] p-3 dark:border-slate-800 dark:bg-slate-950/60">
@@ -156,32 +224,39 @@ export function MonthlyTrendChart({
             })}
 
             {/* Ordered (dashed line, no fill) */}
-            <path d={orderedPath} fill="none" stroke="#2563eb" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.75" />
+            {showOrdered && (
+              <path d={orderedPath} fill="none" stroke="#2563eb" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.75" />
+            )}
 
             {/* Delivered (area + line) */}
-            <path d={deliveredAreaPath} fill="url(#trend-fill)" />
-            <path
-              d={deliveredPath}
-              fill="none"
-              stroke="#14b8a6"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            {showDelivered && (
+              <>
+                <path d={deliveredAreaPath} fill="url(#trend-fill)" />
+                <path
+                  d={deliveredPath}
+                  fill="none"
+                  stroke="#14b8a6"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </>
+            )}
 
             {/* Points */}
-            {deliveredPts.map((p, i) => {
-              const isLast = i === deliveredPts.length - 1;
-              return (
-                <g key={p.data.key}>
-                  <circle cx={p.x} cy={p.y} r={isLast ? 6 : 4.5} fill="#fff" stroke="#14b8a6" strokeWidth={isLast ? 3 : 2} />
-                  <title>{`${p.data.longLabel}\nDelivered ${formatNumber(p.data.delivered)} ${unit}\nOrdered ${formatNumber(p.data.ordered)} ${unit}\n${formatNumber(p.data.orderCount)} orders`}</title>
-                </g>
-              );
-            })}
+            {showDelivered &&
+              deliveredPts.map((p, i) => {
+                const isLast = i === deliveredPts.length - 1;
+                return (
+                  <g key={p.data.key}>
+                    <circle cx={p.x} cy={p.y} r={isLast ? 6 : 4.5} fill="#fff" stroke="#14b8a6" strokeWidth={isLast ? 3 : 2} />
+                    <title>{`${p.data.longLabel}\nDelivered ${formatNumber(p.data.delivered)} ${unit}\nOrdered ${formatNumber(p.data.ordered)} ${unit}\n${formatNumber(p.data.orderCount)} orders`}</title>
+                  </g>
+                );
+              })}
 
             {/* Last-point badge */}
-            {lastPt && (
+            {showDelivered && lastPt && (
               <g>
                 <rect x={lastPt.x - 36} y={lastPt.y - 28} width="72" height="20" rx="10" fill="#14b8a6" />
                 <text x={lastPt.x} y={lastPt.y - 14} fontSize="11" fontWeight="700" fill="#fff" textAnchor="middle">
@@ -229,20 +304,17 @@ export function MonthlyTrendChart({
         <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950">
           <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">เฉลี่ย/เดือน</div>
           <div className="mt-0.5 text-base font-bold text-slate-900 dark:text-slate-100">
-            {compactNumber(months.reduce((s, m) => s + m.delivered, 0) / months.length)}{" "}
+            {compactNumber(totalDelivered / months.length)}{" "}
             <span className="text-[10px] text-slate-400">{unit}</span>
           </div>
           <div className="text-[10px] font-medium text-slate-500">{months.length} เดือน</div>
         </div>
         <div className="rounded-xl border border-[#e5e7eb] bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">รวมทั้งหมด</div>
-          <div className="mt-0.5 text-base font-bold text-slate-900 dark:text-slate-100">
-            {compactNumber(months.reduce((s, m) => s + m.delivered, 0))}{" "}
-            <span className="text-[10px] text-slate-400">{unit}</span>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Fill rate (ส่ง/สั่ง)</div>
+          <div className="mt-0.5 text-base font-bold text-emerald-600 dark:text-emerald-400">
+            {Math.round(fillRate)}<span className="text-[10px] text-slate-400">%</span>
           </div>
-          <div className="text-[10px] font-medium text-slate-500">
-            {formatNumber(months.reduce((s, m) => s + m.orderCount, 0))} orders
-          </div>
+          <div className="text-[10px] font-medium text-slate-500">ค้างส่ง {compactNumber(backlog)} {unit}</div>
         </div>
       </div>
     </div>

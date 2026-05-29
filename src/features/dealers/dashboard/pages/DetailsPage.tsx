@@ -1,15 +1,15 @@
 import { useMemo, useState } from "react";
-import { BarChart3, ChevronDown, Clock3, Layers3, MapPin, PackageCheck, Search, Trophy, TrendingUp, User, Users } from "lucide-react";
+import { BarChart3, ChevronDown, Clock3, Layers3, MapPin, PackageCheck, Trophy, TrendingUp, User, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { compactNumber, formatNumber } from "@/lib/number";
 import { cn } from "@/lib/cn";
 import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUsage, OrderItem } from "@/features/dealers/types";
 import { dateText, parseDateValue } from "../lib/dates";
+import { getRegionColor } from "../lib/regions";
+import { DealerPicker } from "../filters/DealerPicker";
 import type { DataColumn } from "../table/types";
 import { MetricCard } from "../ui/MetricCard";
-import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
-import { DealerPicker } from "../filters/DealerPicker";
 import { ShadcnTabs } from "../ui/ShadcnTabs";
 import { DataTable } from "../table/DataTable";
 import { DualBarChart } from "../charts/DualBarChart";
@@ -49,6 +49,61 @@ type DetailsPageProps = {
   usageRows: DealerUsage[];
 };
 
+function DealerAnalysisHeader({
+  customerCount,
+  dealers,
+  delivered,
+  groups,
+  priceChecks,
+  selectedDealerId,
+  setSelectedDealerId,
+  unit
+}: {
+  customerCount: number;
+  dealers: Dealer[];
+  delivered: number;
+  groups: number;
+  isAllDealers: boolean;
+  priceChecks: number;
+  selectedDealer?: Dealer;
+  selectedDealerId: number | null;
+  setSelectedDealerId: (id: number | null) => void;
+  unit: string;
+}) {
+  const stats = [
+    { label: "Delivered", value: compactNumber(delivered), suffix: unit },
+    { label: "Groups", value: formatNumber(groups) },
+    { label: "Price Checks", value: formatNumber(priceChecks) },
+    { label: "Customers", value: formatNumber(customerCount) }
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Dealer selector — same picker component as the Orders page */}
+      <DealerPicker
+        dealers={dealers}
+        includeAll
+        selectedDealerId={selectedDealerId}
+        setSelectedDealerId={setSelectedDealerId}
+        title="เลือก Dealer หรือดูภาพรวมทุก Dealer"
+      />
+
+      <section className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+        <div className="grid grid-cols-2 divide-y divide-[#eef0f4] rounded-xl border border-[#eef0f4] dark:divide-slate-800 dark:border-slate-800 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+          {stats.map((item) => (
+            <div key={item.label} className="px-4 py-3">
+              <div className="text-[11px] font-semibold text-slate-500">{item.label}</div>
+              <div className="mt-1 text-2xl font-bold leading-none text-slate-950 dark:text-slate-100">
+                {item.value} {item.suffix && <span className="text-xs font-semibold text-slate-400">{item.suffix}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaRow[]; unit: string }) {
   const [othersExpanded, setOthersExpanded] = useState(false);
   const sortedRows = [...rows].sort((a, b) => Math.max(b.delivered, b.ordered) - Math.max(a.delivered, a.ordered));
@@ -74,7 +129,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
   const totalDelivered = rows.reduce((sum, row) => sum + row.delivered, 0);
   const totalOrdered = rows.reduce((sum, row) => sum + row.ordered, 0);
   const segmentTotal = compactRows.reduce((sum, row) => sum + Math.max(row.delivered, row.ordered), 0) || 1;
-  const palette = ["#0f766e", "#2563eb", "#f59e0b", "#e11d48", "#7c3aed", "#14b8a6", "#f97316", "#64748b", "#94a3b8"];
+  const rowColor = (row: AreaRow) => (row.key === OTHER_AREAS_KEY ? "#94a3b8" : getRegionColor(row.label));
 
   if (loading) {
     return (
@@ -114,7 +169,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                   key={row.key}
                   className="min-w-[3px] border-r border-white/70 last:border-r-0"
                   style={{
-                    backgroundColor: palette[index % palette.length],
+                    backgroundColor: rowColor(row),
                     width: `${Math.max((value / segmentTotal) * 100, value > 0 ? 3 : 0)}%`
                   }}
                   title={`${row.label}: ${formatNumber(row.delivered)} delivered / ${formatNumber(row.ordered)} ordered`}
@@ -123,9 +178,9 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
             })}
           </div>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-            {compactRows.slice(0, 6).map((row, index) => (
+            {compactRows.slice(0, 6).map((row) => (
               <span key={row.key} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
-                <i className="h-2 w-2 rounded-sm" style={{ backgroundColor: palette[index % palette.length] }} />
+                <i className="h-2 w-2 rounded-sm" style={{ backgroundColor: rowColor(row) }} />
                 {row.label}
               </span>
             ))}
@@ -150,7 +205,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                   <div className="flex items-center gap-2">
                     <span
                       className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[11px] font-bold text-white"
-                      style={{ backgroundColor: palette[index % palette.length] }}
+                      style={{ backgroundColor: rowColor(row) }}
                     >
                       {index + 1}
                     </span>
@@ -183,8 +238,11 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
               <div className="mt-3 grid gap-1.5">
                 <div className="h-2.5 rounded-full bg-slate-100">
                   <div
-                    className="h-2.5 rounded-full bg-[#0f766e]"
-                    style={{ width: `${Math.max((row.delivered / max) * 100, row.delivered > 0 ? 2 : 0)}%` }}
+                    className="h-2.5 rounded-full"
+                    style={{
+                      backgroundColor: rowColor(row),
+                      width: `${Math.max((row.delivered / max) * 100, row.delivered > 0 ? 2 : 0)}%`
+                    }}
                   />
                 </div>
                 {hasOrdered ? (
@@ -681,49 +739,18 @@ export function DetailsPage(props: DetailsPageProps) {
 
   return (
     <>
-      <DealerPicker
+      <DealerAnalysisHeader
+        customerCount={orderCustomerRows.length || usageSummary.customerCreateCount}
         dealers={props.dealers}
-        includeAll
+        delivered={totalAreaDelivered}
+        groups={totalGroups}
+        isAllDealers={isAllDealers}
+        priceChecks={usageSummary.priceConcreteCount}
+        selectedDealer={props.selectedDealer}
         selectedDealerId={props.selectedDealerId}
         setSelectedDealerId={props.setSelectedDealerId}
-        title="เลือก Dealer เพื่อวิเคราะห์"
+        unit={areaUnit}
       />
-
-      <section className="grid grid-cols-1">
-        <SummaryKpiStrip
-          items={[
-            {
-              detail: isAllDealers ? "รวมทุก dealer ที่กรองอยู่" : props.selectedDealer?.dealer_name ?? "-",
-              icon: <PackageCheck size={14} />,
-              label: "Delivered Volume",
-              value: (
-                <>
-                  {compactNumber(totalAreaDelivered)}{" "}
-                  <span className="text-xs font-semibold text-slate-400">{areaUnit}</span>
-                </>
-              )
-            },
-            {
-              detail: isAllDealers ? "จำนวนกลุ่มรวมจาก dealer list" : "จำนวนกลุ่มของ dealer ที่เลือก",
-              icon: <Layers3 size={14} />,
-              label: "Groups",
-              value: formatNumber(totalGroups)
-            },
-            {
-              detail: "จำนวนครั้งที่เช็คราคา",
-              icon: <Search size={14} />,
-              label: "Price Checks",
-              value: formatNumber(usageSummary.priceConcreteCount)
-            },
-            {
-              detail: "ลูกค้าที่พบใน orders ที่กรองอยู่",
-              icon: <Users size={14} />,
-              label: "Customers",
-              value: formatNumber(orderCustomerRows.length || usageSummary.customerCreateCount)
-            }
-          ]}
-        />
-      </section>
 
       {isAllDealers ? (
         <>

@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — แบบ D (Bento Grid)</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+Thai:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --ink-dark: #0f172a;
+  --ink-light: #475569;
+  --muted: #94a3b8;
+  --line: #f1f5f9;
+  --blue: #4f46e5;
+  --blue-light: #e0e7ff;
+  --teal: #0d9488;
+  --teal-light: #ccfbf1;
+  --purple: #7c3aed;
+  --purple-light: #f3e8ff;
+  --cyan: #06b6d4;
+  --cyan-light: #ecfeff;
+  --orange: #ea580c;
+  --orange-light: #ffedd5;
+  --green: #16a34a;
+  --green-light: #dcfce7;
+  --chip: #f8fafc;
+  --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.02), 0 8px 10px -6px rgba(0, 0, 0, 0.02), 0 0 0 1px rgba(0, 0, 0, 0.03);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Outfit', 'Noto Sans Thai', sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink-light);
+  padding: 24px;
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+.head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.head h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--ink-dark);
+  letter-spacing: -0.5px;
+}
+
+.head .sub {
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.head .tools {
+  display: flex;
+  gap: 12px;
+}
+
+.btn {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-dark);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--muted);
+}
+
+.btn.test {
+  color: #ef4444;
+  border-color: #fee2e2;
+  background: #fef2f2;
+}
+
+.btn.test:hover {
+  background: #fee2e2;
+}
+
+/* Bento Grid Layout */
+.bento {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: auto;
+  gap: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.b-card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.b-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+}
+
+/* KPI specifics */
+.kpi {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.kpi .ic {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.kpi.total .ic { background: var(--blue-light); color: var(--blue); }
+.kpi.active .ic { background: var(--teal-light); color: var(--teal); }
+.kpi.groups .ic { background: var(--purple-light); color: var(--purple); }
+.kpi.region .ic { background: var(--orange-light); color: var(--orange); }
+
+.kpi .info {
+  display: flex;
+  flex-direction: column;
+}
+
+.kpi .lbl {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpi .val {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--ink-dark);
+  line-height: 1.2;
+  margin: 2px 0;
+}
+
+.kpi .val span {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.kpi .note {
+  font-size: 11px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kpi .note b {
+  color: var(--green);
+}
+
+/* Col Spans */
+.span-1 { grid-column: span 1; }
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+.span-4 { grid-column: span 4; }
+.row-2 { grid-row: span 2; }
+
+/* Grid Headings */
+.ctitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink-dark);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cdesc {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  margin-bottom: 20px;
+}
+
+/* Bar charts details */
+.barrow {
+  margin-bottom: 16px;
+}
+
+.barrow:last-child {
+  margin-bottom: 0;
+}
+
+.barrow .top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.barrow .top .n {
+  color: var(--ink-light);
+}
+
+.barrow .top b {
+  color: var(--ink-dark);
+  font-weight: 700;
+}
+
+.barrow .top em {
+  color: var(--muted);
+  font-style: normal;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.track {
+  height: 8px;
+  background: var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 1s ease-in-out;
+}
+
+/* Donut & Legend layout */
+.donut-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.donut-legend {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.donut-legend .li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.donut-legend .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.donut-legend .pct {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--ink-dark);
+}
+
+/* Leaderboard details */
+.lead-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lead-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lead-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.lead-item .rank {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--chip);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-dark);
+}
+
+.lead-item:nth-child(1) .rank { background: #fef08a; color: #a16207; }
+.lead-item:nth-child(2) .rank { background: #e2e8f0; color: #475569; }
+.lead-item:nth-child(3) .rank { background: #ffedd5; color: #c2410c; }
+
+.lead-item .info {
+  flex: 1;
+}
+
+.lead-item .nm {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.lead-item .tag {
+  display: inline-block;
+  background: var(--chip);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-top: 2px;
+}
+
+.lead-item .val {
+  font-weight: 700;
+  color: var(--ink-dark);
+  text-align: right;
+}
+
+.lead-item .val small {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 10px;
+}
+
+/* Table Style */
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+  color: var(--ink-light);
+}
+
+tr:hover td {
+  background: var(--chip);
+}
+
+.status {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.status.active {
+  background: var(--green-light);
+  color: var(--green);
+}
+
+.status.inactive {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.badge {
+  background: var(--blue-light);
+  color: var(--blue);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+}
+
+.badge.interactive {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.badge.interactive:hover {
+  background: var(--blue);
+  color: #fff;
+}
+
+.searchbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.searchbar input, .searchbar select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  outline: none;
+  background: var(--chip);
+  transition: all 0.2s;
+}
+
+.searchbar input:focus, .searchbar select:focus {
+  border-color: var(--blue);
+  background: var(--card);
+}
+
+.mini-trend {
+  height: 6px;
+  background: var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+  width: 70px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 10px;
+}
+
+.mini-trend i {
+  display: block;
+  height: 100%;
+}
+
+.insight-bar {
+  background: linear-gradient(90deg, var(--blue-light), var(--purple-light));
+  border-radius: 12px;
+  padding: 12px 18px;
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+  color: var(--blue);
+  font-weight: 600;
+}
+
+.insight-bar span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.seg-tabs {
+  display: flex;
+  background: var(--chip);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.seg-tabs button {
+  border: none;
+  background: transparent;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.seg-tabs button.active {
+  background: var(--card);
+  color: var(--ink-dark);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <div>
+    <h1>Dashboard</h1>
+    <div class="sub">ภาพรวมธุรกิจและผู้แทนจำหน่าย (Dealer) · แบบ D: Bento Grid Layout</div>
+  </div>
+  <div class="tools">
+    <button class="btn test">ระบบทดสอบ</button>
+    <button class="btn">📅 ช่วงเวลาทั้งหมด ▾</button>
+  </div>
+</div>
+
+<div class="bento">
+  <!-- KPIs -->
+  <div class="b-card kpi total span-1">
+    <div class="ic">📦</div>
+    <div class="info">
+      <span class="lbl">Delivered Volume</span>
+      <span class="val">1.4K <span>m³</span></span>
+      <span class="note"><b>+12.4%</b> จากเดือนก่อน</span>
+    </div>
+  </div>
+
+  <div class="b-card kpi active span-1">
+    <div class="ic">👥</div>
+    <div class="info">
+      <span class="lbl">Active Dealers</span>
+      <span class="val">32<span>%</span></span>
+      <span class="note">ใช้งานล่าสุด 8 / 25 ราย</span>
+    </div>
+  </div>
+
+  <div class="b-card kpi groups span-1">
+    <div class="ic">🗂️</div>
+    <div class="info">
+      <span class="lbl">Total Groups</span>
+      <span class="val">99</span>
+      <span class="note">กลุ่มสั่งสินค้าในระบบ</span>
+    </div>
+  </div>
+
+  <div class="b-card kpi region span-1">
+    <div class="ic">📍</div>
+    <div class="info">
+      <span class="lbl">Top Region</span>
+      <span class="val">CPAC Metro</span>
+      <span class="note">ครองสัดส่วน 35% ของยอด</span>
+    </div>
+  </div>
+
+  <!-- Main Bar Charts - Span 2, Row 2 -->
+  <div class="b-card span-2 row-2" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div class="ctitle">
+        <span>📈 ปริมาณการขายแยกตามพื้นที่ของ Dealer</span>
+        <div class="seg-tabs">
+          <button class="active">ทั้งหมด</button>
+          <button>ปี</button>
+          <button>เดือน</button>
+          <button>วัน</button>
+        </div>
+      </div>
+      <div class="cdesc">ยอดขายสะสมแยกตามพื้นที่การจัดส่งคอนกรีตของแต่ละภูมิภาค</div>
+      
+      <div class="barrow"><div class="top"><span class="n">1 CPAC Metro</span><span><b>477</b> <em>m³ · 35%</em></span></div><div class="track"><div class="fill" style="width:100%;background:var(--blue)"></div></div></div>
+      <div class="barrow"><div class="top"><span class="n">2 CPAC Northeast</span><span><b>380</b> <em>m³ · 28%</em></span></div><div class="track"><div class="fill" style="width:80%;background:var(--teal)"></div></div></div>
+      <div class="barrow"><div class="top"><span class="n">3 CPAC West</span><span><b>221</b> <em>m³ · 16%</em></span></div><div class="track"><div class="fill" style="width:46%;background:var(--purple)"></div></div></div>
+      <div class="barrow"><div class="top"><span class="n">4 CPAC North</span><span><b>186</b> <em>m³ · 14%</em></span></div><div class="track"><div class="fill" style="width:39%;background:var(--cyan)"></div></div></div>
+      <div class="barrow"><div class="top"><span class="n">5 RMC - South Chain</span><span><b>76</b> <em>m³ · 6%</em></span></div><div class="track"><div class="fill" style="width:16%;background:var(--orange)"></div></div></div>
+      <div class="barrow"><div class="top"><span class="n">6 CPAC East</span><span><b>28</b> <em>m³ · 2%</em></span></div><div class="track"><div class="fill" style="width:6%;background:var(--green)"></div></div></div>
+    </div>
+    
+    <div class="insight-bar">
+      <span>💡 CPAC Metro มีอัตราการเติบโตแซงหน้าภูมิภาคอื่นๆ ในไตรมาสล่าสุด</span>
+      <span class="badge interactive">วิเคราะห์เชิงลึก</span>
+    </div>
+  </div>
+
+  <!-- Regional Donut - Span 1, Row 2 -->
+  <div class="b-card span-1 row-2" style="display: flex; flex-direction: column;">
+    <div class="ctitle">สัดส่วนพื้นที่ขาย</div>
+    <div class="cdesc">สัดส่วนร้อยละจำแนกตามภูมิภาค</div>
+    
+    <div class="donut-container" style="flex: 1; justify-content: center;">
+      <div style="width:140px;height:140px;position:relative;">
+        <canvas id="donut"></canvas>
+      </div>
+      <div class="donut-legend">
+        <div class="li"><span class="dot" style="background:var(--blue)"></span>Metro<span class="pct">35%</span></div>
+        <div class="li"><span class="dot" style="background:var(--teal)"></span>Northeast<span class="pct">28%</span></div>
+        <div class="li"><span class="dot" style="background:var(--purple)"></span>West<span class="pct">16%</span></div>
+        <div class="li"><span class="dot" style="background:var(--cyan)"></span>North<span class="pct">14%</span></div>
+        <div class="li"><span class="dot" style="background:var(--orange)"></span>South<span class="pct">6%</span></div>
+        <div class="li"><span class="dot" style="background:var(--green)"></span>East<span class="pct">2%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaderboard - Span 1, Row 2 -->
+  <div class="b-card span-1 row-2" style="display: flex; flex-direction: column;">
+    <div class="ctitle">
+      <span>🏆 Leaderboard</span>
+      <span class="badge" style="background:var(--chip); color:var(--ink-light)">Top 5</span>
+    </div>
+    <div class="cdesc">ยอดขายสะสมสูงสุดราย Dealer</div>
+    
+    <div class="lead-list" style="flex:1;">
+      <div class="lead-item">
+        <span class="rank">1</span>
+        <div class="info">
+          <div class="nm" title="บ.แม็กซ์โฮม แอนด์ เดคคอร์ จก.">บ.แม็กซ์โฮม แอนด์ เดคคอร์ จก.</div>
+          <span class="tag">Northeast</span>
+        </div>
+        <div class="val">250<small>m³</small></div>
+      </div>
+      <div class="lead-item">
+        <span class="rank">2</span>
+        <div class="info">
+          <div class="nm" title="บจ.แม็กซ์โฮม เอ็กซ์เพิร์ต">บจ.แม็กซ์โฮม เอ็กซ์เพิร์ต</div>
+          <span class="tag">Northeast</span>
+        </div>
+        <div class="val">77<small>m³</small></div>
+      </div>
+      <div class="lead-item">
+        <span class="rank">3</span>
+        <div class="info">
+          <div class="nm" title="บ.เคแพค อินเตอร์เทรด จก.">บ.เคแพค อินเตอร์เทรด จก.</div>
+          <span class="tag">West</span>
+        </div>
+        <div class="val">30<small>m³</small></div>
+      </div>
+      <div class="lead-item">
+        <span class="rank">4</span>
+        <div class="info">
+          <div class="nm" title="บจ.ไทยพิพัฒน์ฮาร์ดแวร์">บจ.ไทยพิพัฒน์ฮาร์ดแวร์</div>
+          <span class="tag">Northeast</span>
+        </div>
+        <div class="val">23<small>m³</small></div>
+      </div>
+      <div class="lead-item">
+        <span class="rank">5</span>
+        <div class="info">
+          <div class="nm" title="บ.ชลรุ่งเรืองนครราชสีมา จก.">บ.ชลรุ่งเรืองนครราชสีมา จก.</div>
+          <span class="tag">Northeast</span>
+        </div>
+        <div class="val">12<small>m³</small></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trend Graph in Bento - Span 2 -->
+  <div class="b-card span-2" style="display: flex; flex-direction: column; justify-content: space-between;">
+    <div>
+      <div class="ctitle">
+        <span>📈 แนวโน้มปริมาณการส่งมอบรายเดือน</span>
+        <span class="badge">12 เดือนย้อนหลัง</span>
+      </div>
+      <div class="cdesc">แนวโน้มการส่งมอบคอนกรีตของสองภูมิภาคหลักเปรียบเทียบกันรายเดือน</div>
+      <div style="height: 180px; margin-top: 10px;">
+        <canvas id="trend"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Performance Insight Cards - Span 2 -->
+  <div class="b-card span-2" style="display: flex; flex-direction: column; justify-content: space-between; background: linear-gradient(135deg, var(--card) 60%, var(--purple-light));">
+    <div>
+      <div class="ctitle">
+        <span>💡 Insight & Action Cards</span>
+        <span class="status active">สรุปอัตโนมัติ</span>
+      </div>
+      <div class="cdesc">บทวิเคราะห์ระบบช่วยเหลือประเมินยอดขายของดีลเลอร์รายภูมิภาค</div>
+      
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-top:5px;">
+        <div style="background:var(--bg); padding:12px; border-radius:12px;">
+          <h4 style="font-weight:700; color:var(--ink-dark); font-size:13px; margin-bottom:4px;">🚀 ดีลเลอร์ที่เติบโตสูงสุด</h4>
+          <p style="font-size:11.5px; color:var(--ink-light)">บจ.แม็กซ์โฮม เอ็กซ์เพิร์ต เติบโตขึ้น <b>+66%</b> จากรอบ 30 วันที่ผ่านมา</p>
+        </div>
+        <div style="background:var(--bg); padding:12px; border-radius:12px;">
+          <h4 style="font-weight:700; color:#ef4444; font-size:13px; margin-bottom:4px;">⚠️ กลุ่มที่ต้องเฝ้าระวัง</h4>
+          <p style="font-size:11.5px; color:var(--ink-light)">มีดีลเลอร์จำนวน <b>17 ราย</b> ที่ไม่มีรายการสั่งซื้อเข้ามาเกิน 14 วันทำการ</p>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top: 14px; display:flex; justify-content:space-between; align-items:center; font-size:12px; color:var(--purple); font-weight:700;">
+      <span>ประมวลผลข้อมูลล่าสุดเมื่อ: วันนี้ 09:30 น.</span>
+      <a href="#" style="text-decoration:none; color:var(--purple)">ดูรายงานผู้ติดต่อ ➔</a>
+    </div>
+  </div>
+
+  <!-- Full Dealer Table - Span 4 -->
+  <div class="b-card span-4">
+    <div class="ctitle" style="margin-bottom:6px;">
+      <span>📋 รายชื่อและสถานะของผู้แทนจำหน่ายทั้งหมด</span>
+      <div class="searchbar">
+        <input type="text" placeholder="🔍 ค้นหาดีลเลอร์ / จังหวัด...">
+        <select>
+          <option>ทุกภูมิภาค</option>
+          <option>CPAC Metro</option>
+          <option>CPAC Northeast</option>
+          <option>CPAC West</option>
+        </select>
+        <select>
+          <option>ทุกสถานะ</option>
+          <option>Active</option>
+          <option>Inactive</option>
+        </select>
+      </div>
+    </div>
+    <div class="cdesc" style="margin-bottom:12px;">รายการผู้แทนจำหน่ายคอนกรีต ปริมาณส่งมอบ จำนวนกลุ่มงาน และสถานะการแอคทีฟล่าสุด</div>
+    
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>ชื่อผู้แทนจำหน่าย (Dealer Name)</th>
+            <th>ภูมิภาค</th>
+            <th>จังหวัด</th>
+            <th>ปริมาณที่ส่งมอบแล้ว (Delivered Volume)</th>
+            <th>จำนวนกลุ่ม</th>
+            <th>ใช้งานล่าสุด</th>
+            <th>สถานะ</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>บ.แม็กซ์โฮม แอนด์ เดคคอร์ จก.</td>
+            <td>CPAC Northeast</td>
+            <td>ขอนแก่น</td>
+            <td>250 m³ <span class="mini-trend"><i style="width: 100%; background: var(--teal);"></i></span></td>
+            <td>9 กลุ่ม</td>
+            <td>27 พ.ค. 2026</td>
+            <td><span class="status active">Active</span></td>
+          </tr>
+          <tr>
+            <td>บจ.แม็กซ์โฮม เอ็กซ์เพิร์ต</td>
+            <td>CPAC Northeast</td>
+            <td>อุดรธานี</td>
+            <td>77 m³ <span class="mini-trend"><i style="width: 31%; background: var(--teal);"></i></span></td>
+            <td>6 กลุ่ม</td>
+            <td>20 พ.ค. 2026</td>
+            <td><span class="status inactive">Inactive</span></td>
+          </tr>
+          <tr>
+            <td>บ.เคแพค อินเตอร์เทรด จก.</td>
+            <td>CPAC West</td>
+            <td>กาญจนบุรี</td>
+            <td>30 m³ <span class="mini-trend"><i style="width: 12%; background: var(--teal);"></i></span></td>
+            <td>3 กลุ่ม</td>
+            <td>25 พ.ค. 2026</td>
+            <td><span class="status active">Active</span></td>
+          </tr>
+          <tr>
+            <td>บจ.ไทยพิพัฒน์ฮาร์ดแวร์</td>
+            <td>CPAC Northeast</td>
+            <td>นครราชสีมา</td>
+            <td>23 m³ <span class="mini-trend"><i style="width: 9%; background: var(--teal);"></i></span></td>
+            <td>4 กลุ่ม</td>
+            <td>28 พ.ค. 2026</td>
+            <td><span class="status active">Active</span></td>
+          </tr>
+          <tr>
+            <td>บ.ชลรุ่งเรืองนครราชสีมา จก.</td>
+            <td>CPAC Northeast</td>
+            <td>นครราชสีมา</td>
+            <td>12 m³ <span class="mini-trend"><i style="width: 5%; background: var(--teal);"></i></span></td>
+            <td>2 กลุ่ม</td>
+            <td>10 พ.ค. 2026</td>
+            <td><span class="status inactive">Inactive</span></td>
+          </tr>
+          <tr>
+            <td>บจ.ศรีสะเกษ คอนกรีต</td>
+            <td>CPAC Northeast</td>
+            <td>ศรีสะเกษ</td>
+            <td>8 m³ <span class="mini-trend"><i style="width: 3%; background: var(--teal);"></i></span></td>
+            <td>1 กลุ่ม</td>
+            <td>05 พ.ค. 2026</td>
+            <td><span class="status inactive">Inactive</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// Donut Chart
+new Chart(document.getElementById('donut'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Metro', 'Northeast', 'West', 'North', 'South', 'East'],
+    datasets: [{
+      data: [35, 28, 16, 14, 6, 2],
+      backgroundColor: ['#4f46e5', '#0d9488', '#7c3aed', '#06b6d4', '#ea580c', '#16a34a'],
+      borderWidth: 2,
+      borderColor: '#ffffff'
+    }]
+  },
+  options: {
+    cutout: '70%',
+    plugins: {
+      legend: {
+        display: false
+      }
+    }
+  }
+});
+
+// Line Trend Chart
+new Chart(document.getElementById('trend'), {
+  type: 'line',
+  data: {
+    labels: ['มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.'],
+    datasets: [
+      {
+        label: 'CPAC Metro',
+        data: [40, 42, 48, 45, 52, 55, 58, 62, 60, 65, 70, 72],
+        borderColor: '#4f46e5',
+        backgroundColor: 'rgba(79, 70, 229, 0.05)',
+        fill: true,
+        tension: 0.4,
+        borderWidth: 2.5,
+        pointRadius: 2,
+        pointBackgroundColor: '#4f46e5'
+      },
+      {
+        label: 'CPAC Northeast',
+        data: [30, 33, 35, 38, 40, 42, 44, 48, 46, 50, 53, 55],
+        borderColor: '#0d9488',
+        backgroundColor: 'transparent',
+        fill: false,
+        tension: 0.4,
+        borderWidth: 2,
+        pointRadius: 2,
+        pointBackgroundColor: '#0d9488'
+      }
+    ]
+  },
+  options: {
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          boxWidth: 12,
+          usePointStyle: true,
+          font: {
+            size: 11,
+            family: 'Outfit'
+          }
+        }
+      }
+    },
+    scales: {
+      y: {
+        grid: {
+          color: '#f1f5f9'
+        },
+        ticks: {
+          font: {
+            size: 10,
+            family: 'Outfit'
+          }
+        }
+      },
+      x: {
+        grid: {
+          display: false
+        },
+        ticks: {
+          font: {
+            size: 10,
+            family: 'Outfit'
+          }
+        }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>

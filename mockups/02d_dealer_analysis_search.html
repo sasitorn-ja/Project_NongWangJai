@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup · Dealer Analysis — Search Combobox</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+Thai:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --ink-dark: #0f172a;
+  --ink-light: #475569;
+  --muted: #94a3b8;
+  --line: #f1f5f9;
+  --blue: #3b82f6;
+  --blue-light: #eff6ff;
+  --teal: #10b981;
+  --teal-light: #ecfdf5;
+  --purple: #8b5cf6;
+  --purple-light: #f5f3ff;
+  --orange: #f59e0b;
+  --orange-light: #fefbeb;
+  --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.03), 0 8px 10px -6px rgba(0, 0, 0, 0.03), 0 0 0 1px rgba(0, 0, 0, 0.03);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Outfit', 'Noto Sans Thai', sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink-light);
+  min-height: 100vh;
+  display: flex;
+}
+
+/* Sidebar */
+aside {
+  width: 260px;
+  background: #ffffff;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.logo-section {
+  padding: 24px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-section .icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--blue-light);
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.logo-section h2 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink-dark);
+}
+
+.logo-section p {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+nav {
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+nav a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  color: var(--ink-light);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+nav a:hover, nav a.active {
+  background: var(--blue-light);
+  color: var(--blue);
+}
+
+/* Main Area */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.header {
+  background: #ffffff;
+  padding: 18px 32px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header h1 {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink-dark);
+}
+
+.header .sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.search-container {
+  position: relative;
+  width: 400px;
+}
+
+.search-box {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  outline: none;
+  background: var(--bg);
+  color: var(--ink-dark);
+  transition: all 0.2s;
+}
+
+.search-box:focus {
+  border-color: var(--blue);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  margin-top: 6px;
+  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+  display: none;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background: var(--blue-light);
+}
+
+.dropdown-item .name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-dark);
+}
+
+.dropdown-item .meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.dropdown-item .volume {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--blue);
+}
+
+/* Dashboard Content Grid */
+.content {
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1400px;
+}
+
+.d-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+/* Profile summary card */
+.profile-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.profile-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: var(--orange-light);
+  color: var(--orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.profile-title h2 {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink-dark);
+}
+
+.profile-title p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.stats-row {
+  display: flex;
+  gap: 24px;
+}
+
+.stat-item {
+  text-align: right;
+}
+
+.stat-item .lbl {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stat-item .val {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--ink-dark);
+  margin-top: 2px;
+}
+
+.stat-item .val span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Bento grid */
+.bento {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+
+.ctitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-dark);
+}
+
+.cdesc {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 2px;
+  margin-bottom: 20px;
+}
+
+/* Table Style */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th {
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 10px 14px;
+  border-bottom: 2px solid var(--line);
+  text-align: left;
+}
+
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--ink-light);
+}
+
+tr:hover td {
+  background: var(--line);
+}
+
+.status {
+  font-size: 10.5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.status.active {
+  background: var(--teal-light);
+  color: var(--teal);
+}
+
+.status.inactive {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+/* Custom donut layout */
+.donut-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+}
+
+.donut-legend {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-pct {
+  margin-left: auto;
+  font-weight: 700;
+  color: var(--ink-dark);
+}
+</style>
+</head>
+<body>
+
+<aside>
+  <div class="logo-section">
+    <div class="icon">🤖</div>
+    <div>
+      <h2>Nong WangJai</h2>
+      <p>Dealer Intelligence</p>
+    </div>
+  </div>
+  <nav>
+    <a href="#">▦ Dashboard</a>
+    <a href="#">◫ Dealer Network</a>
+    <a href="#" class="active">📊 Dealer Analysis</a>
+    <a href="#">📋 Orders</a>
+  </nav>
+</aside>
+
+<main>
+  <div class="header">
+    <div>
+      <h1>Dealer Analysis</h1>
+      <div class="sub">วิเคราะห์ดีลเลอร์รายบุคคล · ค้นหาหรือเลือกดีลเลอร์จากกล่องค้นหา</div>
+    </div>
+    
+    <!-- Autocomplete Search Combobox -->
+    <div class="search-container">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-box" id="searchBox" placeholder="พิมพ์ชื่อหรือรหัสดีลเลอร์เพื่อค้นหา...">
+      <div class="search-dropdown" id="searchDropdown">
+        <div class="dropdown-item" onclick="selectDealer(1)">
+          <div>
+            <div class="name">บ.นวชัย แมททีเรียล เทรดดิ้ง จก.</div>
+            <div class="meta">รหัส 3006132 · RMC - South Chain สงขลา</div>
+          </div>
+          <div class="volume">76 m³</div>
+        </div>
+        <div class="dropdown-item" onclick="selectDealer(2)">
+          <div>
+            <div class="name">บ.แม็กซ์โฮม แอนด์ เดคคอร์ จก.</div>
+            <div class="meta">รหัส 3027129 · CPAC Northeast ขอนแก่น</div>
+          </div>
+          <div class="volume">250 m³</div>
+        </div>
+        <div class="dropdown-item" onclick="selectDealer(3)">
+          <div>
+            <div class="name">บจ.ไทยพิพัฒน์ฮาร์ดแวร์</div>
+            <div class="meta">รหัส 3064701 · CPAC Northeast นครราชสีมา</div>
+          </div>
+          <div class="volume">23 m³</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Profile Card -->
+    <div class="d-card profile-card">
+      <div class="profile-info">
+        <div class="profile-avatar">🏪</div>
+        <div class="profile-title">
+          <h2 id="dealerName">บ.นวชัย แมททีเรียล เทรดดิ้ง จก.</h2>
+          <p id="dealerMeta">รหัส Dealer 3006132 · ภูมิภาค RMC – South Chain · จังหวัดสงขลา</p>
+        </div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="lbl">Delivered</div>
+          <div class="val" id="kpiDelivered">76 <span>m³</span></div>
+        </div>
+        <div style="width: 1px; background: var(--line);"></div>
+        <div class="stat-item">
+          <div class="lbl">Orders</div>
+          <div class="val" id="kpiOrders">32</div>
+        </div>
+        <div style="width: 1px; background: var(--line);"></div>
+        <div class="stat-item">
+          <div class="lbl">Sites</div>
+          <div class="val" id="kpiSites">22</div>
+        </div>
+        <div style="width: 1px; background: var(--line);"></div>
+        <div class="stat-item">
+          <div class="lbl">Customers</div>
+          <div class="val" id="kpiCustomers">11</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bento Analytics Section -->
+    <div class="bento">
+      <!-- Trend Line Chart - span 2 -->
+      <div class="d-card span-2" style="display: flex; flex-direction: column;">
+        <div class="ctitle">📈 แนวโน้มปริมาณการส่งจริงรายเดือน</div>
+        <div class="cdesc">ปริมาณส่งมอบสะสมเปรียบเทียบในรอบ 7 เดือนย้อนหลัง</div>
+        <div style="height: 240px; margin-top: auto; position: relative;">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Donut breakdown - span 1 -->
+      <div class="d-card span-1" style="display: flex; flex-direction: column;">
+        <div class="ctitle">สัดส่วนพื้นที่ (Sites)</div>
+        <div class="cdesc">แบ่งตามปริมาณส่งมอบสะสมรายพื้นที่</div>
+        <div class="donut-wrap">
+          <div style="width: 130px; height: 130px; position: relative;">
+            <canvas id="donutChart"></canvas>
+          </div>
+          <div class="donut-legend" id="donutLegend">
+            <!-- Dynamic Legend items here -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Table - span 3 -->
+      <div class="d-card span-3">
+        <div class="ctitle">📋 ลูกค้าหลัก 5 อันดับแรก</div>
+        <div class="cdesc">รายละเอียดรายชื่อลูกค้า ปริมาณการซื้อ และจำนวนคำสั่งซื้อรวม</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ลำดับ</th>
+                <th>ชื่อลูกค้า</th>
+                <th>ปริมาณส่งมอบสะสม</th>
+                <th>สัดส่วน</th>
+                <th>จำนวนคำสั่งซื้อ</th>
+              </tr>
+            </thead>
+            <tbody id="customerTableBody">
+              <!-- Dynamic Rows here -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+// Mock datasets
+const dealerData = {
+  1: {
+    name: "บ.นวชัย แมททีเรียล เทรดดิ้ง จก.",
+    meta: "รหัส Dealer 3006132 · ภูมิภาค RMC – South Chain · จังหวัดสงขลา",
+    delivered: "76",
+    orders: "32",
+    sites: "22",
+    customers: "11",
+    trend: [10, 15, 12, 18, 14, 22, 26],
+    labels: ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.'],
+    donut: [39, 25, 17, 19],
+    donutLabels: ["หาดใหญ่ สงขลา", "เมือง นนทบุรี", "บางซื่อ กทม.", "พื้นที่อื่นๆ"],
+    table: [
+      { rank: 1, name: "อ้น Test (หญิงก่อสร้างสระว่ายน้ำ)", vol: 30, pct: "39%", orders: 5 },
+      { rank: 2, name: "บ. สยามก่อสร้าง จก.", vol: 20, pct: "26%", orders: 4 },
+      { rank: 3, name: "ห้างฯ ทวีโชค", vol: 12, pct: "16%", orders: 3 },
+      { rank: 4, name: "ร้านวัสดุ สมศักดิ์", vol: 8, pct: "11%", orders: 2 },
+      { rank: 5, name: "คุณวันชัย ก่อสร้าง", vol: 6, pct: "8%", orders: 2 }
+    ]
+  },
+  2: {
+    name: "บ.แม็กซ์โฮม แอนด์ เดคคอร์ จก.",
+    meta: "รหัส Dealer 3027129 · ภูมิภาค CPAC Northeast · จังหวัดขอนแก่น",
+    delivered: "250",
+    orders: "94",
+    sites: "48",
+    customers: "27",
+    trend: [30, 35, 42, 38, 45, 50, 55],
+    labels: ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.'],
+    donut: [52, 24, 14, 10],
+    donutLabels: ["เมือง ขอนแก่น", "ชุมแพ ขอนแก่น", "บ้านไผ่ ขอนแก่น", "พื้นที่อื่นๆ"],
+    table: [
+      { rank: 1, name: "บจ. ขอนแก่น โฮม เซ็นเตอร์", vol: 130, pct: "52%", orders: 45 },
+      { rank: 2, name: "หจก. พลังก่อสร้าง", vol: 60, pct: "24%", orders: 20 },
+      { rank: 3, name: "บ. ทีเค คอนกรีต จก.", vol: 35, pct: "14%", orders: 12 },
+      { rank: 4, name: "คุณวิรัช รับเหมา", vol: 15, pct: "6%", orders: 10 },
+      { rank: 5, name: "ห้างหุ้นส่วน บ้านเมือง", vol: 10, pct: "4%", orders: 7 }
+    ]
+  },
+  3: {
+    name: "บจ.ไทยพิพัฒน์ฮาร์ดแวร์",
+    meta: "รหัส Dealer 3064701 · ภูมิภาค CPAC Northeast · จังหวัดนครราชสีมา",
+    delivered: "23",
+    orders: "12",
+    sites: "8",
+    customers: "5",
+    trend: [2, 3, 5, 4, 3, 6, 8],
+    labels: ['ต.ค.', 'พ.ย.', 'ธ.ค.', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.'],
+    donut: [60, 20, 20, 0],
+    donutLabels: ["เมือง นครราชสีมา", "ปากช่อง โคราช", "สีคิ้ว โคราช", "พื้นที่อื่นๆ"],
+    table: [
+      { rank: 1, name: "บจ. โคราช คอนกรีต มิกซ์", vol: 14, pct: "60%", orders: 6 },
+      { rank: 2, name: "คุณเกรียงไกร ก่อสร้าง", vol: 5, pct: "20%", orders: 3 },
+      { rank: 3, name: "หจก. นครราชสีมา ค้าวัสดุ", vol: 4, pct: "20%", orders: 3 },
+      { rank: 4, name: "ไม่มีข้อมูล", vol: 0, pct: "0%", orders: 0 },
+      { rank: 5, name: "ไม่มีข้อมูล", vol: 0, pct: "0%", orders: 0 }
+    ]
+  }
+};
+
+let trendChart = null;
+let donutChart = null;
+
+// Handle search focus & dropdown
+const searchBox = document.getElementById('searchBox');
+const searchDropdown = document.getElementById('searchDropdown');
+
+searchBox.addEventListener('focus', () => {
+  searchDropdown.style.display = 'block';
+});
+
+document.addEventListener('click', (event) => {
+  if (!searchBox.contains(event.target) && !searchDropdown.contains(event.target)) {
+    searchDropdown.style.display = 'none';
+  }
+});
+
+searchBox.addEventListener('input', (event) => {
+  const query = event.target.value.toLowerCase();
+  const items = searchDropdown.getElementsByClassName('dropdown-item');
+  let hasResults = false;
+  
+  for (let item of items) {
+    const text = item.innerText.toLowerCase();
+    if (text.includes(query)) {
+      item.style.display = 'flex';
+      hasResults = true;
+    } else {
+      item.style.display = 'none';
+    }
+  }
+  
+  searchDropdown.style.display = hasResults ? 'block' : 'none';
+});
+
+function selectDealer(id) {
+  const data = dealerData[id];
+  if (!data) return;
+
+  // Set values
+  searchBox.value = data.name;
+  searchDropdown.style.display = 'none';
+
+  document.getElementById('dealerName').innerText = data.name;
+  document.getElementById('dealerMeta').innerText = data.meta;
+  document.getElementById('kpiDelivered').innerHTML = `${data.delivered} <span>m³</span>`;
+  document.getElementById('kpiOrders').innerText = data.orders;
+  document.getElementById('kpiSites').innerText = data.sites;
+  document.getElementById('kpiCustomers').innerText = data.customers;
+
+  // Render table
+  const tbody = document.getElementById('customerTableBody');
+  tbody.innerHTML = '';
+  data.table.forEach(c => {
+    if (c.name === "ไม่มีข้อมูล") return;
+    tbody.innerHTML += `
+      <tr>
+        <td style="font-weight: 700;">${c.rank}</td>
+        <td style="font-weight: 600; color: var(--ink-dark);">${c.name}</td>
+        <td style="font-weight: 700;">${c.vol} m³</td>
+        <td><span class="status active" style="background: var(--blue-light); color: var(--blue);">${c.pct}</span></td>
+        <td>${c.orders} orders</td>
+      </tr>
+    `;
+  });
+
+  // Re-render charts
+  updateCharts(data);
+}
+
+function updateCharts(data) {
+  // Destroy old charts
+  if (trendChart) trendChart.destroy();
+  if (donutChart) donutChart.destroy();
+
+  // 1. Trend Line
+  const ctxTrend = document.getElementById('trendChart').getContext('2d');
+  const gradient = ctxTrend.createLinearGradient(0, 0, 0, 200);
+  gradient.addColorStop(0, 'rgba(59, 130, 246, 0.2)');
+  gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+
+  trendChart = new Chart(ctxTrend, {
+    type: 'line',
+    data: {
+      labels: data.labels,
+      datasets: [{
+        label: 'ปริมาณส่งจริง (m³)',
+        data: data.trend,
+        borderColor: '#3b82f6',
+        backgroundColor: gradient,
+        fill: true,
+        tension: 0.4,
+        borderWidth: 3,
+        pointBackgroundColor: '#3b82f6',
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          grid: { color: '#f1f5f9' },
+          ticks: { font: { family: 'Outfit', size: 10 } }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: 'Outfit', size: 10 } }
+        }
+      }
+    }
+  });
+
+  // 2. Donut
+  const colors = ['#3b82f6', '#10b981', '#8b5cf6', '#cbd5e1'];
+  const ctxDonut = document.getElementById('donutChart').getContext('2d');
+  donutChart = new Chart(ctxDonut, {
+    type: 'doughnut',
+    data: {
+      labels: data.donutLabels,
+      datasets: [{
+        data: data.donut,
+        backgroundColor: colors,
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    },
+    options: {
+      cutout: '72%',
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+
+  // Render Legend
+  const legendContainer = document.getElementById('donutLegend');
+  legendContainer.innerHTML = '';
+  data.donutLabels.forEach((label, idx) => {
+    if (data.donut[idx] === 0) return;
+    legendContainer.innerHTML += `
+      <div class="legend-item">
+        <span class="legend-dot" style="background: ${colors[idx]}"></span>
+        <span class="text-slate-500">${label}</span>
+        <span class="legend-pct">${data.donut[idx]}%</span>
+      </div>
+    `;
+  });
+}
+
+// Initial load
+selectDealer(1);
+</script>
+</body>
+</html>
