@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Mockup · Dealer Analysis – Option C (Calendar Heatmap)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Inter', 'Sarabun', system-ui, -apple-system, sans-serif; background: #f4f6f8; }
+  .dashboard-card { background:#fff; border:1px solid #e5e9ec; border-radius:18px; }
+  .heat-0 { background:#f1f5f9; }
+  .heat-1 { background:#bae6fd; }
+  .heat-2 { background:#7dd3fc; }
+  .heat-3 { background:#38bdf8; }
+  .heat-4 { background:#0284c7; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="flex min-h-screen">
+  <aside class="w-60 bg-white border-r border-slate-200 flex flex-col shrink-0">
+    <div class="px-4 py-5 flex items-center gap-3 border-b border-slate-100">
+      <div class="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600 text-lg">🤖</div>
+      <div>
+        <div class="font-bold text-slate-900">Nong WangJai</div>
+        <div class="text-[11px] text-slate-500 -mt-0.5">Dealer Intelligence</div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1 text-sm">
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>▦</span> Dashboard</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>◫</span> Dealer Network</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-100 text-slate-900 font-semibold"><span>📊</span> Dealer Analysis</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>📈</span> Top N Dealers</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>📦</span> Top N Products</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>📋</span> Orders</a>
+    </nav>
+  </aside>
+
+  <main class="flex-1 min-w-0">
+    <div class="flex items-center justify-between px-8 py-5">
+      <div class="flex items-center gap-3">
+        <button class="w-9 h-9 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-600">☰</button>
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 leading-tight">Dealer Analysis</h1>
+          <p class="text-xs text-slate-500">ตัวเลือก C · Activity Calendar Heatmap</p>
+        </div>
+      </div>
+      <span class="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-500 text-xs font-bold">TEST</span>
+    </div>
+
+    <div class="px-8 pb-8 space-y-4">
+      <!-- Dealer header card with progress goal -->
+      <div class="dashboard-card px-6 py-5 grid grid-cols-[1fr_320px] gap-6 items-center">
+        <div>
+          <div class="text-xs font-semibold text-slate-500 uppercase">Dealer</div>
+          <div class="text-xl font-bold text-slate-900 mt-1">บ.นวชัย แมททีเรียล เทรดดิ้ง จก.</div>
+          <div class="text-xs text-slate-500 mt-1">RMC – South Chain · จังหวัดสงขลา · 3006132</div>
+          <div class="flex gap-6 mt-4">
+            <div>
+              <div class="text-[10px] font-semibold text-slate-400 uppercase">Delivered (ปีนี้)</div>
+              <div class="text-2xl font-bold text-slate-900 mt-0.5">76 <span class="text-xs text-slate-400">m³</span></div>
+            </div>
+            <div>
+              <div class="text-[10px] font-semibold text-slate-400 uppercase">Orders รวม</div>
+              <div class="text-2xl font-bold text-slate-900 mt-0.5">32</div>
+            </div>
+            <div>
+              <div class="text-[10px] font-semibold text-slate-400 uppercase">วันที่ส่งของ</div>
+              <div class="text-2xl font-bold text-slate-900 mt-0.5">17 วัน</div>
+            </div>
+          </div>
+        </div>
+        <!-- Goal ring -->
+        <div class="flex items-center gap-4">
+          <svg viewBox="0 0 100 100" class="w-24 h-24">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+            <circle cx="50" cy="50" r="42" fill="none" stroke="#14b8a6" stroke-width="10" stroke-dasharray="200 264" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+            <text x="50" y="48" font-size="16" font-weight="700" text-anchor="middle" fill="#0f172a">76%</text>
+            <text x="50" y="65" font-size="9" text-anchor="middle" fill="#94a3b8">ของเป้า</text>
+          </svg>
+          <div>
+            <div class="text-[10px] font-semibold text-slate-400 uppercase">เป้าหมายเดือนนี้</div>
+            <div class="text-base font-bold text-slate-900 mt-0.5">100 m³</div>
+            <div class="text-[11px] text-emerald-600 font-semibold mt-1">เหลือ 24 m³</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calendar Heatmap -->
+      <div class="dashboard-card px-6 py-5">
+        <div class="flex items-start justify-between mb-4">
+          <div>
+            <h3 class="text-base font-bold text-slate-900">ปฏิทินกิจกรรมการขาย</h3>
+            <p class="text-xs text-slate-500 mt-0.5">เห็นจังหวะการขายในแต่ละวันของ 7 เดือนล่าสุด · สีเข้ม = ยอดสูง</p>
+          </div>
+          <div class="flex items-center gap-2 text-[11px] text-slate-500">
+            <span>น้อย</span>
+            <span class="w-3 h-3 rounded heat-0"></span>
+            <span class="w-3 h-3 rounded heat-1"></span>
+            <span class="w-3 h-3 rounded heat-2"></span>
+            <span class="w-3 h-3 rounded heat-3"></span>
+            <span class="w-3 h-3 rounded heat-4"></span>
+            <span>มาก</span>
+          </div>
+        </div>
+
+        <!-- 7 columns x ~30 rows OR weeks x weekdays -->
+        <div class="overflow-x-auto">
+          <div class="flex gap-1 min-w-[1100px]">
+            <!-- weekday labels column -->
+            <div class="grid grid-rows-7 gap-1 text-[10px] text-slate-400 pr-1 font-semibold">
+              <span>จ</span><span></span><span>พ</span><span></span><span>ศ</span><span></span><span>อา</span>
+            </div>
+            <!-- 30 weeks columns; each column 7 cells -->
+            <script>document.write(Array.from({length:30}).map((_,col) => {
+              return `<div class="grid grid-rows-7 gap-1">` + Array.from({length:7}).map((__,row) => {
+                const r = Math.random();
+                let cls = 'heat-0';
+                if (r > 0.85) cls = 'heat-4';
+                else if (r > 0.7) cls = 'heat-3';
+                else if (r > 0.5) cls = 'heat-2';
+                else if (r > 0.3) cls = 'heat-1';
+                return `<div class="w-3.5 h-3.5 rounded ${cls}" title="x"></div>`;
+              }).join('') + `</div>`;
+            }).join(''));</script>
+          </div>
+          <div class="flex justify-between mt-2 text-[10px] text-slate-400 font-semibold px-2">
+            <span>ต.ค.</span><span>พ.ย.</span><span>ธ.ค.</span><span>ม.ค.</span><span>ก.พ.</span><span>มี.ค.</span><span>เม.ย.</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-slate-100">
+          <div class="bg-slate-50 rounded-xl px-4 py-3">
+            <div class="text-[10px] font-semibold text-slate-500 uppercase">วันที่ส่งสูงสุด</div>
+            <div class="text-base font-bold text-slate-900 mt-1">18 เม.ย. 2569</div>
+            <div class="text-[11px] text-slate-400">12 m³ · 3 orders</div>
+          </div>
+          <div class="bg-slate-50 rounded-xl px-4 py-3">
+            <div class="text-[10px] font-semibold text-slate-500 uppercase">วันที่ขายดีสุดในสัปดาห์</div>
+            <div class="text-base font-bold text-slate-900 mt-1">วันศุกร์</div>
+            <div class="text-[11px] text-slate-400">เฉลี่ย 5.2 m³/วัน</div>
+          </div>
+          <div class="bg-slate-50 rounded-xl px-4 py-3">
+            <div class="text-[10px] font-semibold text-slate-500 uppercase">ระยะห่างเฉลี่ย</div>
+            <div class="text-base font-bold text-slate-900 mt-1">3.5 วัน/order</div>
+            <div class="text-[11px] text-slate-400">พีคเดือน เม.ย.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom: 2 cards -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="dashboard-card px-6 py-5">
+          <h3 class="text-base font-bold text-slate-900 mb-3">ส่วนแบ่ง Product</h3>
+          <div class="space-y-2 text-sm">
+            <div class="flex items-center gap-3">
+              <span class="w-2 h-2 rounded-full" style="background:#0ea5e9;"></span>
+              <span class="flex-1">CPAC Super Plus</span>
+              <span class="font-bold">58 m³ (76%)</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="w-2 h-2 rounded-full" style="background:#14b8a6;"></span>
+              <span class="flex-1">คอนกรีตทนไอทะเล</span>
+              <span class="font-bold">14 m³ (18%)</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="w-2 h-2 rounded-full" style="background:#94a3b8;"></span>
+              <span class="flex-1">CPAC Regular</span>
+              <span class="font-bold">4 m³ (5%)</span>
+            </div>
+            <div class="mt-3 h-3 rounded-full overflow-hidden flex">
+              <div style="width:76%;background:#0ea5e9;"></div>
+              <div style="width:18%;background:#14b8a6;"></div>
+              <div style="width:6%;background:#94a3b8;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-card px-6 py-5">
+          <h3 class="text-base font-bold text-slate-900 mb-3">สถานะ Order</h3>
+          <div class="grid grid-cols-3 gap-3 text-center">
+            <div class="bg-emerald-50 rounded-xl py-3 px-2">
+              <div class="text-2xl font-bold text-emerald-700">7</div>
+              <div class="text-[10px] text-emerald-700 font-semibold mt-1 uppercase">ยืนยันแล้ว</div>
+            </div>
+            <div class="bg-amber-50 rounded-xl py-3 px-2">
+              <div class="text-2xl font-bold text-amber-700">0</div>
+              <div class="text-[10px] text-amber-700 font-semibold mt-1 uppercase">รออนุมัติ</div>
+            </div>
+            <div class="bg-rose-50 rounded-xl py-3 px-2">
+              <div class="text-2xl font-bold text-rose-700">25</div>
+              <div class="text-[10px] text-rose-700 font-semibold mt-1 uppercase">ยกเลิก</div>
+            </div>
+          </div>
+          <div class="mt-3 text-[11px] text-rose-600 bg-rose-50 rounded-lg px-3 py-2">
+            ⚠️ อัตรา cancel สูง 78% — อาจต้องตรวจสอบ
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-sky-50 border border-sky-200 text-sky-700 rounded-xl px-4 py-3 text-xs">
+        <strong>ตัวเลือก C (Activity Calendar):</strong> ใช้ GitHub-style heatmap แสดงรายวันใน 7 เดือนล่าสุด · เห็นจังหวะการขาย/ช่วงเงียบทันที + Goal Ring บอกสถานะเป้าหมายเดือนนี้ · มี alert ถ้าอัตรา cancel สูงผิดปกติ
+      </div>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

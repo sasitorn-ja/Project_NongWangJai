@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Mockup · Orders – Option C (Customer Card Grid)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Inter', 'Sarabun', system-ui, -apple-system, sans-serif; background: #f4f6f8; }
+  .dashboard-card { background:#fff; border:1px solid #e5e9ec; border-radius:18px; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="flex min-h-screen">
+  <aside class="w-60 bg-white border-r border-slate-200 flex flex-col shrink-0">
+    <div class="px-4 py-5 flex items-center gap-3 border-b border-slate-100">
+      <div class="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600 text-lg">🤖</div>
+      <div>
+        <div class="font-bold text-slate-900">Nong WangJai</div>
+        <div class="text-[11px] text-slate-500 -mt-0.5">Dealer Intelligence</div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1 text-sm">
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>▦</span> Dashboard</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>◫</span> Dealer Network</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>📊</span> Dealer Analysis</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>📈</span> Top N Dealers</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>📦</span> Top N Products</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-100 text-slate-900 font-semibold"><span>📋</span> Orders</a>
+    </nav>
+  </aside>
+
+  <main class="flex-1 min-w-0">
+    <div class="flex items-center justify-between px-8 py-5">
+      <div class="flex items-center gap-3">
+        <button class="w-9 h-9 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-600">☰</button>
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 leading-tight">Orders</h1>
+          <p class="text-xs text-slate-500">ตัวเลือก C · Customer Card Grid (การ์ดลูกค้า + popover ดู Order)</p>
+        </div>
+      </div>
+      <span class="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-500 text-xs font-bold">TEST</span>
+    </div>
+
+    <div class="px-8 pb-8 space-y-4">
+      <!-- KPI Strip + Filter -->
+      <div class="dashboard-card grid grid-cols-[1fr_1fr_1fr_1fr_auto] divide-x divide-slate-100">
+        <div class="px-5 py-4">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase">Customers</div>
+          <div class="text-2xl font-bold mt-1">22</div>
+        </div>
+        <div class="px-5 py-4">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase">Orders</div>
+          <div class="text-2xl font-bold mt-1">32</div>
+        </div>
+        <div class="px-5 py-4">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase">Ordered</div>
+          <div class="text-2xl font-bold mt-1">356 <span class="text-xs text-slate-400">m³</span></div>
+        </div>
+        <div class="px-5 py-4">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase">Active Customer</div>
+          <div class="text-2xl font-bold mt-1">7</div>
+        </div>
+        <div class="px-5 py-4 flex items-center">
+          <div class="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs">
+            <span class="text-slate-400">🔍</span>
+            <span class="text-slate-400">ค้นหาลูกค้า</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sort/Filter chips -->
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mr-2">เรียงตาม:</span>
+        <button class="px-3 py-1.5 rounded-full bg-slate-900 text-white text-xs font-semibold">Ordered สูงสุด</button>
+        <button class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 text-xs font-semibold">Pour ล่าสุด</button>
+        <button class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 text-xs font-semibold">A–Z</button>
+        <button class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 text-xs font-semibold">% Cancel</button>
+        <div class="flex items-center gap-2 ml-auto text-xs">
+          <span class="text-slate-500">สถานะ:</span>
+          <button class="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold">มี Active</button>
+          <button class="px-3 py-1.5 rounded-full bg-white border border-slate-200 text-slate-700 text-xs font-semibold">ทั้งหมด</button>
+        </div>
+      </div>
+
+      <!-- Customer Cards Grid -->
+      <div class="grid grid-cols-3 gap-4">
+        <!-- Card 1 (expanded popover style) -->
+        <div class="dashboard-card overflow-hidden col-span-3 md:col-span-1 ring-2 ring-sky-400">
+          <div class="px-5 py-4 bg-gradient-to-br from-sky-50 to-white border-b border-slate-100">
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="text-base font-bold text-slate-900">อ้น Test</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">หญิงก่อสร้างสระว่ายน้ำ · C00781</div>
+              </div>
+              <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold">1 active</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-3">
+              <div>
+                <div class="text-[10px] text-slate-500">Orders</div>
+                <div class="text-lg font-bold text-slate-900">5</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-500">Ordered</div>
+                <div class="text-lg font-bold text-slate-900">86 <span class="text-[10px] text-slate-400">m³</span></div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-500">Sites</div>
+                <div class="text-lg font-bold text-slate-900">4</div>
+              </div>
+            </div>
+            <!-- mini bar showing delivered vs ordered -->
+            <div class="mt-3">
+              <div class="flex justify-between text-[10px] text-slate-500">
+                <span>Delivered 0 / 86</span><span>0%</span>
+              </div>
+              <div class="h-1.5 rounded-full bg-slate-200 overflow-hidden mt-1">
+                <div class="h-full bg-emerald-500" style="width:0%;"></div>
+              </div>
+            </div>
+          </div>
+          <!-- Mini order list -->
+          <div class="px-3 py-2 space-y-1.5">
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50">
+              <span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[9px] font-bold">ยืนยัน</span>
+              <span class="flex-1 text-xs truncate">CPAC Super Plus 280 · บางซื่อ</span>
+              <span class="text-xs font-bold">7</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50">
+              <span class="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 text-[9px] font-bold">ยกเลิก</span>
+              <span class="flex-1 text-xs truncate">CPAC Super Plus 240 · บางซื่อ</span>
+              <span class="text-xs font-bold">3</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50">
+              <span class="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 text-[9px] font-bold">ยกเลิก</span>
+              <span class="flex-1 text-xs truncate">CPAC Super Plus 320 · นนทบุรี</span>
+              <span class="text-xs font-bold">6</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50">
+              <span class="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 text-[9px] font-bold">ยกเลิก</span>
+              <span class="flex-1 text-xs truncate">คอนกรีตทนไอทะเล 240 · หาดใหญ่</span>
+              <span class="text-xs font-bold">65</span>
+            </div>
+            <div class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50">
+              <span class="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-[9px] font-bold">รอ</span>
+              <span class="flex-1 text-xs truncate">CPAC Super Plus 280 · ลาดพร้าว</span>
+              <span class="text-xs font-bold">5</span>
+            </div>
+          </div>
+          <div class="px-4 py-2.5 bg-slate-50 border-t border-slate-100 text-center">
+            <button class="text-xs font-semibold text-sky-600 hover:underline">ดูทั้งหมด ›</button>
+          </div>
+        </div>
+
+        <!-- Card 2 (collapsed) -->
+        <div class="dashboard-card overflow-hidden hover:ring-2 hover:ring-slate-300 cursor-pointer">
+          <div class="px-5 py-4">
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="text-base font-bold text-slate-900">บ. สยามก่อสร้าง จก.</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">รับเหมาทั่วไป · C00134</div>
+              </div>
+              <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold">2 active</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-3">
+              <div>
+                <div class="text-[10px] text-slate-500">Orders</div>
+                <div class="text-lg font-bold text-slate-900">4</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-500">Ordered</div>
+                <div class="text-lg font-bold text-slate-900">52 <span class="text-[10px] text-slate-400">m³</span></div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-500">Sites</div>
+                <div class="text-lg font-bold text-slate-900">3</div>
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="flex justify-between text-[10px] text-slate-500">
+                <span>Delivered 20 / 52</span><span>38%</span>
+              </div>
+              <div class="h-1.5 rounded-full bg-slate-200 overflow-hidden mt-1">
+                <div class="h-full bg-emerald-500" style="width:38%;"></div>
+              </div>
+            </div>
+            <div class="mt-3 text-[10px] text-slate-500">Pour ล่าสุด: 12 มี.ค. 2569</div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="dashboard-card overflow-hidden hover:ring-2 hover:ring-slate-300 cursor-pointer">
+          <div class="px-5 py-4">
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="text-base font-bold text-slate-900">ห้างฯ ทวีโชค</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">ร้านวัสดุก่อสร้าง · C00342</div>
+              </div>
+              <span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold">1 active</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-3">
+              <div>
+                <div class="text-[10px] text-slate-500">Orders</div>
+                <div class="text-lg font-bold text-slate-900">3</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-500">Ordered</div>
+                <div class="text-lg font-bold text-slate-900">38 <span class="text-[10px] text-slate-400">m³</span></div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-500">Sites</div>
+                <div class="text-lg font-bold text-slate-900">2</div>
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="flex justify-between text-[10px] text-slate-500">
+                <span>Delivered 12 / 38</span><span>32%</span>
+              </div>
+              <div class="h-1.5 rounded-full bg-slate-200 overflow-hidden mt-1">
+                <div class="h-full bg-emerald-500" style="width:32%;"></div>
+              </div>
+            </div>
+            <div class="mt-3 text-[10px] text-slate-500">Pour ล่าสุด: 5 มี.ค. 2569</div>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="dashboard-card overflow-hidden hover:ring-2 hover:ring-slate-300 cursor-pointer">
+          <div class="px-5 py-4">
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="text-base font-bold text-slate-900">ร้านวัสดุ สมศักดิ์</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">ร้านวัสดุ · C00455</div>
+              </div>
+              <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-bold">เงียบ</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-3">
+              <div>
+                <div class="text-[10px] text-slate-500">Orders</div>
+                <div class="text-lg font-bold text-slate-900">2</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-500">Ordered</div>
+                <div class="text-lg font-bold text-slate-900">24 <span class="text-[10px] text-slate-400">m³</span></div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-500">Sites</div>
+                <div class="text-lg font-bold text-slate-900">1</div>
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="flex justify-between text-[10px] text-slate-500">
+                <span>Delivered 8 / 24</span><span>33%</span>
+              </div>
+              <div class="h-1.5 rounded-full bg-slate-200 overflow-hidden mt-1">
+                <div class="h-full bg-emerald-500" style="width:33%;"></div>
+              </div>
+            </div>
+            <div class="mt-3 text-[10px] text-slate-500">Pour ล่าสุด: 28 ก.พ. 2569</div>
+          </div>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="dashboard-card overflow-hidden hover:ring-2 hover:ring-slate-300 cursor-pointer">
+          <div class="px-5 py-4">
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="text-base font-bold text-slate-900">คุณวันชัย</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">รายย่อย · C00521</div>
+              </div>
+              <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-bold">เงียบ</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-3">
+              <div>
+                <div class="text-[10px] text-slate-500">Orders</div>
+                <div class="text-lg font-bold text-slate-900">2</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-500">Ordered</div>
+                <div class="text-lg font-bold text-slate-900">18 <span class="text-[10px] text-slate-400">m³</span></div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-500">Sites</div>
+                <div class="text-lg font-bold text-slate-900">2</div>
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="flex justify-between text-[10px] text-slate-500">
+                <span>Delivered 6 / 18</span><span>33%</span>
+              </div>
+              <div class="h-1.5 rounded-full bg-slate-200 overflow-hidden mt-1">
+                <div class="h-full bg-emerald-500" style="width:33%;"></div>
+              </div>
+            </div>
+            <div class="mt-3 text-[10px] text-slate-500">Pour ล่าสุด: 22 ก.พ. 2569</div>
+          </div>
+        </div>
+
+        <!-- Card 6 -->
+        <div class="dashboard-card overflow-hidden hover:ring-2 hover:ring-slate-300 cursor-pointer">
+          <div class="px-5 py-4">
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="text-base font-bold text-slate-900">บ. ก่อสร้างไทย จก.</div>
+                <div class="text-[11px] text-slate-500 mt-0.5">รับเหมา · C00632</div>
+              </div>
+              <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px] font-bold">เงียบ</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-3">
+              <div>
+                <div class="text-[10px] text-slate-500">Orders</div>
+                <div class="text-lg font-bold text-slate-900">1</div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-500">Ordered</div>
+                <div class="text-lg font-bold text-slate-900">14 <span class="text-[10px] text-slate-400">m³</span></div>
+              </div>
+              <div>
+                <div class="text-[10px] text-slate-500">Sites</div>
+                <div class="text-lg font-bold text-slate-900">1</div>
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="flex justify-between text-[10px] text-slate-500">
+                <span>Delivered 0 / 14</span><span>0%</span>
+              </div>
+              <div class="h-1.5 rounded-full bg-slate-200 overflow-hidden mt-1">
+                <div class="h-full bg-emerald-500" style="width:0%;"></div>
+              </div>
+            </div>
+            <div class="mt-3 text-[10px] text-slate-500">Pour ล่าสุด: 15 ก.พ. 2569</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center">
+        <button class="px-4 py-2 rounded-xl border border-dashed border-slate-300 bg-white text-xs font-semibold text-slate-600 hover:bg-slate-50">โหลดเพิ่มอีก 16 ลูกค้า ▾</button>
+      </div>
+
+      <div class="bg-sky-50 border border-sky-200 text-sky-700 rounded-xl px-4 py-3 text-xs">
+        <strong>ตัวเลือก C (Card Grid):</strong> ลูกค้าทุกคนเป็นการ์ดเรียงกัน เห็นภาพรวม + Progress Bar Delivered/Ordered ในการ์ดเลย · คลิกการ์ดเพื่อ "กาง" มินิรายการ Order ในการ์ดนั้น · เหมาะถ้าอยากให้ดู "พอร์ตลูกค้า" ทั้งหมดในแว็บเดียว
+      </div>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

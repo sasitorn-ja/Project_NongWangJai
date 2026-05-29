@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Nong WangJai · Mockup Hub</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Inter', 'Sarabun', system-ui, -apple-system, sans-serif; background:#f4f6f8; }
+  .mock-card { background:#fff; border:1px solid #e5e9ec; border-radius:18px; transition: all .15s; }
+  .mock-card:hover { border-color:#0ea5e9; box-shadow: 0 8px 24px -8px rgba(14,165,233,.25); transform: translateY(-2px); }
+  .badge-a { background:#dbeafe; color:#1e40af; }
+  .badge-b { background:#dcfce7; color:#166534; }
+  .badge-c { background:#fef3c7; color:#92400e; }
+</style>
+</head>
+<body class="min-h-screen px-8 py-10">
+  <div class="max-w-6xl mx-auto">
+    <header class="mb-8">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-12 h-12 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600 text-2xl">🤖</div>
+        <div>
+          <h1 class="text-3xl font-bold text-slate-900">Nong WangJai · Mockup Hub</h1>
+          <p class="text-sm text-slate-500">รวมตัวเลือกการออกแบบทั้ง 3 จุดที่จะปรับ · คลิกเพื่อเปิดดูตัวเต็ม</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Section 1 -->
+    <section class="mb-10">
+      <div class="flex items-baseline justify-between mb-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">1. Dashboard · ฟิลเตอร์ภูมิภาคในกราฟ</h2>
+          <p class="text-sm text-slate-500 mt-0.5">เลือกได้หลายภูมิภาคพร้อมกัน + เห็นตัวเลขทุกอันที่เลือก</p>
+        </div>
+        <span class="text-xs font-semibold text-slate-500">3 ตัวเลือก</span>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <a href="01_dashboard_region_filter.html" class="mock-card p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="badge-a px-2.5 py-0.5 rounded-full text-xs font-bold">ตัวเลือก A</span>
+            <span class="text-xs text-slate-400">Chip Pills</span>
+          </div>
+          <div class="h-32 bg-slate-50 rounded-lg mb-3 p-3 flex flex-wrap gap-1.5 items-start">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold text-white" style="background:#3b82f6;">✓ CPAC Metro</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold text-white" style="background:#14b8a6;">✓ Northeast</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold text-white" style="background:#f59e0b;">✓ South</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] border border-dashed border-slate-300 text-slate-500">West</span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] border border-dashed border-slate-300 text-slate-500">North</span>
+          </div>
+          <div class="font-bold text-slate-900">Chip Pills แบบสีๆ</div>
+          <p class="text-xs text-slate-500 mt-1">ติ๊กแบบ pill มีสีของภูมิภาค โชว์ตัวเลขในชิป + สรุปด้านล่าง</p>
+        </a>
+
+        <a href="01b_dashboard_dropdown_filter.html" class="mock-card p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="badge-b px-2.5 py-0.5 rounded-full text-xs font-bold">ตัวเลือก B</span>
+            <span class="text-xs text-slate-400">Dropdown</span>
+          </div>
+          <div class="h-32 bg-slate-50 rounded-lg mb-3 p-3 flex items-start justify-end">
+            <div class="bg-white rounded-lg border border-slate-200 shadow-md p-2 w-32">
+              <div class="text-[9px] font-bold text-slate-400 mb-1">เลือกภูมิภาค</div>
+              <div class="space-y-1">
+                <div class="flex items-center gap-1 text-[9px]"><span class="w-2.5 h-2.5 bg-sky-500 rounded text-white text-center leading-[10px]">✓</span>Metro</div>
+                <div class="flex items-center gap-1 text-[9px]"><span class="w-2.5 h-2.5 bg-sky-500 rounded text-white text-center leading-[10px]">✓</span>Northeast</div>
+                <div class="flex items-center gap-1 text-[9px]"><span class="w-2.5 h-2.5 border border-slate-300 rounded"></span>West</div>
+              </div>
+            </div>
+          </div>
+          <div class="font-bold text-slate-900">Dropdown + Checkbox</div>
+          <p class="text-xs text-slate-500 mt-1">ปุ่ม "ภูมิภาค ▾" เปิด dropdown ที่มี checkbox + ช่องค้นหา</p>
+        </a>
+
+        <a href="01c_dashboard_side_toggle.html" class="mock-card p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="badge-c px-2.5 py-0.5 rounded-full text-xs font-bold">ตัวเลือก C</span>
+            <span class="text-xs text-slate-400">Side Toggle</span>
+          </div>
+          <div class="h-32 bg-slate-50 rounded-lg mb-3 p-2 grid grid-cols-2 gap-2">
+            <div class="bg-white rounded p-1.5">
+              <div class="text-[8px] text-slate-400">กราฟแท่ง</div>
+              <div class="flex items-end gap-0.5 h-12">
+                <div class="flex-1 rounded-t" style="background:#3b82f6;height:90%;"></div>
+                <div class="flex-1 rounded-t" style="background:#14b8a6;height:70%;"></div>
+                <div class="flex-1 rounded-t" style="background:#f59e0b;height:20%;"></div>
+              </div>
+            </div>
+            <div class="space-y-1">
+              <div class="bg-white rounded border border-sky-400 p-1 flex items-center gap-1"><span class="w-3 h-1.5 bg-sky-500 rounded-full"></span><span class="text-[8px]">Metro</span></div>
+              <div class="bg-white rounded border border-emerald-400 p-1 flex items-center gap-1"><span class="w-3 h-1.5 bg-emerald-500 rounded-full"></span><span class="text-[8px]">NE</span></div>
+              <div class="bg-white rounded border border-slate-200 p-1 flex items-center gap-1"><span class="w-3 h-1.5 bg-slate-300 rounded-full"></span><span class="text-[8px]">West</span></div>
+            </div>
+          </div>
+          <div class="font-bold text-slate-900">Side Toggle Cards</div>
+          <p class="text-xs text-slate-500 mt-1">แผงเลือกอยู่ข้างกราฟ ทุกภูมิภาคเป็นการ์ด + toggle ปิด/เปิด</p>
+        </a>
+      </div>
+    </section>
+
+    <!-- Section 2 -->
+    <section class="mb-10">
+      <div class="flex items-baseline justify-between mb-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">2. Dealer Analysis · ทำให้อ่านง่ายขึ้น</h2>
+          <p class="text-sm text-slate-500 mt-0.5">มุมมองที่ Dealer จะเห็นเฉพาะของตัวเองในอนาคต</p>
+        </div>
+        <span class="text-xs font-semibold text-slate-500">3 ตัวเลือก</span>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <a href="02_dealer_analysis_simplified.html" class="mock-card p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="badge-a px-2.5 py-0.5 rounded-full text-xs font-bold">ตัวเลือก A</span>
+            <span class="text-xs text-slate-400">Trend + Donut</span>
+          </div>
+          <div class="h-32 bg-slate-50 rounded-lg mb-3 p-3">
+            <svg viewBox="0 0 200 60" class="w-full h-12">
+              <polyline points="10,50 40,40 70,42 100,25 130,30 160,15 190,10" fill="none" stroke="#14b8a6" stroke-width="2"/>
+              <circle cx="190" cy="10" r="3" fill="#14b8a6"/>
+            </svg>
+            <div class="flex gap-2 mt-2">
+              <div class="w-10 h-10 rounded-full border-[6px] border-teal-500 border-r-blue-500 border-b-amber-500"></div>
+              <div class="flex-1 space-y-1">
+                <div class="h-1.5 bg-teal-500 rounded" style="width:80%;"></div>
+                <div class="h-1.5 bg-blue-500 rounded" style="width:60%;"></div>
+                <div class="h-1.5 bg-amber-500 rounded" style="width:40%;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="font-bold text-slate-900">Trend Line + Donut + Top 5</div>
+          <p class="text-xs text-slate-500 mt-1">แนวโน้มเดือน + สัดส่วน Site + Top 5 ลูกค้า · เรียบง่ายดูเข้าใจไว</p>
+        </a>
+
+        <a href="02b_dealer_analysis_kpi_focus.html" class="mock-card p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="badge-b px-2.5 py-0.5 rounded-full text-xs font-bold">ตัวเลือก B</span>
+            <span class="text-xs text-slate-400">KPI Focus</span>
+          </div>
+          <div class="h-32 bg-slate-50 rounded-lg mb-3 p-2 grid grid-cols-2 gap-1.5">
+            <div class="bg-white rounded p-1.5">
+              <div class="text-[8px] text-slate-400">DELIVERED</div>
+              <div class="text-base font-bold">26</div>
+              <div class="text-[8px] text-emerald-600">↑ +18%</div>
+            </div>
+            <div class="bg-white rounded p-1.5">
+              <div class="text-[8px] text-slate-400">ORDERS</div>
+              <div class="text-base font-bold">7/32</div>
+            </div>
+            <div class="bg-white rounded p-1.5 col-span-2">
+              <div class="text-[8px] text-slate-400 mb-1">Top Products</div>
+              <div class="space-y-0.5">
+                <div class="h-1 bg-sky-500 rounded" style="width:100%;"></div>
+                <div class="h-1 bg-sky-500 rounded" style="width:60%;"></div>
+                <div class="h-1 bg-teal-500 rounded" style="width:45%;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="font-bold text-slate-900">KPI Cards + Horizontal Bars</div>
+          <p class="text-xs text-slate-500 mt-1">เน้นตัวเลขใหญ่ๆ + bar chart เปรียบเทียบ Product/Site + ลูกค้าเป็นการ์ด</p>
+        </a>
+
+        <a href="02c_dealer_analysis_calendar.html" class="mock-card p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="badge-c px-2.5 py-0.5 rounded-full text-xs font-bold">ตัวเลือก C</span>
+            <span class="text-xs text-slate-400">Activity Heatmap</span>
+          </div>
+          <div class="h-32 bg-slate-50 rounded-lg mb-3 p-3">
+            <div class="grid grid-cols-12 gap-0.5">
+              <div class="aspect-square bg-sky-200 rounded-sm"></div>
+              <div class="aspect-square bg-sky-100 rounded-sm"></div>
+              <div class="aspect-square bg-sky-300 rounded-sm"></div>
+              <div class="aspect-square bg-slate-200 rounded-sm"></div>
+              <div class="aspect-square bg-sky-400 rounded-sm"></div>
+              <div class="aspect-square bg-sky-500 rounded-sm"></div>
+              <div class="aspect-square bg-sky-200 rounded-sm"></div>
+              <div class="aspect-square bg-sky-100 rounded-sm"></div>
+              <div class="aspect-square bg-sky-300 rounded-sm"></div>
+              <div class="aspect-square bg-sky-500 rounded-sm"></div>
+              <div class="aspect-square bg-sky-400 rounded-sm"></div>
+              <div class="aspect-square bg-sky-200 rounded-sm"></div>
+              <div class="aspect-square bg-sky-100 rounded-sm"></div>
+              <div class="aspect-square bg-slate-200 rounded-sm"></div>
+              <div class="aspect-square bg-sky-300 rounded-sm"></div>
+              <div class="aspect-square bg-sky-200 rounded-sm"></div>
+              <div class="aspect-square bg-sky-500 rounded-sm"></div>
+              <div class="aspect-square bg-sky-300 rounded-sm"></div>
+              <div class="aspect-square bg-sky-100 rounded-sm"></div>
+              <div class="aspect-square bg-slate-200 rounded-sm"></div>
+              <div class="aspect-square bg-sky-400 rounded-sm"></div>
+              <div class="aspect-square bg-sky-300 rounded-sm"></div>
+              <div class="aspect-square bg-sky-500 rounded-sm"></div>
+              <div class="aspect-square bg-sky-200 rounded-sm"></div>
+            </div>
+            <div class="flex items-center justify-center gap-2 mt-3">
+              <svg viewBox="0 0 40 40" class="w-10 h-10">
+                <circle cx="20" cy="20" r="16" fill="none" stroke="#e2e8f0" stroke-width="4"/>
+                <circle cx="20" cy="20" r="16" fill="none" stroke="#14b8a6" stroke-width="4" stroke-dasharray="76 100" transform="rotate(-90 20 20)"/>
+              </svg>
+              <div class="text-[10px]">เป้าหมาย 76%</div>
+            </div>
+          </div>
+          <div class="font-bold text-slate-900">Calendar Heatmap + Goal</div>
+          <p class="text-xs text-slate-500 mt-1">GitHub-style heatmap รายวัน + Goal Ring + Alert ถ้า cancel rate สูง</p>
+        </a>
+      </div>
+    </section>
+
+    <!-- Section 3 -->
+    <section>
+      <div class="flex items-baseline justify-between mb-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">3. Orders · กลุ่มตามลูกค้า</h2>
+          <p class="text-sm text-slate-500 mt-0.5">เปลี่ยนจาก 1 row = 1 order เป็นจัดกลุ่มตามลูกค้าก่อน</p>
+        </div>
+        <span class="text-xs font-semibold text-slate-500">3 ตัวเลือก</span>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <a href="03a_orders_inline_accordion.html" class="mock-card p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="badge-a px-2.5 py-0.5 rounded-full text-xs font-bold">ตัวเลือก A</span>
+            <span class="text-xs text-slate-400">Inline Accordion</span>
+          </div>
+          <div class="h-32 bg-slate-50 rounded-lg mb-3 p-2 space-y-1">
+            <div class="bg-sky-100 rounded p-1.5 text-[9px]">▾ อ้น Test · 5 orders · 86 m³</div>
+            <div class="bg-white rounded p-1 ml-3 text-[8px] text-slate-500">└ CPAC Super Plus 280 · 7 คิว</div>
+            <div class="bg-white rounded p-1 ml-3 text-[8px] text-slate-500">└ CPAC Super Plus 240 · 3 คิว</div>
+            <div class="bg-white rounded p-1.5 text-[9px]">▸ บ. สยามก่อสร้าง · 4 orders</div>
+            <div class="bg-white rounded p-1.5 text-[9px]">▸ ห้างฯ ทวีโชค · 3 orders</div>
+          </div>
+          <div class="font-bold text-slate-900">Inline Accordion Table</div>
+          <p class="text-xs text-slate-500 mt-1">แถวลูกค้าเป็นแถวหลัก คลิกกางออกในที่เดิม · ตรงไปตรงมา</p>
+        </a>
+
+        <a href="03b_orders_two_pane.html" class="mock-card p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="badge-b px-2.5 py-0.5 rounded-full text-xs font-bold">ตัวเลือก B</span>
+            <span class="text-xs text-slate-400">Master-Detail</span>
+          </div>
+          <div class="h-32 bg-slate-50 rounded-lg mb-3 p-2 grid grid-cols-[1fr_1.5fr] gap-1.5">
+            <div class="bg-white rounded p-1 space-y-1">
+              <div class="bg-sky-100 border-l-2 border-sky-500 p-1 text-[8px]">อ้น Test</div>
+              <div class="text-[8px] p-1">บ. สยาม</div>
+              <div class="text-[8px] p-1">ห้างฯ ทวี</div>
+              <div class="text-[8px] p-1">ร้านวัสดุ</div>
+            </div>
+            <div class="bg-white rounded p-1.5 space-y-1">
+              <div class="text-[9px] font-bold">อ้น Test</div>
+              <div class="grid grid-cols-3 gap-0.5">
+                <div class="bg-slate-100 rounded text-[7px] p-0.5 text-center">5</div>
+                <div class="bg-slate-100 rounded text-[7px] p-0.5 text-center">86m³</div>
+                <div class="bg-slate-100 rounded text-[7px] p-0.5 text-center">4 sites</div>
+              </div>
+              <div class="text-[8px] text-slate-500">└ Order 1</div>
+              <div class="text-[8px] text-slate-500">└ Order 2</div>
+            </div>
+          </div>
+          <div class="font-bold text-slate-900">Two-Pane Master-Detail</div>
+          <p class="text-xs text-slate-500 mt-1">รายชื่อซ้าย · รายละเอียดขวา เหมือนหน้า Email/CRM · deep dive</p>
+        </a>
+
+        <a href="03c_orders_customer_cards.html" class="mock-card p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="badge-c px-2.5 py-0.5 rounded-full text-xs font-bold">ตัวเลือก C</span>
+            <span class="text-xs text-slate-400">Card Grid</span>
+          </div>
+          <div class="h-32 bg-slate-50 rounded-lg mb-3 p-2 grid grid-cols-2 gap-1.5">
+            <div class="bg-white rounded p-1.5 border border-sky-300 ring-1 ring-sky-200">
+              <div class="text-[8px] font-bold">อ้น Test</div>
+              <div class="text-[7px] text-slate-400">5 orders · 86m³</div>
+              <div class="h-1 bg-slate-200 rounded mt-1"><div class="h-full bg-emerald-500 rounded" style="width:0%;"></div></div>
+            </div>
+            <div class="bg-white rounded p-1.5">
+              <div class="text-[8px] font-bold">บ. สยาม</div>
+              <div class="text-[7px] text-slate-400">4 · 52m³</div>
+              <div class="h-1 bg-slate-200 rounded mt-1"><div class="h-full bg-emerald-500 rounded" style="width:38%;"></div></div>
+            </div>
+            <div class="bg-white rounded p-1.5">
+              <div class="text-[8px] font-bold">ห้างฯ</div>
+              <div class="text-[7px] text-slate-400">3 · 38m³</div>
+              <div class="h-1 bg-slate-200 rounded mt-1"><div class="h-full bg-emerald-500 rounded" style="width:32%;"></div></div>
+            </div>
+            <div class="bg-white rounded p-1.5">
+              <div class="text-[8px] font-bold">ร้านวัสดุ</div>
+              <div class="text-[7px] text-slate-400">2 · 24m³</div>
+              <div class="h-1 bg-slate-200 rounded mt-1"><div class="h-full bg-emerald-500 rounded" style="width:33%;"></div></div>
+            </div>
+          </div>
+          <div class="font-bold text-slate-900">Customer Card Grid</div>
+          <p class="text-xs text-slate-500 mt-1">ลูกค้าเป็นการ์ด มี progress bar Delivered/Ordered · เห็นพอร์ตทั้งหมด</p>
+        </a>
+      </div>
+    </section>
+
+    <div class="mt-10 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-sm text-amber-900">
+      <div class="font-bold mb-1">💡 วิธีเลือก</div>
+      <p>คลิกเปิดดูแต่ละตัวเลือกแล้วบอกผมว่าชอบแบบไหนของแต่ละจุดได้เลยครับ เช่น "เอา 1A + 2C + 3B" — ผมจะเอามารวมแล้วลงมือแก้โค้ดจริงให้</p>
+    </div>
+  </div>
+</body>
+</html>

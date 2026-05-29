@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Mockup · Orders – Option B (Two-Pane Master-Detail)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: 'Inter', 'Sarabun', system-ui, -apple-system, sans-serif; background: #f4f6f8; }
+  .dashboard-card { background:#fff; border:1px solid #e5e9ec; border-radius:18px; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="flex min-h-screen">
+  <aside class="w-60 bg-white border-r border-slate-200 flex flex-col shrink-0">
+    <div class="px-4 py-5 flex items-center gap-3 border-b border-slate-100">
+      <div class="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600 text-lg">🤖</div>
+      <div>
+        <div class="font-bold text-slate-900">Nong WangJai</div>
+        <div class="text-[11px] text-slate-500 -mt-0.5">Dealer Intelligence</div>
+      </div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1 text-sm">
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>▦</span> Dashboard</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>◫</span> Dealer Network</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>📊</span> Dealer Analysis</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>📈</span> Top N Dealers</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 hover:bg-slate-50"><span>📦</span> Top N Products</a>
+      <a class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-100 text-slate-900 font-semibold"><span>📋</span> Orders</a>
+    </nav>
+  </aside>
+
+  <main class="flex-1 min-w-0">
+    <div class="flex items-center justify-between px-8 py-5">
+      <div class="flex items-center gap-3">
+        <button class="w-9 h-9 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-600">☰</button>
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 leading-tight">Orders</h1>
+          <p class="text-xs text-slate-500">ตัวเลือก B · Two-Pane Master-Detail (รายชื่อลูกค้าซ้าย · Order ขวา)</p>
+        </div>
+      </div>
+      <span class="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-500 text-xs font-bold">TEST</span>
+    </div>
+
+    <div class="px-8 pb-8 space-y-4">
+      <!-- KPI Strip -->
+      <div class="dashboard-card grid grid-cols-4 divide-x divide-slate-100">
+        <div class="px-5 py-4">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase">Customers</div>
+          <div class="text-2xl font-bold mt-1">22</div>
+        </div>
+        <div class="px-5 py-4">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase">Orders</div>
+          <div class="text-2xl font-bold mt-1">32</div>
+        </div>
+        <div class="px-5 py-4">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase">Ordered</div>
+          <div class="text-2xl font-bold mt-1">356 <span class="text-xs text-slate-400">m³</span></div>
+        </div>
+        <div class="px-5 py-4">
+          <div class="text-[11px] font-semibold text-slate-500 uppercase">Delivered</div>
+          <div class="text-2xl font-bold mt-1">0 <span class="text-xs text-slate-400">m³</span></div>
+        </div>
+      </div>
+
+      <!-- Two-Pane Layout -->
+      <div class="dashboard-card overflow-hidden grid grid-cols-[360px_1fr]" style="min-height:620px;">
+        <!-- LEFT: Customer list -->
+        <div class="border-r border-slate-200 flex flex-col">
+          <div class="px-4 py-3 border-b border-slate-100">
+            <div class="text-sm font-bold text-slate-900">รายชื่อลูกค้า</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">22 ลูกค้า · 32 orders</div>
+            <div class="mt-2 flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs">
+              <span class="text-slate-400">🔍</span>
+              <input class="flex-1 outline-none text-slate-700" placeholder="ค้นหาลูกค้า..." readonly>
+            </div>
+          </div>
+
+          <div class="overflow-y-auto flex-1">
+            <!-- ACTIVE customer -->
+            <div class="border-l-[3px] border-sky-500 bg-sky-50/60 px-4 py-3 cursor-pointer">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="text-sm font-bold text-slate-900 truncate">อ้น Test</span>
+                <span class="text-xs font-bold text-sky-600">86 m³</span>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5">หญิงก่อสร้างสระว่ายน้ำ</div>
+              <div class="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
+                <span>5 orders</span><span>·</span><span>4 sites</span><span>·</span><span>1 เม.ย.</span>
+              </div>
+            </div>
+
+            <div class="border-l-[3px] border-transparent hover:bg-slate-50 px-4 py-3 cursor-pointer">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="text-sm font-semibold text-slate-800 truncate">บ. สยามก่อสร้าง จก.</span>
+                <span class="text-xs font-bold text-slate-700">52 m³</span>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5">รับเหมาทั่วไป</div>
+              <div class="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
+                <span>4 orders</span><span>·</span><span>3 sites</span><span>·</span><span>12 มี.ค.</span>
+              </div>
+            </div>
+
+            <div class="border-l-[3px] border-transparent hover:bg-slate-50 px-4 py-3 cursor-pointer">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="text-sm font-semibold text-slate-800 truncate">ห้างฯ ทวีโชค</span>
+                <span class="text-xs font-bold text-slate-700">38 m³</span>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5">ร้านวัสดุก่อสร้าง</div>
+              <div class="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
+                <span>3 orders</span><span>·</span><span>2 sites</span><span>·</span><span>5 มี.ค.</span>
+              </div>
+            </div>
+
+            <div class="border-l-[3px] border-transparent hover:bg-slate-50 px-4 py-3 cursor-pointer">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="text-sm font-semibold text-slate-800 truncate">ร้านวัสดุ สมศักดิ์</span>
+                <span class="text-xs font-bold text-slate-700">24 m³</span>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5">ร้านวัสดุก่อสร้าง</div>
+              <div class="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
+                <span>2 orders</span><span>·</span><span>1 site</span><span>·</span><span>28 ก.พ.</span>
+              </div>
+            </div>
+
+            <div class="border-l-[3px] border-transparent hover:bg-slate-50 px-4 py-3 cursor-pointer">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="text-sm font-semibold text-slate-800 truncate">คุณวันชัย</span>
+                <span class="text-xs font-bold text-slate-700">18 m³</span>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5">รับเหมารายย่อย</div>
+              <div class="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
+                <span>2 orders</span><span>·</span><span>2 sites</span><span>·</span><span>22 ก.พ.</span>
+              </div>
+            </div>
+
+            <div class="border-l-[3px] border-transparent hover:bg-slate-50 px-4 py-3 cursor-pointer">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="text-sm font-semibold text-slate-800 truncate">บ. ก่อสร้างไทย จก.</span>
+                <span class="text-xs font-bold text-slate-700">14 m³</span>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5">รับเหมา</div>
+              <div class="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
+                <span>1 order</span><span>·</span><span>1 site</span><span>·</span><span>15 ก.พ.</span>
+              </div>
+            </div>
+
+            <div class="border-l-[3px] border-transparent hover:bg-slate-50 px-4 py-3 cursor-pointer">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="text-sm font-semibold text-slate-800 truncate">หจก. ภาคใต้พัฒนา</span>
+                <span class="text-xs font-bold text-slate-700">10 m³</span>
+              </div>
+              <div class="text-[11px] text-slate-500 mt-0.5">รับเหมา</div>
+              <div class="flex items-center gap-3 mt-1 text-[10px] text-slate-500">
+                <span>1 order</span><span>·</span><span>1 site</span><span>·</span><span>8 ก.พ.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Selected customer detail -->
+        <div class="flex flex-col">
+          <!-- Customer header -->
+          <div class="px-6 py-4 border-b border-slate-100">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="text-lg font-bold text-slate-900">อ้น Test</div>
+                <div class="text-sm text-slate-500">หญิงก่อสร้างสระว่ายน้ำ · รหัสลูกค้า C00781</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50">📞 ติดต่อ</button>
+                <button class="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-semibold">+ Order ใหม่</button>
+              </div>
+            </div>
+            <div class="grid grid-cols-4 gap-3 mt-4">
+              <div class="bg-slate-50 rounded-xl px-3 py-2">
+                <div class="text-[10px] font-semibold text-slate-500 uppercase">Orders</div>
+                <div class="text-lg font-bold text-slate-900 mt-0.5">5</div>
+              </div>
+              <div class="bg-slate-50 rounded-xl px-3 py-2">
+                <div class="text-[10px] font-semibold text-slate-500 uppercase">Ordered</div>
+                <div class="text-lg font-bold text-slate-900 mt-0.5">86 <span class="text-[10px] text-slate-400">m³</span></div>
+              </div>
+              <div class="bg-slate-50 rounded-xl px-3 py-2">
+                <div class="text-[10px] font-semibold text-slate-500 uppercase">Delivered</div>
+                <div class="text-lg font-bold text-slate-900 mt-0.5">0 <span class="text-[10px] text-slate-400">m³</span></div>
+              </div>
+              <div class="bg-slate-50 rounded-xl px-3 py-2">
+                <div class="text-[10px] font-semibold text-slate-500 uppercase">Sites</div>
+                <div class="text-lg font-bold text-slate-900 mt-0.5">4</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Order list -->
+          <div class="flex-1 overflow-y-auto">
+            <div class="grid grid-cols-[1.4fr_1fr_70px_70px_120px_90px] gap-3 px-6 py-2.5 bg-slate-50 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <span>Order / Product</span>
+              <span>Site</span>
+              <span class="text-right">Ordered</span>
+              <span class="text-right">Delivered</span>
+              <span>Pour Time</span>
+              <span>Status</span>
+            </div>
+            <div class="grid grid-cols-[1.4fr_1fr_70px_70px_120px_90px] gap-3 px-6 py-3 items-center text-sm border-b border-slate-50">
+              <div>
+                <div class="font-semibold text-slate-900">CPAC Super Plus 280</div>
+                <div class="text-[10px] text-slate-500">28F1A4AB00</div>
+              </div>
+              <div>
+                <div>วงศ์สว่าง บางซื่อ</div>
+                <div class="text-[10px] text-slate-500">B030674</div>
+              </div>
+              <div class="text-right font-semibold">7 คิว</div>
+              <div class="text-right text-slate-400">0 คิว</div>
+              <div class="text-xs text-slate-500">28 มี.ค. 17:00</div>
+              <div><span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10px] font-bold">ยืนยันแล้ว</span></div>
+            </div>
+            <div class="grid grid-cols-[1.4fr_1fr_70px_70px_120px_90px] gap-3 px-6 py-3 items-center text-sm border-b border-slate-50">
+              <div>
+                <div class="font-semibold text-slate-900">CPAC Super Plus 240</div>
+                <div class="text-[10px] text-slate-500">24F1A4AB00</div>
+              </div>
+              <div>
+                <div>วงศ์สว่าง บางซื่อ</div>
+                <div class="text-[10px] text-slate-500">B030674</div>
+              </div>
+              <div class="text-right font-semibold">3 คิว</div>
+              <div class="text-right text-slate-400">0 คิว</div>
+              <div class="text-xs text-slate-500">1 เม.ย. 16:00</div>
+              <div><span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-[10px] font-bold">ยกเลิก</span></div>
+            </div>
+            <div class="grid grid-cols-[1.4fr_1fr_70px_70px_120px_90px] gap-3 px-6 py-3 items-center text-sm border-b border-slate-50">
+              <div>
+                <div class="font-semibold text-slate-900">CPAC Super Plus 320</div>
+                <div class="text-[10px] text-slate-500">32F1A4AB00</div>
+              </div>
+              <div>
+                <div>เมือง นนทบุรี</div>
+                <div class="text-[10px] text-slate-500">B030713</div>
+              </div>
+              <div class="text-right font-semibold">6 คิว</div>
+              <div class="text-right text-slate-400">0 คิว</div>
+              <div class="text-xs text-slate-500">28 มี.ค. 23:00</div>
+              <div><span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-[10px] font-bold">ยกเลิก</span></div>
+            </div>
+            <div class="grid grid-cols-[1.4fr_1fr_70px_70px_120px_90px] gap-3 px-6 py-3 items-center text-sm border-b border-slate-50">
+              <div>
+                <div class="font-semibold text-slate-900">คอนกรีตทนไอทะเล 240</div>
+                <div class="text-[10px] text-slate-500">24D8B3BB00</div>
+              </div>
+              <div>
+                <div>หาดใหญ่ สงขลา</div>
+                <div class="text-[10px] text-slate-500">S007507</div>
+              </div>
+              <div class="text-right font-semibold">65 คิว</div>
+              <div class="text-right text-slate-400">0 คิว</div>
+              <div class="text-xs text-slate-500">31 มี.ค. 21:00</div>
+              <div><span class="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700 text-[10px] font-bold">ยกเลิก</span></div>
+            </div>
+            <div class="grid grid-cols-[1.4fr_1fr_70px_70px_120px_90px] gap-3 px-6 py-3 items-center text-sm border-b border-slate-50">
+              <div>
+                <div class="font-semibold text-slate-900">CPAC Super Plus 280</div>
+                <div class="text-[10px] text-slate-500">28F1A4AB00</div>
+              </div>
+              <div>
+                <div>ลาดพร้าว</div>
+                <div class="text-[10px] text-slate-500">B030801</div>
+              </div>
+              <div class="text-right font-semibold">5 คิว</div>
+              <div class="text-right text-slate-400">0 คิว</div>
+              <div class="text-xs text-slate-500">15 มี.ค. 09:00</div>
+              <div><span class="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 text-[10px] font-bold">รออนุมัติ</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-sky-50 border border-sky-200 text-sky-700 rounded-xl px-4 py-3 text-xs">
+        <strong>ตัวเลือก B (Master-Detail):</strong> รายชื่อลูกค้าอยู่ซ้ายแบบ list view คลิกเลือกแล้วโชว์รายละเอียดด้านขวาเต็มที่ · ใช้พื้นที่หน้าจอเต็มมากที่สุด เหมือนหน้า Email/CRM · เหมาะกับ Dealer ที่จะ deep-dive ลูกค้าทีละคน
+      </div>
+    </div>
+  </main>
+</div>
+
+</body>
+</html>

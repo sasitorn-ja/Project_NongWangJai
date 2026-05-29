@@ -101,7 +101,7 @@ function buildBuckets(
   const earliest = rows.reduce((e, r) => (r.date < e ? r.date : e), rows[0].date);
   const latest = rows.reduce((l, r) => (r.date > l ? r.date : l), rows[0].date);
 
-  let starts: Date[] = [];
+  const starts: Date[] = [];
   if (range === "year") {
     for (let c = startOfYear(earliest); c <= startOfYear(latest); c = new Date(c.getFullYear() + 1, 0, 1)) starts.push(c);
   } else if (range === "month") {
@@ -429,11 +429,57 @@ export function TimeVolumeBarChart({
   range: ChartRange;
   unit?: string;
 }) {
-  const buckets = useMemo(() => buildBuckets(dealers, range, focusRange), [dealers, focusRange?.from, focusRange?.to, range]);
   const [activeKey, setActiveKey] = useState("");
   const [dealerRegionFilter, setDealerRegionFilter] = useState<string>("");
   const [hoveredDonutIdx, setHoveredDonutIdx] = useState<number | null>(null);
   const [showAllDealers, setShowAllDealers] = useState(false);
+
+  // Region filter state: null = all regions selected (default)
+  const [selectedRegions, setSelectedRegions] = useState<string[] | null>(null);
+
+  // Full region list (for filter chips) — derived from unfiltered dealers
+  const allRegions = useMemo(
+    () => [...new Set(dealers.map((d) => d.region).filter(Boolean))].sort((a, b) => a.localeCompare(b, "th")),
+    [dealers]
+  );
+
+  // Effective selected regions (null = all)
+  const effectiveSelectedRegions = selectedRegions ?? allRegions;
+  const selectedRegionSet = useMemo(() => new Set(effectiveSelectedRegions), [effectiveSelectedRegions]);
+
+  // Dealers filtered by selected regions
+  const visibleDealers = useMemo(() => {
+    if (selectedRegionSet.size === allRegions.length) return dealers;
+    if (selectedRegionSet.size === 0) return [];
+    return dealers.filter((d) => selectedRegionSet.has(d.region));
+  }, [dealers, selectedRegionSet, allRegions]);
+
+  // All-time volume per region (for chip labels)
+  const regionTotalVolumes = useMemo(() => {
+    const map = new Map<string, number>();
+    dealers.forEach((d) => {
+      if (!d.region) return;
+      map.set(d.region, (map.get(d.region) ?? 0) + d.volume);
+    });
+    return map;
+  }, [dealers]);
+
+  const totalAllVolume = useMemo(() => dealers.reduce((s, d) => s + d.volume, 0), [dealers]);
+  const totalSelectedVolume = useMemo(() => visibleDealers.reduce((s, d) => s + d.volume, 0), [visibleDealers]);
+  const selectedPercent = totalAllVolume > 0 ? (totalSelectedVolume / totalAllVolume) * 100 : 0;
+
+  const toggleRegion = (region: string) => {
+    setSelectedRegions((prev) => {
+      const current = prev ?? allRegions;
+      if (current.includes(region)) return current.filter((r) => r !== region);
+      return [...current, region];
+    });
+  };
+  const selectAllRegions = () => setSelectedRegions(null);
+  const clearAllRegions = () => setSelectedRegions([]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const buckets = useMemo(() => buildBuckets(visibleDealers, range, focusRange), [visibleDealers, focusRange?.from, focusRange?.to, range]);
 
   const defaultBucket = range === "all"
     ? buckets.find((b) => b.value > 0) ?? buckets[0]
@@ -443,9 +489,10 @@ export function TimeVolumeBarChart({
   const activeIndex = activeBucket ? buckets.findIndex((b) => b.key === activeBucket.key) : -1;
   const prevBucket = activeIndex > 0 ? buckets[activeIndex - 1] : undefined;
 
+  // Active regions for chart-internal use (cards/colors) — only selected ones
   const regions = useMemo(
-    () => [...new Set(dealers.map((d) => d.region).filter(Boolean))].sort((a, b) => a.localeCompare(b, "th")),
-    [dealers]
+    () => [...new Set(visibleDealers.map((d) => d.region).filter(Boolean))].sort((a, b) => a.localeCompare(b, "th")),
+    [visibleDealers]
   );
 
   // Per-region trend across all buckets
@@ -484,7 +531,92 @@ export function TimeVolumeBarChart({
     return undefined;
   }, [activeKey, buckets, defaultBucket]);
 
-  if (!buckets.length) return <EmptyState />;
+  const RegionFilter = (
+    <div className="rounded-2xl border border-[#e2e8f0] bg-gradient-to-b from-slate-50 to-white px-4 py-3 dark:border-slate-800 dark:from-slate-900 dark:to-slate-950">
+      <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-baseline gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">เลือกภูมิภาคที่จะดู</span>
+          <span className="text-[11px] font-semibold text-slate-400">·</span>
+          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+            {selectedRegionSet.size} / {allRegions.length} พื้นที่
+          </span>
+        </div>
+        <div className="flex gap-1.5">
+          <button
+            type="button"
+            onClick={selectAllRegions}
+            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            เลือกทั้งหมด
+          </button>
+          <button
+            type="button"
+            onClick={clearAllRegions}
+            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            ล้างการเลือก
+          </button>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {allRegions.map((region) => {
+          const active = selectedRegionSet.has(region);
+          const color = getRegionColor(region, allRegions);
+          const vol = regionTotalVolumes.get(region) ?? 0;
+          return (
+            <button
+              key={region}
+              type="button"
+              onClick={() => toggleRegion(region)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold transition-all",
+                active
+                  ? "text-white shadow-sm"
+                  : "border border-dashed border-slate-300 bg-white text-slate-500 hover:border-slate-400 hover:text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
+              )}
+              style={active ? { backgroundColor: color } : undefined}
+            >
+              {active ? (
+                <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3">
+                  <polyline points="3,8.5 7,12.5 13,4.5" />
+                </svg>
+              ) : (
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+              )}
+              <span>{region}</span>
+              <span className={active ? "opacity-80" : "text-slate-400"}>· {compactNumber(vol)}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-slate-200/60 pt-2.5 text-[11px] dark:border-slate-700/60">
+        <span>
+          <span className="font-semibold uppercase tracking-wider text-slate-400">รวมที่เลือก: </span>
+          <strong className="font-bold text-slate-900 dark:text-slate-100">{compactNumber(totalSelectedVolume)} {unit}</strong>
+        </span>
+        <span>
+          <span className="font-semibold uppercase tracking-wider text-slate-400">Dealers: </span>
+          <strong className="font-bold text-slate-900 dark:text-slate-100">{formatNumber(visibleDealers.length)}</strong>
+        </span>
+        <span>
+          <span className="font-semibold uppercase tracking-wider text-slate-400">% จากยอดทั้งหมด: </span>
+          <strong className="font-bold text-slate-900 dark:text-slate-100">{Math.round(selectedPercent)}%</strong>
+        </span>
+        {selectedRegionSet.size === 0 && (
+          <span className="ml-auto text-amber-600 font-semibold">⚠ ยังไม่ได้เลือกภูมิภาค — กดปุ่ม "เลือกทั้งหมด" เพื่อดูข้อมูล</span>
+        )}
+      </div>
+    </div>
+  );
+
+  if (!buckets.length) {
+    return (
+      <div className="space-y-4">
+        {RegionFilter}
+        <EmptyState />
+      </div>
+    );
+  }
 
   const regionRanks = new Map(
     regions
@@ -532,15 +664,8 @@ export function TimeVolumeBarChart({
 
   return (
     <div className="space-y-4">
-      {/* Legend */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-        {regions.map((region) => (
-          <div key={region} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: getRegionColor(region, regions) }} />
-            {region}
-          </div>
-        ))}
-      </div>
+      {/* Region filter (chip pills) */}
+      {RegionFilter}
 
       {/* Bar chart (period navigator) */}
       <div className="overflow-x-auto rounded-2xl border border-[#e5e7eb] bg-[#fbfcfd] p-4 dark:border-slate-800 dark:bg-slate-950/60">

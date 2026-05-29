@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { BarChart3, ChevronDown, Clock3, Layers3, MapPin, PackageCheck, Search, User, Users } from "lucide-react";
+import { BarChart3, ChevronDown, Clock3, Layers3, MapPin, PackageCheck, Search, Trophy, TrendingUp, User, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { compactNumber, formatNumber } from "@/lib/number";
+import { cn } from "@/lib/cn";
 import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUsage, OrderItem } from "@/features/dealers/types";
 import { dateText, parseDateValue } from "../lib/dates";
 import type { DataColumn } from "../table/types";
@@ -13,6 +14,7 @@ import { ShadcnTabs } from "../ui/ShadcnTabs";
 import { DataTable } from "../table/DataTable";
 import { DualBarChart } from "../charts/DualBarChart";
 import { GroupVolumeInsights } from "../charts/GroupVolumeInsights";
+import { MonthlyTrendChart } from "../charts/MonthlyTrendChart";
 import { ProgressList } from "../charts/ProgressList";
 import { statusColumn } from "../table/columns";
 
@@ -232,6 +234,216 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
           );
         })}
       </div>
+    </div>
+  );
+}
+
+const DONUT_PALETTE = ["#14b8a6", "#3b82f6", "#f59e0b", "#8b5cf6", "#06b6d4", "#94a3b8"];
+
+function SitesDonut({
+  rows,
+  unit
+}: {
+  rows: { siteName: string; siteCode: string; delivered: number; ordered: number }[];
+  unit: string;
+}) {
+  const sorted = [...rows].sort((a, b) => b.delivered - a.delivered);
+  const top = sorted.slice(0, 5);
+  const rest = sorted.slice(5);
+  const restValue = rest.reduce((s, r) => s + r.delivered, 0);
+
+  type Segment = { color: string; label: string; sublabel?: string; value: number };
+  const segments: Segment[] = top
+    .filter((s) => s.delivered > 0)
+    .map((s, i) => ({
+      color: DONUT_PALETTE[i % DONUT_PALETTE.length],
+      label: s.siteName,
+      sublabel: s.siteCode,
+      value: s.delivered
+    }));
+  if (restValue > 0) {
+    segments.push({
+      color: DONUT_PALETTE[5],
+      label: `Site อื่นๆ (${rest.length})`,
+      value: restValue
+    });
+  }
+
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
+
+  if (!segments.length || total === 0) {
+    return (
+      <div className="flex h-[200px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#d9e3e6] bg-[#fbfcfc]">
+        <div className="text-sm font-semibold text-slate-600">ยังไม่มียอดส่งจริง</div>
+        <div className="text-xs font-medium text-slate-400">กราฟจะแสดงเมื่อมี orders ที่ส่งแล้ว</div>
+      </div>
+    );
+  }
+
+  // Compute donut paths
+  const size = 180;
+  const r = size / 2;
+  const innerR = r * 0.65;
+  const cx = r;
+  const cy = r;
+
+  // Compute cumulative start/end values for each segment (immutably)
+  const segmentRanges = segments.reduce<{ start: number; end: number }[]>((arr, seg) => {
+    const prevEnd = arr.length ? arr[arr.length - 1].end : 0;
+    arr.push({ start: prevEnd, end: prevEnd + seg.value });
+    return arr;
+  }, []);
+
+  const paths = segments.map((seg, idx) => {
+    const { start: startVal, end: endVal } = segmentRanges[idx];
+    const start = (startVal / total) * Math.PI * 2 - Math.PI / 2;
+    const end = (endVal / total) * Math.PI * 2 - Math.PI / 2;
+    if (segments.length === 1 || seg.value === total) {
+      return (
+        <circle
+          key={idx}
+          cx={cx}
+          cy={cy}
+          r={(r + innerR) / 2}
+          fill="none"
+          stroke={seg.color}
+          strokeWidth={r - innerR}
+        />
+      );
+    }
+    const x1 = cx + r * Math.cos(start);
+    const y1 = cy + r * Math.sin(start);
+    const x2 = cx + r * Math.cos(end);
+    const y2 = cy + r * Math.sin(end);
+    const x3 = cx + innerR * Math.cos(end);
+    const y3 = cy + innerR * Math.sin(end);
+    const x4 = cx + innerR * Math.cos(start);
+    const y4 = cy + innerR * Math.sin(start);
+    const large = end - start > Math.PI ? 1 : 0;
+    const d = [
+      `M ${x1} ${y1}`,
+      `A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`,
+      `L ${x3} ${y3}`,
+      `A ${innerR} ${innerR} 0 ${large} 0 ${x4} ${y4}`,
+      "Z"
+    ].join(" ");
+    return (
+      <path key={idx} d={d} fill={seg.color}>
+        <title>{`${seg.label}: ${compactNumber(seg.value)} ${unit} (${Math.round((seg.value / total) * 100)}%)`}</title>
+      </path>
+    );
+  });
+
+  return (
+    <div>
+      <div className="relative mx-auto" style={{ maxWidth: 200 }}>
+        <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>{paths}</svg>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">รวม</span>
+          <span className="text-xl font-bold text-slate-900 dark:text-slate-100">{compactNumber(total)}</span>
+          <span className="text-[10px] font-semibold text-slate-400">{unit}</span>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-1.5">
+        {segments.map((seg) => {
+          const pct = (seg.value / total) * 100;
+          return (
+            <div key={seg.label} className="flex items-center gap-2 text-[11px]">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: seg.color }} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-semibold text-slate-700 dark:text-slate-200" title={seg.label}>{seg.label}</div>
+                {seg.sublabel && <div className="text-[10px] text-slate-400">{seg.sublabel}</div>}
+              </div>
+              <span className="shrink-0 font-bold text-slate-800 dark:text-slate-200">
+                {compactNumber(seg.value)} <span className="text-[10px] text-slate-400">{unit}</span>
+              </span>
+              <span className="w-10 shrink-0 text-right text-[10px] font-bold text-slate-500">{Math.round(pct)}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function TopCustomersList({
+  rows,
+  unit
+}: {
+  rows: { key: string; customerName: string; customerCode: string; delivered: number; ordered: number; orderCount: number; siteCount: number }[];
+  unit: string;
+}) {
+  const sorted = [...rows].sort((a, b) => b.delivered - a.delivered).slice(0, 5);
+  const max = Math.max(...sorted.map((r) => r.delivered), 1);
+  const totalDelivered = rows.reduce((s, r) => s + r.delivered, 0);
+
+  if (!sorted.length) {
+    return (
+      <div className="flex h-[200px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#d9e3e6] bg-[#fbfcfc]">
+        <div className="text-sm font-semibold text-slate-600">ยังไม่มีข้อมูลลูกค้า</div>
+        <div className="text-xs font-medium text-slate-400">ลูกค้าจะแสดงเมื่อมี orders เข้ามา</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {sorted.map((customer, i) => {
+        const share = totalDelivered > 0 ? (customer.delivered / totalDelivered) * 100 : 0;
+        const barWidth = (customer.delivered / max) * 100;
+        const colors = DONUT_PALETTE;
+        const color = colors[i % colors.length];
+        return (
+          <div key={customer.key} className="grid grid-cols-[28px_minmax(0,1fr)_92px] items-center gap-3">
+            <span
+              className={cn(
+                "flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold",
+                i === 0
+                  ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                  : i === 1
+                    ? "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                    : i === 2
+                      ? "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300"
+                      : "bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400"
+              )}
+            >
+              {i + 1}
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="truncate text-sm font-semibold text-slate-800 dark:text-slate-200" title={customer.customerName}>
+                  {customer.customerName}
+                </span>
+                <span className="shrink-0 text-[10px] font-semibold text-slate-400">{Math.round(share)}%</span>
+              </div>
+              <div className="mt-1 flex items-center gap-2 text-[10px] font-semibold text-slate-400">
+                <span>{customer.customerCode}</span>
+                <span>·</span>
+                <span>{formatNumber(customer.orderCount)} orders</span>
+                <span>·</span>
+                <span>{formatNumber(customer.siteCount)} sites</span>
+              </div>
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ backgroundColor: color, width: `${Math.max(barWidth, 2)}%` }}
+                />
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                {compactNumber(customer.delivered)}
+              </p>
+              <p className="text-[10px] font-semibold text-slate-400">{unit}</p>
+            </div>
+          </div>
+        );
+      })}
+      {rows.length > 5 && (
+        <p className="pt-2 text-center text-[11px] font-semibold text-slate-400 border-t border-slate-100 dark:border-slate-800">
+          + อีก {formatNumber(rows.length - 5)} ลูกค้า — ดูทั้งหมดที่ Tab "Customers" ด้านล่าง
+        </p>
+      )}
     </div>
   );
 }
@@ -513,94 +725,178 @@ export function DetailsPage(props: DetailsPageProps) {
         />
       </section>
 
-      <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]">
-        <Card className="dashboard-card">
-          <CardHeader className="border-b border-[#d9e3e6]">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <MapPin size={18} />
-              ปริมาณการขายแยกตามพื้นที่
-            </CardTitle>
-            <p className="text-xs font-medium text-slate-500">
-              {isAllDealers ? "ค่าเริ่มต้นคือทุก Dealer และรวมตามภูมิภาค" : "เมื่อเลือก Dealer แล้ว กราฟจะแยกตามจังหวัดของไซต์ที่ขาย"}
-            </p>
-          </CardHeader>
-          <CardContent>
-            <SalesAreaChart loading={!isAllDealers && props.sitesState === "loading"} rows={areaRows} unit={areaUnit} />
-          </CardContent>
-        </Card>
+      {isAllDealers ? (
+        <>
+          <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]">
+            <Card className="dashboard-card">
+              <CardHeader className="border-b border-[#d9e3e6]">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <MapPin size={18} />
+                  ปริมาณการขายแยกตามพื้นที่
+                </CardTitle>
+                <p className="text-xs font-medium text-slate-500">ค่าเริ่มต้นคือทุก Dealer และรวมตามภูมิภาค</p>
+              </CardHeader>
+              <CardContent>
+                <SalesAreaChart loading={false} rows={areaRows} unit={areaUnit} />
+              </CardContent>
+            </Card>
 
-        <Card className="dashboard-card">
-          <CardHeader className="border-b border-[#d9e3e6]">
-            <CardTitle className="text-lg">{isAllDealers ? "Top Dealer Delivered Volume" : "Usage Summary"}</CardTitle>
-            <p className="text-xs font-medium text-slate-500">
-              {isAllDealers ? "Dealer ที่มี volume สูงสุดใน filter ปัจจุบัน" : `${props.selectedDealer?.dealer_name ?? "-"} | Updated: ${dateText(usageSummary.updatedAt)}`}
-            </p>
-          </CardHeader>
-          <CardContent>
-            {isAllDealers ? (
-              <ProgressList
-                rows={topDealerVolume.map((dealer) => ({
-                  label: dealer.dealer_name,
-                  total: maxDealerVolume,
-                  unit: dealer.unit || areaUnit,
-                  value: dealer.volume
-                }))}
-              />
-            ) : (
-              <div className="grid gap-3">
-                <MetricCard icon={<Clock3 size={18} />} label="Bookings" value={formatNumber(usageSummary.bookingCreateCount)} detail="จำนวนครั้งที่สร้างจองคิว" tone="amber" />
-                <MetricCard icon={<User size={18} />} label="Sites" value={formatNumber(props.sites.length)} detail="ไซต์ของ dealer ที่เลือก" tone="green" />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+            <Card className="dashboard-card">
+              <CardHeader className="border-b border-[#d9e3e6]">
+                <CardTitle className="text-lg">Top Dealer Delivered Volume</CardTitle>
+                <p className="text-xs font-medium text-slate-500">Dealer ที่มี volume สูงสุดใน filter ปัจจุบัน</p>
+              </CardHeader>
+              <CardContent>
+                <ProgressList
+                  rows={topDealerVolume.map((dealer) => ({
+                    label: dealer.dealer_name,
+                    total: maxDealerVolume,
+                    unit: dealer.unit || areaUnit,
+                    value: dealer.volume
+                  }))}
+                />
+              </CardContent>
+            </Card>
+          </section>
 
-      <section className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-        <Card className="dashboard-card">
-          <CardHeader className="border-b border-[#d9e3e6]">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <BarChart3 size={18} />
-              {isAllDealers ? "Customer Insight" : "ยอดส่งมอบรายกลุ่ม"}
-            </CardTitle>
-            <p className="text-xs font-medium text-slate-500">
-              {isAllDealers ? "Top customers จากรายการ order ทั้งหมดที่กรองอยู่" : "เทียบยอดส่งมอบจริงกับยอดจองของแต่ละกลุ่ม ในดีลเลอร์ที่เลือก"}
-            </p>
-          </CardHeader>
-          <CardContent>
-            {isAllDealers ? (
-              <DualBarChart
-                data={orderCustomerRows.slice(0, 8).map((customer) => ({
-                  label: customer.customerName,
-                  primary: customer.delivered,
-                  secondary: customer.ordered
-                }))}
-                primaryLabel="Delivered Volume"
-                secondaryLabel="Ordered Volume"
-              />
-            ) : (
-              <GroupVolumeInsights groups={topGroups} totalBooked={totalBooked} totalDelivered={totalDelivered} totalGroups={props.groups.length} unit={areaUnit} />
-            )}
-          </CardContent>
-        </Card>
+          <section className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+            <Card className="dashboard-card">
+              <CardHeader className="border-b border-[#d9e3e6]">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <BarChart3 size={18} />
+                  Customer Insight
+                </CardTitle>
+                <p className="text-xs font-medium text-slate-500">Top customers จากรายการ order ทั้งหมดที่กรองอยู่</p>
+              </CardHeader>
+              <CardContent>
+                <DualBarChart
+                  data={orderCustomerRows.slice(0, 8).map((customer) => ({
+                    label: customer.customerName,
+                    primary: customer.delivered,
+                    secondary: customer.ordered
+                  }))}
+                  primaryLabel="Delivered Volume"
+                  secondaryLabel="Ordered Volume"
+                />
+              </CardContent>
+            </Card>
 
-        <Card className="dashboard-card">
-          <CardHeader className="border-b border-[#d9e3e6]">
-            <CardTitle className="text-lg">Site Delivery Progress</CardTitle>
-            <p className="text-xs font-medium text-slate-500">ไซต์ที่มี Delivered Volume สูงสุดจากรายการ order ที่กรองอยู่</p>
-          </CardHeader>
-          <CardContent>
-            <ProgressList
-              rows={orderSiteRows.slice(0, 8).map((site) => ({
-                label: site.siteName,
-                total: Math.max(site.ordered, site.delivered),
-                unit: areaUnit,
-                value: site.delivered
-              }))}
-            />
-          </CardContent>
-        </Card>
-      </section>
+            <Card className="dashboard-card">
+              <CardHeader className="border-b border-[#d9e3e6]">
+                <CardTitle className="text-lg">Site Delivery Progress</CardTitle>
+                <p className="text-xs font-medium text-slate-500">ไซต์ที่มี Delivered Volume สูงสุดจากรายการ order ที่กรองอยู่</p>
+              </CardHeader>
+              <CardContent>
+                <ProgressList
+                  rows={orderSiteRows.slice(0, 8).map((site) => ({
+                    label: site.siteName,
+                    total: Math.max(site.ordered, site.delivered),
+                    unit: areaUnit,
+                    value: site.delivered
+                  }))}
+                />
+              </CardContent>
+            </Card>
+          </section>
+        </>
+      ) : (
+        <>
+          {/* HERO: Monthly trend chart */}
+          <section className="grid grid-cols-1 gap-3">
+            <Card className="dashboard-card">
+              <CardHeader className="border-b border-[#d9e3e6]">
+                <div className="flex items-start gap-2.5">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                    <TrendingUp size={16} />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">แนวโน้มยอดส่งจริงรายเดือน</CardTitle>
+                    <p className="mt-0.5 text-[11px] font-medium text-slate-500">
+                      ดูได้ในแว็บเดียวว่าเดือนไหนพีค เดือนไหนเงียบ · เปรียบเทียบยอดสั่งกับยอดส่งจริง
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <MonthlyTrendChart
+                  loading={props.ordersState === "loading"}
+                  orders={dealerOrders}
+                  unit={areaUnit}
+                />
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* 2-column: Sites donut + Top 5 customers */}
+          <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(320px,1fr)_minmax(0,1.6fr)]">
+            <Card className="dashboard-card">
+              <CardHeader className="border-b border-[#d9e3e6]">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <MapPin size={16} />
+                  สัดส่วน Site
+                </CardTitle>
+                <p className="text-[11px] font-medium text-slate-500">ยอดส่งจริงแยกตามไซต์หลัก</p>
+              </CardHeader>
+              <CardContent>
+                <SitesDonut rows={orderSiteRows} unit={areaUnit} />
+              </CardContent>
+            </Card>
+
+            <Card className="dashboard-card">
+              <CardHeader className="border-b border-[#d9e3e6]">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-start gap-2">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                      <Trophy size={14} />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">ลูกค้าหลัก 5 อันดับ</CardTitle>
+                      <p className="text-[11px] font-medium text-slate-500">เรียงตาม Delivered Volume · ดูทั้งหมดที่ tab Customers ด้านล่าง</p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    {formatNumber(orderCustomerRows.length)} ราย
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <TopCustomersList rows={orderCustomerRows} unit={areaUnit} />
+              </CardContent>
+            </Card>
+          </section>
+
+          {/* Compact secondary row: Groups insights + Usage Summary (kept for completeness) */}
+          {(props.groups.length > 0 || usageSummary.bookingCreateCount > 0 || props.sites.length > 0) && (
+            <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]">
+              <Card className="dashboard-card">
+                <CardHeader className="border-b border-[#d9e3e6]">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <BarChart3 size={16} />
+                    ยอดส่งมอบรายกลุ่ม
+                  </CardTitle>
+                  <p className="text-[11px] font-medium text-slate-500">เทียบยอดส่งมอบจริงกับยอดจองของแต่ละกลุ่ม</p>
+                </CardHeader>
+                <CardContent>
+                  <GroupVolumeInsights groups={topGroups} totalBooked={totalBooked} totalDelivered={totalDelivered} totalGroups={props.groups.length} unit={areaUnit} />
+                </CardContent>
+              </Card>
+
+              <Card className="dashboard-card">
+                <CardHeader className="border-b border-[#d9e3e6]">
+                  <CardTitle className="text-base">Usage Summary</CardTitle>
+                  <p className="text-[11px] font-medium text-slate-500">Updated: {dateText(usageSummary.updatedAt)}</p>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-3">
+                    <MetricCard icon={<Clock3 size={18} />} label="Bookings" value={formatNumber(usageSummary.bookingCreateCount)} detail="จำนวนครั้งที่สร้างจองคิว" tone="amber" />
+                    <MetricCard icon={<User size={18} />} label="Sites" value={formatNumber(props.sites.length)} detail="ไซต์ของ dealer ที่เลือก" tone="green" />
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+          )}
+        </>
+      )}
 
       <ShadcnTabs
         items={[
