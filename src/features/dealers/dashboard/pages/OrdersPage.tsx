@@ -141,9 +141,9 @@ function CustomerAccordionRow({
             {group.customerName}
           </div>
           <div className="mt-0.5 flex items-center gap-2 text-[11px] font-medium text-slate-500">
-            <span>{group.customerCode}</span>
+            <span>รหัสลูกค้า {group.customerCode}</span>
             <span className="text-slate-300">·</span>
-            <span>{formatNumber(group.uniqueSiteCount)} sites</span>
+            <span>{formatNumber(group.uniqueSiteCount)} ไซต์</span>
             {group.openOrderCount > 0 && (
               <>
                 <span className="text-slate-300">·</span>
@@ -276,7 +276,9 @@ function MobileCustomerCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-bold text-slate-950" title={group.customerName}>{group.customerName}</div>
-          <div className="mt-0.5 text-[11px] font-medium text-slate-500">{group.customerCode} · {formatNumber(group.uniqueSiteCount)} sites</div>
+          <div className="mt-0.5 text-[11px] font-medium text-slate-500">
+            รหัสลูกค้า {group.customerCode} · {formatNumber(group.uniqueSiteCount)} ไซต์
+          </div>
           <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
             <div>
               <div className="text-[10px] font-semibold text-slate-400">Orders</div>

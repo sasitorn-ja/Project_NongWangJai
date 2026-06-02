@@ -1,45 +1,14 @@
-import { cn } from "@/lib/cn";
 import { formatNumber } from "@/lib/number";
 import type { DealerGroup } from "@/features/dealers/types";
 
-function formatPercent(value: number) {
-  return `${new Intl.NumberFormat("th-TH", {
-    maximumFractionDigits: 1,
-    minimumFractionDigits: value > 0 && value < 10 ? 1 : 0
-  }).format(Number.isFinite(value) ? value : 0)}%`;
-}
+const DELIVERED_COLOR = "#14b8a6";
+const BOOKED_COLOR = "#3b82f6";
+const GROUP_LIMIT = 6;
 
 function EmptyChart() {
   return (
-    <div className="flex h-[150px] items-center justify-center rounded-lg border border-dashed border-[#d9e3e6] bg-[#fbfcfc] text-sm font-semibold text-slate-500">
-      ไม่มีข้อมูลสำหรับแสดงกราฟ
-    </div>
-  );
-}
-
-function InsightMiniCard({
-  detail,
-  label,
-  tone,
-  value
-}: {
-  detail: string;
-  label: string;
-  tone: "amber" | "blue" | "green" | "slate";
-  value: string;
-}) {
-  const tones = {
-    amber: "border-amber-100 bg-amber-50/70 text-amber-700",
-    blue: "border-blue-100 bg-blue-50/70 text-blue-700",
-    green: "border-emerald-100 bg-emerald-50/70 text-emerald-700",
-    slate: "border-slate-200 bg-slate-50 text-slate-700"
-  } as const;
-
-  return (
-    <div className={cn("rounded-[20px] border p-3", tones[tone])}>
-      <div className="text-[11px] font-semibold uppercase tracking-wide">{label}</div>
-      <div className="mt-2 text-2xl font-semibold leading-none text-slate-950">{value}</div>
-      <div className="mt-2 text-[11px] font-medium text-slate-500">{detail}</div>
+    <div className="flex h-[150px] items-center justify-center rounded-xl border border-dashed border-[#d9e3e6] bg-[#fbfcfc] text-sm font-semibold text-slate-500 dark:border-slate-800 dark:bg-slate-900/40">
+      ไม่มีข้อมูลกลุ่มสำหรับแสดง
     </div>
   );
 }
@@ -59,161 +28,74 @@ export function GroupVolumeInsights({
 }) {
   if (!groups.length) return <EmptyChart />;
 
-  const deliveredLeader = [...groups].sort((a, b) => b.delivered_volume - a.delivered_volume)[0];
-  const bookedLeader = [...groups].sort((a, b) => b.booked_volume - a.booked_volume)[0];
-  const deliveredLeadCount = groups.filter((group) => group.delivered_volume > group.booked_volume).length;
-  const bookedLeadCount = groups.filter((group) => group.booked_volume > group.delivered_volume).length;
-  const balancedCount = groups.filter((group) => group.booked_volume === group.delivered_volume).length;
-  const topDeliveredShare = totalDelivered
-    ? (groups.slice(0, 3).reduce((sum, group) => sum + group.delivered_volume, 0) / totalDelivered) * 100
-    : 0;
-  const totalPairVolume = totalDelivered + totalBooked;
+  const topGroups = [...groups]
+    .sort((a, b) => Math.max(b.delivered_volume, b.booked_volume) - Math.max(a.delivered_volume, a.booked_volume))
+    .slice(0, GROUP_LIMIT);
+  const max = Math.max(...topGroups.flatMap((g) => [g.delivered_volume, g.booked_volume]), 1);
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <InsightMiniCard
-          label="กลุ่มที่ส่งมอบเกินจอง"
-          value={formatNumber(deliveredLeadCount)}
-          detail={`จาก ${formatNumber(totalGroups)} กลุ่ม`}
-          tone="green"
-        />
-        <InsightMiniCard
-          label="กลุ่มที่จองเกินส่งมอบ"
-          value={formatNumber(bookedLeadCount)}
-          detail={`จาก ${formatNumber(totalGroups)} กลุ่ม`}
-          tone="blue"
-        />
-        <InsightMiniCard
-          label="กลุ่มที่ส่งมอบเท่าจอง"
-          value={formatNumber(balancedCount)}
-          detail="ยอดส่งมอบเท่ากับยอดจอง"
-          tone="slate"
-        />
-        <InsightMiniCard
-          label="สัดส่วน 3 อันดับแรก"
-          value={formatPercent(topDeliveredShare)}
-          detail={`ของยอดส่งมอบรวม ${formatNumber(totalDelivered)} ${unit}`}
-          tone="amber"
-        />
+      {/* Legend + totals */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#eef0f4] bg-[#fbfcfd] px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900/40">
+        <div className="flex items-center gap-4 text-[12px] font-semibold">
+          <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+            <i className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: DELIVERED_COLOR }} />
+            ส่งมอบจริง {formatNumber(totalDelivered)} {unit}
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+            <i className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: BOOKED_COLOR }} />
+            ยอดจอง {formatNumber(totalBooked)} {unit}
+          </span>
+        </div>
+        <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          แสดง {formatNumber(topGroups.length)} จาก {formatNumber(totalGroups)} กลุ่ม
+        </span>
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(260px,0.9fr)]">
-        <div className="rounded-[22px] border border-[#e5e7eb] bg-[#fbfcfd] p-4 dark:border-slate-800 dark:bg-slate-950/60">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-sm font-semibold text-slate-900">กลุ่มที่ส่งมอบสูงสุด</div>
-              <div className="mt-1 text-xs font-medium text-slate-500">กลุ่มที่มียอดส่งมอบสูงสุด (ไม่ซ้ำกับตารางด้านล่าง)</div>
-            </div>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-              แสดง {formatNumber(groups.length)} กลุ่ม
-            </span>
-          </div>
+      {/* Group rows: delivered vs booked bars */}
+      <div className="space-y-3.5">
+        {topGroups.map((group, index) => {
+          const groupUnit = group.unit || unit;
+          return (
+            <div key={group.group_id}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    {index + 1}
+                  </span>
+                  <span className="truncate text-sm font-semibold text-slate-800 dark:text-slate-200" title={group.group_name}>
+                    {group.group_name}
+                  </span>
+                </div>
+              </div>
 
-          <div className="mt-4 space-y-3">
-            {groups.slice(0, 3).map((group, index) => {
-              const combined = group.delivered_volume + group.booked_volume;
-              const deliveredRatio = combined ? (group.delivered_volume / combined) * 100 : 0;
-              const bookedRatio = combined ? (group.booked_volume / combined) * 100 : 0;
-
-              return (
-                <div
-                  key={group.group_id}
-                  className="rounded-[18px] border border-[#e5e7eb] bg-white px-3 py-3 dark:border-slate-800 dark:bg-slate-950/70"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-slate-700">
-                          {index + 1}
-                        </span>
-                        <div className="truncate text-sm font-semibold text-slate-900">{group.group_name}</div>
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right text-[11px] font-medium text-slate-500">
-                      {formatNumber(group.delivered_volume)} / {formatNumber(group.booked_volume)} {group.unit || unit}
-                    </div>
+              <div className="mt-1.5 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${Math.max((group.delivered_volume / max) * 100, group.delivered_volume > 0 ? 3 : 0)}%`, backgroundColor: DELIVERED_COLOR }}
+                    />
                   </div>
-
-                  <div className="mt-3 grid gap-1.5">
-                    <div className="flex items-center justify-between gap-3 text-[11px] font-medium text-slate-500">
-                      <span>ยอดส่งมอบ</span>
-                      <span>{formatPercent(deliveredRatio)}</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-slate-100">
-                      <div
-                        className="h-2 rounded-full bg-[#0f766e]"
-                        style={{ width: `${Math.max(deliveredRatio, group.delivered_volume > 0 ? 6 : 0)}%` }}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-3 text-[11px] font-medium text-slate-500">
-                      <span>ยอดจอง</span>
-                      <span>{formatPercent(bookedRatio)}</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-slate-100">
-                      <div
-                        className="h-2 rounded-full bg-[#2563eb]"
-                        style={{ width: `${Math.max(bookedRatio, group.booked_volume > 0 ? 6 : 0)}%` }}
-                      />
-                    </div>
+                  <span className="w-24 shrink-0 text-right text-[12px] font-semibold text-slate-700 dark:text-slate-200">
+                    {formatNumber(group.delivered_volume)} <span className="text-[10px] text-slate-400">{groupUnit}</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${Math.max((group.booked_volume / max) * 100, group.booked_volume > 0 ? 3 : 0)}%`, backgroundColor: BOOKED_COLOR }}
+                    />
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="rounded-[22px] border border-emerald-100 bg-emerald-50/70 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-            <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">กลุ่มส่งมอบสูงสุด</div>
-            <div className="mt-2 text-base font-semibold text-slate-950">{deliveredLeader?.group_name ?? "-"}</div>
-            <div className="mt-1 text-2xl font-semibold leading-none text-slate-950">
-              {formatNumber(deliveredLeader?.delivered_volume ?? 0)} {deliveredLeader?.unit || unit}
-            </div>
-          </div>
-
-          <div className="rounded-[22px] border border-blue-100 bg-blue-50/70 p-4 dark:border-blue-900/50 dark:bg-blue-950/20">
-            <div className="text-xs font-semibold uppercase tracking-wide text-blue-700">กลุ่มยอดจองสูงสุด</div>
-            <div className="mt-2 text-base font-semibold text-slate-950">{bookedLeader?.group_name ?? "-"}</div>
-            <div className="mt-1 text-2xl font-semibold leading-none text-slate-950">
-              {formatNumber(bookedLeader?.booked_volume ?? 0)} {bookedLeader?.unit || unit}
-            </div>
-          </div>
-
-          <div className="rounded-[22px] border border-[#e5e7eb] bg-white p-4 dark:border-slate-800 dark:bg-slate-950/70">
-            <div className="text-sm font-semibold text-slate-900">ภาพรวมส่งมอบ–จอง</div>
-            <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-100">
-              <div className="flex h-full">
-                <div
-                  className="h-full bg-[#0f766e]"
-                  style={{
-                    width: `${totalPairVolume ? (totalDelivered / totalPairVolume) * 100 : 0}%`
-                  }}
-                />
-                <div
-                  className="h-full bg-[#2563eb]"
-                  style={{
-                    width: `${totalPairVolume ? (totalBooked / totalPairVolume) * 100 : 0}%`
-                  }}
-                />
-              </div>
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <div className="text-xs font-medium text-slate-500">ยอดส่งมอบรวม</div>
-                <div className="mt-1 font-semibold text-slate-900">
-                  {formatNumber(totalDelivered)} {unit}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-slate-500">ยอดจองรวม</div>
-                <div className="mt-1 font-semibold text-slate-900">
-                  {formatNumber(totalBooked)} {unit}
+                  <span className="w-24 shrink-0 text-right text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+                    {formatNumber(group.booked_volume)} <span className="text-[10px] text-slate-400">{groupUnit}</span>
+                  </span>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+          );
+        })}
       </div>
     </div>
   );

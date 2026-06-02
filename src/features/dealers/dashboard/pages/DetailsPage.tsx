@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { BarChart3, ChevronDown, Clock3, Layers3, MapPin, PackageCheck, Trophy, TrendingUp, User, Users } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
+import { Activity, BarChart3, Boxes, Building2, ChevronDown, Clock3, ListChecks, MapPin, ShoppingCart, Trophy, Truck, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { compactNumber, formatNumber } from "@/lib/number";
@@ -7,14 +7,12 @@ import { cn } from "@/lib/cn";
 import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUsage, OrderItem } from "@/features/dealers/types";
 import { dateText, parseDateValue } from "../lib/dates";
 import { getRegionColor } from "../lib/regions";
+import { getDealerStatusKey, getOrderStatusKey } from "../lib/status";
 import { DealerPicker } from "../filters/DealerPicker";
 import type { DataColumn } from "../table/types";
-import { MetricCard } from "../ui/MetricCard";
 import { ShadcnTabs } from "../ui/ShadcnTabs";
 import { DataTable } from "../table/DataTable";
 import { DualBarChart } from "../charts/DualBarChart";
-import { GroupVolumeInsights } from "../charts/GroupVolumeInsights";
-import { MonthlyTrendChart } from "../charts/MonthlyTrendChart";
 import { ProgressList } from "../charts/ProgressList";
 import { statusColumn } from "../table/columns";
 
@@ -31,6 +29,12 @@ type AreaRow = {
 
 const AREA_CHART_LIMIT = 8;
 const OTHER_AREAS_KEY = "__other_areas";
+
+function formatPercent(value: number) {
+  return `${new Intl.NumberFormat("th-TH", {
+    maximumFractionDigits: 0
+  }).format(Number.isFinite(value) ? value : 0)}%`;
+}
 
 type DetailsPageProps = {
   customers: CustomerUsage[];
@@ -49,57 +53,328 @@ type DetailsPageProps = {
   usageRows: DealerUsage[];
 };
 
-function DealerAnalysisHeader({
+const STATUS_META: Record<"active" | "idle" | "new", { label: string; dot: string; pill: string }> = {
+  active: { label: "ใช้งานอยู่", dot: "#10b981", pill: "bg-emerald-50 text-emerald-700 ring-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-900/40" },
+  idle: { label: "ไม่ได้ใช้งาน", dot: "#94a3b8", pill: "bg-slate-100 text-slate-600 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700" },
+  new: { label: "ใหม่", dot: "#3b82f6", pill: "bg-sky-50 text-sky-700 ring-sky-100 dark:bg-sky-900/30 dark:text-sky-300 dark:ring-sky-900/40" }
+};
+
+function initialsOf(name: string) {
+  const cleaned = name.trim();
+  if (!cleaned) return "?";
+  const parts = cleaned.split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
+/** All-dealers overview: simple stat strip kept above the charts. */
+function AllDealersStatStrip({
   customerCount,
-  dealers,
   delivered,
   groups,
   priceChecks,
-  selectedDealerId,
-  setSelectedDealerId,
   unit
 }: {
   customerCount: number;
-  dealers: Dealer[];
   delivered: number;
   groups: number;
-  isAllDealers: boolean;
   priceChecks: number;
-  selectedDealer?: Dealer;
-  selectedDealerId: number | null;
-  setSelectedDealerId: (id: number | null) => void;
   unit: string;
 }) {
   const stats = [
-    { label: "Delivered", value: compactNumber(delivered), suffix: unit },
-    { label: "Groups", value: formatNumber(groups) },
-    { label: "Price Checks", value: formatNumber(priceChecks) },
-    { label: "Customers", value: formatNumber(customerCount) }
+    { label: "ส่งจริงรวม", value: compactNumber(delivered), suffix: unit },
+    { label: "จำนวนกลุ่ม", value: formatNumber(groups) },
+    { label: "เช็คราคา", value: formatNumber(priceChecks) },
+    { label: "ลูกค้า", value: formatNumber(customerCount) }
   ];
 
   return (
-    <div className="space-y-4">
-      {/* Dealer selector — same picker component as the Orders page */}
-      <DealerPicker
-        dealers={dealers}
-        includeAll
-        selectedDealerId={selectedDealerId}
-        setSelectedDealerId={setSelectedDealerId}
-        title="เลือก Dealer หรือดูภาพรวมทุก Dealer"
-      />
+    <section className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+      <div className="grid grid-cols-2 divide-y divide-[#eef0f4] rounded-xl border border-[#eef0f4] dark:divide-slate-800 dark:border-slate-800 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+        {stats.map((item) => (
+          <div key={item.label} className="px-4 py-3">
+            <div className="text-[11px] font-semibold text-slate-500">{item.label}</div>
+            <div className="mt-1 text-2xl font-bold leading-none text-slate-950 dark:text-slate-100">
+              {item.value} {item.suffix && <span className="text-xs font-semibold text-slate-400">{item.suffix}</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-      <section className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-        <div className="grid grid-cols-2 divide-y divide-[#eef0f4] rounded-xl border border-[#eef0f4] dark:divide-slate-800 dark:border-slate-800 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-          {stats.map((item) => (
-            <div key={item.label} className="px-4 py-3">
-              <div className="text-[11px] font-semibold text-slate-500">{item.label}</div>
-              <div className="mt-1 text-2xl font-bold leading-none text-slate-950 dark:text-slate-100">
-                {item.value} {item.suffix && <span className="text-xs font-semibold text-slate-400">{item.suffix}</span>}
+/** Single-dealer identity card — large, clear, friendly for non-technical users. */
+function DealerProfileHero({
+  dealer,
+  fulfillmentRate,
+  delivered,
+  ordered,
+  unit
+}: {
+  dealer: Dealer;
+  fulfillmentRate: number;
+  delivered: number;
+  ordered: number;
+  unit: string;
+}) {
+  const statusKey = getDealerStatusKey(dealer.status);
+  const status = STATUS_META[statusKey];
+  const regionColor = getRegionColor(dealer.region || "");
+  const pct = Math.max(0, Math.min(100, Math.round(fulfillmentRate)));
+  // Donut ring geometry
+  const size = 104;
+  const stroke = 11;
+  const radius = (size - stroke) / 2;
+  const circ = 2 * Math.PI * radius;
+  const dash = (pct / 100) * circ;
+
+  return (
+    <section className="overflow-hidden rounded-[22px] border border-[#e5e7eb] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+      <div className="h-1.5 w-full" style={{ background: `linear-gradient(90deg, ${regionColor}, ${regionColor}22)` }} />
+      <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="flex items-start gap-4">
+          <div
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-xl font-extrabold text-white shadow-sm"
+            style={{ backgroundColor: regionColor }}
+          >
+            {initialsOf(dealer.dealer_name)}
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-700 ring-1 ring-sky-100 dark:bg-sky-900/30 dark:text-sky-300 dark:ring-sky-900/40">
+                ID {dealer.dealer_id}
+              </span>
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-900/40">
+                {dealer.dealer_code}
+              </span>
+              <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-bold ring-1", status.pill)}>
+                <i className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: status.dot }} />
+                {status.label}
+              </span>
+            </div>
+            <h2 className="mt-2 truncate text-2xl font-extrabold leading-tight text-slate-950 dark:text-slate-50" title={dealer.dealer_name}>
+              {dealer.dealer_name}
+            </h2>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] font-medium text-slate-500 dark:text-slate-400">
+              <span className="inline-flex items-center gap-1.5">
+                <Building2 size={15} style={{ color: regionColor }} />
+                {dealer.region || "ไม่ระบุภูมิภาค"}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <MapPin size={15} className="text-slate-400" />
+                {dealer.province || "ไม่ระบุจังหวัด"}
+              </span>
+              {dealer.last_active_at ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock3 size={15} className="text-slate-400" />
+                  ใช้งานล่าสุด {dateText(dealer.last_active_at)}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        {/* Fulfillment ring */}
+        <div className="flex items-center gap-4 rounded-2xl border border-[#eef0f4] bg-[#fbfcfd] px-5 py-3 dark:border-slate-800 dark:bg-slate-900/50 lg:justify-self-end">
+          <div className="relative" style={{ width: size, height: size }}>
+            <svg width={size} height={size} className="-rotate-90">
+              <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
+              <circle
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke="#10b981"
+                strokeWidth={stroke}
+                strokeLinecap="round"
+                strokeDasharray={`${dash} ${circ}`}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-extrabold leading-none text-slate-950 dark:text-slate-50">{pct}%</span>
+              <span className="mt-0.5 text-[10px] font-semibold text-slate-400">ส่งสำเร็จ</span>
+            </div>
+          </div>
+          <div className="text-sm">
+            <div className="flex items-center gap-2 text-slate-500">
+              <Truck size={14} className="text-emerald-600" /> ส่งจริง
+            </div>
+            <div className="mt-0.5 text-lg font-bold text-slate-950 dark:text-slate-100">
+              {compactNumber(delivered)} <span className="text-xs font-semibold text-slate-400">{unit}</span>
+            </div>
+            <div className="mt-2 flex items-center gap-2 text-slate-500">
+              <ShoppingCart size={14} className="text-slate-400" /> ยอดสั่ง
+            </div>
+            <div className="mt-0.5 text-lg font-bold text-slate-950 dark:text-slate-100">
+              {compactNumber(ordered)} <span className="text-xs font-semibold text-slate-400">{unit}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const KPI_TONES: Record<string, string> = {
+  teal: "bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300",
+  blue: "bg-sky-50 text-sky-700 dark:bg-sky-900/30 dark:text-sky-300",
+  amber: "bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  violet: "bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300",
+  rose: "bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
+  slate: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+};
+
+function KpiGrid({
+  items
+}: {
+  items: { icon: ReactNode; label: string; value: string; hint: string; tone: keyof typeof KPI_TONES }[];
+}) {
+  return (
+    <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      {items.map((item) => (
+        <div
+          key={item.label}
+          className="rounded-2xl border border-[#e5e7eb] bg-white p-3.5 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-950"
+        >
+          <div className={cn("flex h-9 w-9 items-center justify-center rounded-xl", KPI_TONES[item.tone])}>{item.icon}</div>
+          <p className="mt-2.5 text-[11px] font-semibold text-slate-500">{item.label}</p>
+          <p className="mt-0.5 truncate text-[22px] font-extrabold leading-none text-slate-950 dark:text-slate-100">{item.value}</p>
+          <p className="mt-1.5 truncate text-[11px] font-medium text-slate-400">{item.hint}</p>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+const ORDER_STATUS_META: Record<"confirmed" | "pending" | "cancelled" | "other", { label: string; color: string; text: string }> = {
+  confirmed: { label: "ยืนยันแล้ว", color: "#10b981", text: "text-emerald-700 dark:text-emerald-300" },
+  pending: { label: "รอดำเนินการ", color: "#f59e0b", text: "text-amber-700 dark:text-amber-300" },
+  cancelled: { label: "ยกเลิก", color: "#f43f5e", text: "text-rose-700 dark:text-rose-300" },
+  other: { label: "อื่นๆ", color: "#94a3b8", text: "text-slate-600 dark:text-slate-300" }
+};
+
+/** Order status breakdown for the selected dealer. */
+function OrderStatusCard({ orders }: { orders: OrderItem[] }) {
+  const buckets = useMemo(() => {
+    const counts: Record<"confirmed" | "pending" | "cancelled" | "other", number> = {
+      confirmed: 0,
+      pending: 0,
+      cancelled: 0,
+      other: 0
+    };
+    orders.forEach((row) => {
+      counts[getOrderStatusKey(row.status?.order)] += 1;
+    });
+    return counts;
+  }, [orders]);
+
+  const total = orders.length;
+  const order: ("confirmed" | "pending" | "cancelled" | "other")[] = ["confirmed", "pending", "cancelled", "other"];
+
+  if (!total) {
+    return (
+      <div className="flex h-[160px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#d9e3e6] bg-[#fbfcfc] dark:border-slate-800 dark:bg-slate-900/40">
+        <div className="text-sm font-semibold text-slate-600">ยังไม่มีคำสั่งซื้อ</div>
+        <div className="text-xs font-medium text-slate-400">จะแสดงเมื่อ dealer นี้มี orders</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <div className="flex items-baseline justify-between">
+          <span className="text-3xl font-extrabold leading-none text-slate-950 dark:text-slate-100">{formatNumber(total)}</span>
+          <span className="text-xs font-semibold text-slate-400">คำสั่งซื้อทั้งหมด</span>
+        </div>
+        <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+          {order.map((key) =>
+            buckets[key] > 0 ? (
+              <div
+                key={key}
+                style={{ width: `${(buckets[key] / total) * 100}%`, backgroundColor: ORDER_STATUS_META[key].color }}
+                title={`${ORDER_STATUS_META[key].label}: ${buckets[key]}`}
+              />
+            ) : null
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-2.5">
+        {order.map((key) => {
+          const count = buckets[key];
+          const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+          return (
+            <div key={key} className="rounded-xl border border-[#eef0f4] bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950">
+              <div className="flex items-center gap-1.5">
+                <i className="h-2 w-2 rounded-full" style={{ backgroundColor: ORDER_STATUS_META[key].color }} />
+                <span className="text-[11px] font-semibold text-slate-500">{ORDER_STATUS_META[key].label}</span>
+              </div>
+              <div className="mt-1 flex items-baseline gap-1.5">
+                <span className={cn("text-xl font-bold leading-none", ORDER_STATUS_META[key].text)}>{formatNumber(count)}</span>
+                <span className="text-[11px] font-semibold text-slate-400">{pct}%</span>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Recent orders timeline for the selected dealer. */
+function RecentActivityCard({ orders, unit }: { orders: OrderItem[]; unit: string }) {
+  const recent = useMemo(() => {
+    return [...orders]
+      .map((row) => ({
+        row,
+        date: parseDateValue(row.pour_datetime ?? row.updated_at ?? row.created_at)
+      }))
+      .filter((item) => item.date)
+      .sort((a, b) => (b.date as Date).getTime() - (a.date as Date).getTime())
+      .slice(0, 6);
+  }, [orders]);
+
+  if (!recent.length) {
+    return (
+      <div className="flex h-[160px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#d9e3e6] bg-[#fbfcfc] dark:border-slate-800 dark:bg-slate-900/40">
+        <div className="text-sm font-semibold text-slate-600">ยังไม่มีกิจกรรม</div>
+        <div className="text-xs font-medium text-slate-400">รายการเทล่าสุดจะแสดงที่นี่</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {recent.map(({ row, date }, i) => {
+        const statusKey = getOrderStatusKey(row.status?.order);
+        const meta = ORDER_STATUS_META[statusKey];
+        const customer = row.customer?.name?.trim() || "ไม่ระบุลูกค้า";
+        const site = row.site?.site_name?.trim() || "ไม่ระบุไซต์";
+        const delivered = row.quantity?.delivered ?? 0;
+        return (
+          <div
+            key={`${row.order?.order_no ?? "o"}-${i}`}
+            className="flex items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/50"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: `${meta.color}1f` }}>
+              <i className="h-2 w-2 rounded-full" style={{ backgroundColor: meta.color }} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate text-sm font-semibold text-slate-800 dark:text-slate-200" title={customer}>{customer}</span>
+                <span className="shrink-0 text-[11px] font-semibold text-slate-400">{dateText(date?.toISOString())}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2 text-[11px] font-medium text-slate-400">
+                <span className="truncate" title={site}>{site}</span>
+                <span className={cn("shrink-0 font-bold", meta.text)}>
+                  {compactNumber(delivered)} {unit}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -128,8 +403,9 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
   const hasOrdered = rows.some((row) => row.ordered > 0);
   const totalDelivered = rows.reduce((sum, row) => sum + row.delivered, 0);
   const totalOrdered = rows.reduce((sum, row) => sum + row.ordered, 0);
-  const segmentTotal = compactRows.reduce((sum, row) => sum + Math.max(row.delivered, row.ordered), 0) || 1;
+  const segmentTotal = compactRows.reduce((sum, row) => sum + row.delivered, 0) || 1;
   const rowColor = (row: AreaRow) => (row.key === OTHER_AREAS_KEY ? "#94a3b8" : getRegionColor(row.label));
+  const fulfillmentRate = totalOrdered > 0 ? (totalDelivered / totalOrdered) * 100 : 0;
 
   if (loading) {
     return (
@@ -149,21 +425,22 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center">
-        <div className="rounded-lg border border-[#e5e7eb] bg-[#fbfcfd] px-3 py-2">
-          <div className="text-xs font-semibold text-slate-500">Delivered Volume / Ordered Volume</div>
+      <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-center">
+        <div className="rounded-lg border border-[#e5e7eb] bg-[#fbfcfd] px-3 py-2.5">
+          <div className="text-xs font-semibold text-slate-500">ส่งจริง / ยอดสั่ง</div>
           <div className="mt-1 text-lg font-bold text-slate-950">
             {compactNumber(totalDelivered)} / {compactNumber(totalOrdered)} {unit}
           </div>
-          <div className="mt-1 text-xs font-medium text-slate-500">
+          <div className="mt-1 flex flex-wrap gap-2 text-xs font-medium text-slate-500">
             {formatNumber(rows.length)} พื้นที่ทั้งหมด
+            {totalOrdered > 0 ? <span className="rounded bg-emerald-50 px-1.5 font-bold text-emerald-700">ส่งได้ {formatPercent(fulfillmentRate)}</span> : null}
           </div>
         </div>
 
         <div className="min-w-0">
           <div className="flex h-8 overflow-hidden rounded-lg bg-slate-100">
             {compactRows.map((row, index) => {
-              const value = Math.max(row.delivered, row.ordered);
+              const value = row.delivered;
               return (
                 <div
                   key={row.key}
@@ -172,7 +449,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                     backgroundColor: rowColor(row),
                     width: `${Math.max((value / segmentTotal) * 100, value > 0 ? 3 : 0)}%`
                   }}
-                  title={`${row.label}: ${formatNumber(row.delivered)} delivered / ${formatNumber(row.ordered)} ordered`}
+                  title={`${row.label}: ส่งจริง ${formatNumber(row.delivered)} / ยอดสั่ง ${formatNumber(row.ordered)}`}
                 />
               );
             })}
@@ -193,6 +470,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
           const isOthers = row.key === OTHER_AREAS_KEY;
           const canExpand = isOthers && !!row.children?.length;
           const expanded = canExpand && othersExpanded;
+          const rowFulfillmentRate = row.ordered > 0 ? (row.delivered / row.ordered) * 100 : 0;
           return (
             <div
               key={row.key}
@@ -216,8 +494,8 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                   <div className="mt-1 text-xs font-medium text-slate-500">{row.detail}</div>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <div className="text-sm font-bold text-slate-950">
-                    {compactNumber(Math.max(row.delivered, row.ordered))} {unit}
+                  <div className="text-right text-sm font-bold text-slate-950">
+                    {compactNumber(row.delivered)} {unit}
                   </div>
                   {canExpand ? (
                     <button
@@ -236,6 +514,10 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                 </div>
               </div>
               <div className="mt-3 grid gap-1.5">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+                  <span>ส่งจริง</span>
+                  <span>{formatNumber(row.delivered)} {unit}</span>
+                </div>
                 <div className="h-2.5 rounded-full bg-slate-100">
                   <div
                     className="h-2.5 rounded-full"
@@ -246,17 +528,23 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                   />
                 </div>
                 {hasOrdered ? (
-                  <div className="h-2.5 rounded-full bg-slate-100">
-                    <div
-                      className="h-2.5 rounded-full bg-[#2563eb]"
-                      style={{ width: `${Math.max((row.ordered / max) * 100, row.ordered > 0 ? 2 : 0)}%` }}
-                    />
-                  </div>
+                  <>
+                    <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
+                      <span>ยอดสั่ง</span>
+                      <span>{formatNumber(row.ordered)} {unit}</span>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-slate-100">
+                      <div
+                        className="h-2.5 rounded-full bg-[#2563eb]"
+                        style={{ width: `${Math.max((row.ordered / max) * 100, row.ordered > 0 ? 2 : 0)}%` }}
+                      />
+                    </div>
+                  </>
                 ) : null}
               </div>
               <div className="mt-2 flex items-center justify-between gap-3 text-xs font-medium text-slate-500">
-                <span>Delivered Volume {formatNumber(row.delivered)} {unit}</span>
-                {hasOrdered ? <span>Ordered Volume {formatNumber(row.ordered)} {unit}</span> : null}
+                <span>{row.detail}</span>
+                {row.ordered > 0 ? <span className="font-bold text-emerald-700">ส่งได้ {formatPercent(rowFulfillmentRate)}</span> : null}
               </div>
 
               {expanded && row.children ? (
@@ -264,8 +552,8 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                   <div className="grid grid-cols-[1fr_60px_70px_70px] gap-2 px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                     <span>จังหวัด</span>
                     <span className="text-right">Sites</span>
-                    <span className="text-right">Delivered Volume</span>
-                    <span className="text-right">Ordered Volume</span>
+                    <span className="text-right">ส่งจริง</span>
+                    <span className="text-right">ยอดสั่ง</span>
                   </div>
                   <div className="max-h-60 overflow-y-auto">
                     {row.children.map((child) => (
@@ -475,11 +763,11 @@ function TopCustomersList({
                 <span className="shrink-0 text-[10px] font-semibold text-slate-400">{Math.round(share)}%</span>
               </div>
               <div className="mt-1 flex items-center gap-2 text-[10px] font-semibold text-slate-400">
-                <span>{customer.customerCode}</span>
+                <span>รหัสลูกค้า {customer.customerCode}</span>
                 <span>·</span>
                 <span>{formatNumber(customer.orderCount)} orders</span>
                 <span>·</span>
-                <span>{formatNumber(customer.siteCount)} sites</span>
+                <span>{formatNumber(customer.siteCount)} ไซต์</span>
               </div>
               <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                 <div
@@ -548,7 +836,7 @@ export function DetailsPage(props: DetailsPageProps) {
       current.delivered += site.total_delivered;
       current.ordered += site.total_ordered;
       current.count += 1;
-      current.detail = `${formatNumber(current.count)} sites`;
+      current.detail = `${formatNumber(current.count)} ไซต์`;
       provinceMap.set(key, current);
     });
 
@@ -574,7 +862,7 @@ export function DetailsPage(props: DetailsPageProps) {
       current.count += 1;
       current.delivered += dealer.volume;
       if (dealer.province) current.provinces.add(dealer.province);
-      current.detail = `${formatNumber(current.count)} dealers | ${formatNumber(current.provinces.size)} provinces`;
+      current.detail = `${formatNumber(current.count)} Dealer | ${formatNumber(current.provinces.size)} จังหวัด`;
       areaMap.set(label, current);
     });
 
@@ -698,17 +986,13 @@ export function DetailsPage(props: DetailsPageProps) {
   const areaUnit = props.selectedDealer?.unit ?? areaRows.find((row) => row.unit)?.unit ?? props.filteredDealers.find((dealer) => dealer.unit)?.unit ?? "m3";
   const totalAreaDelivered = areaRows.reduce((sum, row) => sum + row.delivered, 0);
   const totalGroups = isAllDealers ? props.filteredDealers.reduce((sum, dealer) => sum + dealer.group_count, 0) : props.groups.length;
-  const totalDelivered = props.groups.reduce((sum, group) => sum + group.delivered_volume, 0);
-  const totalBooked = props.groups.reduce((sum, group) => sum + group.booked_volume, 0);
-  const topGroups = useMemo(
-    () =>
-      [...props.groups]
-        .sort((a, b) => Math.max(b.delivered_volume, b.booked_volume) - Math.max(a.delivered_volume, a.booked_volume))
-        .slice(0, 10),
-    [props.groups]
-  );
   const topDealerVolume = useMemo(() => [...props.filteredDealers].sort((a, b) => b.volume - a.volume).slice(0, 8), [props.filteredDealers]);
   const maxDealerVolume = Math.max(...topDealerVolume.map((dealer) => dealer.volume), 1);
+
+  // Single-dealer order totals (used for the profile hero + KPI grid)
+  const dealerOrderedTotal = useMemo(() => dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0), [dealerOrders]);
+  const dealerDeliveredTotal = useMemo(() => dealerOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0), [dealerOrders]);
+  const dealerFulfillmentRate = dealerOrderedTotal > 0 ? (dealerDeliveredTotal / dealerOrderedTotal) * 100 : 0;
 
   const customerColumns: DataColumn<(typeof orderCustomerRows)[number]>[] = [
     { title: "Customer", key: "customer", sortAccessor: (record) => record.customerName, width: 300, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.customerName}</div><div className="text-xs font-medium text-slate-500">{record.customerCode}</div></div> },
@@ -739,21 +1023,24 @@ export function DetailsPage(props: DetailsPageProps) {
 
   return (
     <>
-      <DealerAnalysisHeader
-        customerCount={orderCustomerRows.length || usageSummary.customerCreateCount}
+      <DealerPicker
         dealers={props.dealers}
-        delivered={totalAreaDelivered}
-        groups={totalGroups}
-        isAllDealers={isAllDealers}
-        priceChecks={usageSummary.priceConcreteCount}
-        selectedDealer={props.selectedDealer}
+        includeAll
         selectedDealerId={props.selectedDealerId}
         setSelectedDealerId={props.setSelectedDealerId}
-        unit={areaUnit}
+        title="เลือก Dealer หรือดูภาพรวมทุก Dealer"
       />
 
       {isAllDealers ? (
         <>
+          <AllDealersStatStrip
+            customerCount={orderCustomerRows.length || usageSummary.customerCreateCount}
+            delivered={totalAreaDelivered}
+            groups={totalGroups}
+            priceChecks={usageSummary.priceConcreteCount}
+            unit={areaUnit}
+          />
+
           <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,.65fr)]">
             <Card className="dashboard-card">
               <CardHeader className="border-b border-[#d9e3e6]">
@@ -770,8 +1057,8 @@ export function DetailsPage(props: DetailsPageProps) {
 
             <Card className="dashboard-card">
               <CardHeader className="border-b border-[#d9e3e6]">
-                <CardTitle className="text-lg">Top Dealer Delivered Volume</CardTitle>
-                <p className="text-xs font-medium text-slate-500">Dealer ที่มี volume สูงสุดใน filter ปัจจุบัน</p>
+                <CardTitle className="text-lg">Dealer ส่งจริงสูงสุด</CardTitle>
+                <p className="text-xs font-medium text-slate-500">เรียงตามยอดส่งจริงในตัวกรองปัจจุบัน</p>
               </CardHeader>
               <CardContent>
                 <ProgressList
@@ -791,65 +1078,99 @@ export function DetailsPage(props: DetailsPageProps) {
               <CardHeader className="border-b border-[#d9e3e6]">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <BarChart3 size={18} />
-                  Customer Insight
+                  ลูกค้าที่มียอดสูงสุด
                 </CardTitle>
-                <p className="text-xs font-medium text-slate-500">Top customers จากรายการ order ทั้งหมดที่กรองอยู่</p>
+                <p className="text-xs font-medium text-slate-500">เทียบยอดส่งจริงกับยอดสั่งของลูกค้าแต่ละราย</p>
               </CardHeader>
               <CardContent>
                 <DualBarChart
-                  data={orderCustomerRows.slice(0, 8).map((customer) => ({
+                  data={orderCustomerRows.slice(0, 5).map((customer) => ({
                     label: customer.customerName,
                     primary: customer.delivered,
                     secondary: customer.ordered
                   }))}
-                  primaryLabel="Delivered Volume"
-                  secondaryLabel="Ordered Volume"
+                  primaryLabel="ส่งจริง"
+                  secondaryLabel="ยอดสั่ง"
                 />
+                {orderCustomerRows.length > 5 ? (
+                  <p className="mt-3 border-t border-slate-100 pt-2 text-center text-[11px] font-semibold text-slate-400 dark:border-slate-800">
+                    + อีก {formatNumber(orderCustomerRows.length - 5)} ราย — ดูทั้งหมดที่แท็บ Customers ด้านล่าง
+                  </p>
+                ) : null}
               </CardContent>
             </Card>
 
             <Card className="dashboard-card">
               <CardHeader className="border-b border-[#d9e3e6]">
-                <CardTitle className="text-lg">Site Delivery Progress</CardTitle>
-                <p className="text-xs font-medium text-slate-500">ไซต์ที่มี Delivered Volume สูงสุดจากรายการ order ที่กรองอยู่</p>
+                <CardTitle className="text-lg">ไซต์ที่ส่งจริงสูงสุด</CardTitle>
+                <p className="text-xs font-medium text-slate-500">ไซต์ที่มียอดส่งจริงสูงสุดจากรายการ order ที่กรองอยู่</p>
               </CardHeader>
               <CardContent>
                 <ProgressList
-                  rows={orderSiteRows.slice(0, 8).map((site) => ({
+                  rows={orderSiteRows.slice(0, 5).map((site) => ({
                     label: site.siteName,
                     total: Math.max(site.ordered, site.delivered),
                     unit: areaUnit,
                     value: site.delivered
                   }))}
                 />
+                {orderSiteRows.length > 5 ? (
+                  <p className="mt-3 border-t border-slate-100 pt-2 text-center text-[11px] font-semibold text-slate-400 dark:border-slate-800">
+                    + อีก {formatNumber(orderSiteRows.length - 5)} ไซต์ — ดูทั้งหมดที่แท็บ Sites ด้านล่าง
+                  </p>
+                ) : null}
               </CardContent>
             </Card>
           </section>
         </>
       ) : (
         <>
-          {/* HERO: Monthly trend chart */}
-          <section className="grid grid-cols-1 gap-3">
+          {props.selectedDealer ? (
+            <DealerProfileHero
+              dealer={props.selectedDealer}
+              delivered={dealerDeliveredTotal}
+              ordered={dealerOrderedTotal}
+              fulfillmentRate={dealerFulfillmentRate}
+              unit={areaUnit}
+            />
+          ) : null}
+
+          <KpiGrid
+            items={[
+              { icon: <ShoppingCart size={18} />, label: "คำสั่งซื้อ", value: formatNumber(dealerOrders.length), hint: "จำนวน orders ทั้งหมด", tone: "blue" },
+              { icon: <Users size={18} />, label: "ลูกค้า", value: formatNumber(orderCustomerRows.length), hint: "จำนวนลูกค้าที่สั่ง", tone: "violet" },
+              { icon: <MapPin size={18} />, label: "ไซต์", value: formatNumber(orderSiteRows.length || props.sites.length), hint: "ไซต์ที่มีรายการ", tone: "rose" },
+              { icon: <Boxes size={18} />, label: "กลุ่ม", value: formatNumber(props.groups.length), hint: "กลุ่มของ dealer นี้", tone: "slate" },
+              { icon: <Clock3 size={18} />, label: "จองคิว", value: formatNumber(usageSummary.bookingCreateCount), hint: "จำนวนครั้งที่สร้างจองคิว", tone: "amber" },
+              { icon: <BarChart3 size={18} />, label: "เช็คราคา", value: formatNumber(usageSummary.priceConcreteCount), hint: "จำนวนครั้งที่เช็คราคา", tone: "teal" }
+            ]}
+          />
+
+          {/* Operational row: order status + recent activity */}
+          <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(320px,1fr)_minmax(0,1.4fr)]">
             <Card className="dashboard-card">
               <CardHeader className="border-b border-[#d9e3e6]">
-                <div className="flex items-start gap-2.5">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
-                    <TrendingUp size={16} />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base">แนวโน้มยอดส่งจริงรายเดือน</CardTitle>
-                    <p className="mt-0.5 text-[11px] font-medium text-slate-500">
-                      ดูได้ในแว็บเดียวว่าเดือนไหนพีค เดือนไหนเงียบ · เปรียบเทียบยอดสั่งกับยอดส่งจริง
-                    </p>
-                  </div>
-                </div>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ListChecks size={16} />
+                  สถานะคำสั่งซื้อ
+                </CardTitle>
+                <p className="text-[11px] font-medium text-slate-500">สัดส่วนคำสั่งซื้อของ dealer นี้แยกตามสถานะ</p>
               </CardHeader>
               <CardContent>
-                <MonthlyTrendChart
-                  loading={props.ordersState === "loading"}
-                  orders={dealerOrders}
-                  unit={areaUnit}
-                />
+                <OrderStatusCard orders={dealerOrders} />
+              </CardContent>
+            </Card>
+
+            <Card className="dashboard-card">
+              <CardHeader className="border-b border-[#d9e3e6]">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Activity size={16} />
+                  กิจกรรมล่าสุด
+                </CardTitle>
+                <p className="text-[11px] font-medium text-slate-500">รายการเทคอนกรีตล่าสุด 6 รายการ</p>
+              </CardHeader>
+              <CardContent>
+                <RecentActivityCard orders={dealerOrders} unit={areaUnit} />
               </CardContent>
             </Card>
           </section>
@@ -860,7 +1181,7 @@ export function DetailsPage(props: DetailsPageProps) {
               <CardHeader className="border-b border-[#d9e3e6]">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <MapPin size={16} />
-                  สัดส่วน Site
+                  สัดส่วนไซต์
                 </CardTitle>
                 <p className="text-[11px] font-medium text-slate-500">ยอดส่งจริงแยกตามไซต์หลัก</p>
               </CardHeader>
@@ -878,7 +1199,7 @@ export function DetailsPage(props: DetailsPageProps) {
                     </div>
                     <div>
                       <CardTitle className="text-base">ลูกค้าหลัก 5 อันดับ</CardTitle>
-                      <p className="text-[11px] font-medium text-slate-500">เรียงตาม Delivered Volume · ดูทั้งหมดที่ tab Customers ด้านล่าง</p>
+                      <p className="text-[11px] font-medium text-slate-500">เรียงตามยอดส่งจริง · ดูทั้งหมดที่ tab Customers ด้านล่าง</p>
                     </div>
                   </div>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
@@ -892,36 +1213,6 @@ export function DetailsPage(props: DetailsPageProps) {
             </Card>
           </section>
 
-          {/* Compact secondary row: Groups insights + Usage Summary (kept for completeness) */}
-          {(props.groups.length > 0 || usageSummary.bookingCreateCount > 0 || props.sites.length > 0) && (
-            <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]">
-              <Card className="dashboard-card">
-                <CardHeader className="border-b border-[#d9e3e6]">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <BarChart3 size={16} />
-                    ยอดส่งมอบรายกลุ่ม
-                  </CardTitle>
-                  <p className="text-[11px] font-medium text-slate-500">เทียบยอดส่งมอบจริงกับยอดจองของแต่ละกลุ่ม</p>
-                </CardHeader>
-                <CardContent>
-                  <GroupVolumeInsights groups={topGroups} totalBooked={totalBooked} totalDelivered={totalDelivered} totalGroups={props.groups.length} unit={areaUnit} />
-                </CardContent>
-              </Card>
-
-              <Card className="dashboard-card">
-                <CardHeader className="border-b border-[#d9e3e6]">
-                  <CardTitle className="text-base">Usage Summary</CardTitle>
-                  <p className="text-[11px] font-medium text-slate-500">Updated: {dateText(usageSummary.updatedAt)}</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-3">
-                    <MetricCard icon={<Clock3 size={18} />} label="Bookings" value={formatNumber(usageSummary.bookingCreateCount)} detail="จำนวนครั้งที่สร้างจองคิว" tone="amber" />
-                    <MetricCard icon={<User size={18} />} label="Sites" value={formatNumber(props.sites.length)} detail="ไซต์ของ dealer ที่เลือก" tone="green" />
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
-          )}
         </>
       )}
 

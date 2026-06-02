@@ -70,6 +70,9 @@ export function MonthlyTrendChart({
     [allMonths, range]
   );
 
+  const DELIVERED_COLOR = "#14b8a6";
+  const ORDERED_COLOR = "#93c5fd";
+
   const RangeToggle = (
     <div className="inline-flex gap-0.5 rounded-xl bg-slate-100 p-0.5 dark:bg-slate-800">
       {RANGE_OPTIONS.map((opt) => {
@@ -112,41 +115,34 @@ export function MonthlyTrendChart({
     );
   }
 
-  // SVG layout
+  // SVG layout — grouped bar chart (clearer than a line for sparse dealer data)
   const W = 1000;
   const H = 280;
   const padL = 48;
-  const padR = 36;
-  const padT = 32;
+  const padR = 24;
+  const padT = 28;
   const padB = 40;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
+  const baseline = padT + innerH;
   const max = Math.max(
     ...months.map((m) => Math.max(showDelivered ? m.delivered : 0, showOrdered ? m.ordered : 0)),
     1
   );
-  const stepX = months.length > 1 ? innerW / (months.length - 1) : innerW;
 
-  const xy = (i: number, value: number) => ({
-    x: months.length === 1 ? padL + innerW / 2 : padL + i * stepX,
-    y: padT + innerH - (value / max) * innerH
-  });
+  const n = months.length;
+  const slot = innerW / n;
+  const pairCount = (showDelivered ? 1 : 0) + (showOrdered ? 1 : 0) || 1;
+  const barW = Math.min((slot * 0.62) / pairCount, 40);
+  const barGap = pairCount > 1 ? Math.min(barW * 0.22, 8) : 0;
+  const groupW = barW * pairCount + barGap * (pairCount - 1);
+  const showValueLabels = n <= 6;
 
-  const deliveredPts = months.map((m, i) => ({ ...xy(i, m.delivered), data: m }));
-  const orderedPts = months.map((m, i) => ({ ...xy(i, m.ordered), data: m }));
-
-  const deliveredPath = deliveredPts
-    .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
-    .join(" ");
-  const deliveredAreaPath = `${deliveredPath} L ${deliveredPts[deliveredPts.length - 1].x} ${padT + innerH} L ${deliveredPts[0].x} ${padT + innerH} Z`;
-  const orderedPath = orderedPts
-    .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
-    .join(" ");
+  const barH = (value: number) => Math.max((value / max) * innerH, value > 0 ? 2 : 0);
 
   const last = months[months.length - 1];
   const prev = months.length > 1 ? months[months.length - 2] : null;
   const momPercent = prev && prev.delivered > 0 ? ((last.delivered - prev.delivered) / prev.delivered) * 100 : null;
-  const lastPt = deliveredPts[deliveredPts.length - 1];
 
   // Fill-rate (delivered / ordered) across the visible window
   const totalDelivered = months.reduce((s, m) => s + m.delivered, 0);
@@ -167,9 +163,9 @@ export function MonthlyTrendChart({
             onClick={() => setShowDelivered((v) => !v)}
             className={cn("inline-flex items-center gap-1.5 transition-opacity", !showDelivered && "opacity-40")}
           >
-            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#14b8a6" }} />
+            <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: DELIVERED_COLOR }} />
             <span className={cn("text-slate-600 dark:text-slate-300", !showDelivered && "line-through")}>
-              Delivered Volume
+              ส่งจริง
             </span>
           </button>
           <button
@@ -177,9 +173,9 @@ export function MonthlyTrendChart({
             onClick={() => setShowOrdered((v) => !v)}
             className={cn("inline-flex items-center gap-1.5 transition-opacity", !showOrdered && "opacity-40")}
           >
-            <span className="h-2.5 w-2.5 rounded-full border-2 border-dashed" style={{ borderColor: "#2563eb" }} />
+            <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: ORDERED_COLOR }} />
             <span className={cn("text-slate-600 dark:text-slate-300", !showOrdered && "line-through")}>
-              Ordered Volume
+              ยอดสั่ง
             </span>
           </button>
         </div>
@@ -203,13 +199,6 @@ export function MonthlyTrendChart({
       <div className="rounded-2xl border border-[#e5e7eb] bg-[#fbfcfd] p-3 dark:border-slate-800 dark:bg-slate-950/60">
         <div className="overflow-x-auto">
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ minWidth: 540, height: H }}>
-            <defs>
-              <linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#14b8a6" stopOpacity="0.22" />
-                <stop offset="100%" stopColor="#14b8a6" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-
             {/* Gridlines */}
             {ticks.map((tickValue, i) => {
               const y = padT + (i / tickCount) * innerH;
@@ -223,51 +212,42 @@ export function MonthlyTrendChart({
               );
             })}
 
-            {/* Ordered (dashed line, no fill) */}
-            {showOrdered && (
-              <path d={orderedPath} fill="none" stroke="#2563eb" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.75" />
-            )}
+            {/* Grouped bars per month */}
+            {months.map((m, i) => {
+              const groupStart = padL + slot * i + (slot - groupW) / 2;
+              let cursor = groupStart;
+              const bars: { color: string; value: number; label: string }[] = [];
+              if (showDelivered) bars.push({ color: DELIVERED_COLOR, value: m.delivered, label: "ส่งจริง" });
+              if (showOrdered) bars.push({ color: ORDERED_COLOR, value: m.ordered, label: "ยอดสั่ง" });
+              return (
+                <g key={m.key}>
+                  {bars.map((bar, bi) => {
+                    const h = barH(bar.value);
+                    const x = cursor;
+                    cursor += barW + barGap;
+                    return (
+                      <g key={bi}>
+                        <rect x={x} y={baseline - h} width={barW} height={h} rx={Math.min(barW / 3, 5)} fill={bar.color}>
+                          <title>{`${m.longLabel}\n${bar.label} ${formatNumber(bar.value)} ${unit}\n${formatNumber(m.orderCount)} orders`}</title>
+                        </rect>
+                        {showValueLabels && bar.value > 0 ? (
+                          <text x={x + barW / 2} y={baseline - h - 5} fontSize="10" fontWeight="700" textAnchor="middle" fill="#475569">
+                            {compactNumber(bar.value)}
+                          </text>
+                        ) : null}
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            })}
 
-            {/* Delivered (area + line) */}
-            {showDelivered && (
-              <>
-                <path d={deliveredAreaPath} fill="url(#trend-fill)" />
-                <path
-                  d={deliveredPath}
-                  fill="none"
-                  stroke="#14b8a6"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </>
-            )}
-
-            {/* Points */}
-            {showDelivered &&
-              deliveredPts.map((p, i) => {
-                const isLast = i === deliveredPts.length - 1;
-                return (
-                  <g key={p.data.key}>
-                    <circle cx={p.x} cy={p.y} r={isLast ? 6 : 4.5} fill="#fff" stroke="#14b8a6" strokeWidth={isLast ? 3 : 2} />
-                    <title>{`${p.data.longLabel}\nDelivered ${formatNumber(p.data.delivered)} ${unit}\nOrdered ${formatNumber(p.data.ordered)} ${unit}\n${formatNumber(p.data.orderCount)} orders`}</title>
-                  </g>
-                );
-              })}
-
-            {/* Last-point badge */}
-            {showDelivered && lastPt && (
-              <g>
-                <rect x={lastPt.x - 36} y={lastPt.y - 28} width="72" height="20" rx="10" fill="#14b8a6" />
-                <text x={lastPt.x} y={lastPt.y - 14} fontSize="11" fontWeight="700" fill="#fff" textAnchor="middle">
-                  {compactNumber(last.delivered)} {unit}
-                </text>
-              </g>
-            )}
+            {/* Baseline */}
+            <line x1={padL} y1={baseline} x2={W - padR} y2={baseline} stroke="#cbd5e1" strokeWidth="1" />
 
             {/* X-axis labels */}
             {months.map((m, i) => {
-              const x = months.length === 1 ? padL + innerW / 2 : padL + i * stepX;
+              const x = padL + slot * i + slot / 2;
               return (
                 <text key={m.key} x={x} y={H - 10} fontSize="11" textAnchor="middle" fill="#64748b" fontWeight="600">
                   {m.label}
