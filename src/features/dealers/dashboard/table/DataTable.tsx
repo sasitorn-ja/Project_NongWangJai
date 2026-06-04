@@ -99,14 +99,14 @@ export function DataTable<T>({
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-[15px]" style={{ minWidth }}>
+        <table className="w-full table-fixed border-collapse text-[13px]" style={{ minWidth }}>
           <thead>
             <tr className="border-b border-[#d9e3e6] bg-[#f6f8f9] dark:border-slate-800 dark:bg-slate-900">
               {columns.map((column) => (
                 <th
                   key={column.key}
                   className={cn(
-	                    "border-r border-[#e5e9ec] px-3 py-2.5 text-[13px] font-semibold text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400",
+	                    "border-r border-[#e5e9ec] px-3 py-2 text-[12px] font-semibold text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400",
                     alignClass(column.align)
                   )}
                   style={{ width: column.width }}
@@ -152,7 +152,7 @@ export function DataTable<T>({
                       <td
                         key={column.key}
                         className={cn(
-                          "border-r border-[#edf1f2] px-3 py-2.5 align-middle text-slate-800 last:border-r-0 dark:border-slate-800 dark:text-slate-200",
+                          "border-r border-[#edf1f2] px-3 py-2 align-middle text-slate-800 last:border-r-0 dark:border-slate-800 dark:text-slate-200",
                           alignClass(column.align)
                         )}
                       >
@@ -169,8 +169,8 @@ export function DataTable<T>({
                 className="border-b border-[#edf1f2] dark:border-slate-800"
               >
                 {columns.map((column) => (
-                  <td key={`${column.key}-filler-${index}`} className="border-r border-[#edf1f2] px-3 py-2.5 last:border-r-0 dark:border-slate-800">
-                    <div className="h-[45px]" />
+                  <td key={`${column.key}-filler-${index}`} className="border-r border-[#edf1f2] px-3 py-2 last:border-r-0 dark:border-slate-800">
+                    <div className="h-[34px]" />
                   </td>
                 ))}
               </tr>

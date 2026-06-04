@@ -75,6 +75,7 @@ function DealerDashboardApp() {
             data.setSelectedDealerId(dealerId);
             setPage("details");
           }}
+          selectedDealerId={data.selectedDealerId}
         />
       )}
 

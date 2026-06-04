@@ -27,7 +27,7 @@ export function DashboardLayout({
   setDateTo: (value: string) => void;
   setPage: (page: PageKey) => void;
 }) {
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
@@ -56,9 +56,9 @@ export function DashboardLayout({
 
       <aside
         className={cn(
-          "brand-sider fixed bottom-0 left-0 top-0 z-30 w-[228px] transition-transform duration-200 md:z-20 md:transition-all",
+          "brand-sider fixed bottom-0 left-0 top-0 z-30 w-[260px] transition-transform duration-200 md:z-20 md:transition-all",
           mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-          collapsed ? "md:w-[64px]" : "md:w-[228px]"
+          collapsed ? "md:w-[76px]" : "md:w-[260px]"
         )}
       >
         <Sidebar
@@ -69,7 +69,7 @@ export function DashboardLayout({
         />
       </aside>
 
-      <div className={cn("min-h-screen transition-all", collapsed ? "md:pl-[64px]" : "md:pl-[228px]")}>
+      <div className={cn("min-h-screen transition-all", collapsed ? "md:pl-[76px]" : "md:pl-[260px]")}>
         <Header
           collapsed={collapsed}
           dateFrom={dateFrom}
@@ -83,7 +83,7 @@ export function DashboardLayout({
           setDateTo={setDateTo}
         />
 
-        <main className="space-y-3 p-3 lg:p-4">{children}</main>
+        <main className="space-y-2.5 px-3 py-3 lg:px-4 lg:py-3">{children}</main>
       </div>
     </div>
   );

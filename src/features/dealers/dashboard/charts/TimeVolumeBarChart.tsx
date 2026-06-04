@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { TrendingUp } from "lucide-react";
 
 import { cn } from "@/lib/cn";
@@ -264,10 +264,6 @@ export function RegionFilterPanel({
 }) {
   const effective = selectedRegions ?? allRegions;
   const selectedSet = new Set(effective);
-  const selectedVolume = allRegions
-    .filter((r) => selectedSet.has(r))
-    .reduce((s, r) => s + (regionTotalVolumes.get(r) ?? 0), 0);
-  const selectedPercent = totalAllVolume > 0 ? (selectedVolume / totalAllVolume) * 100 : 0;
 
   const toggle = (region: string) => {
     const current = selectedRegions ?? allRegions;
@@ -277,10 +273,7 @@ export function RegionFilterPanel({
 
   return (
     <div className="rounded-xl bg-slate-50/70 px-3 py-2.5 dark:bg-slate-900/40">
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold text-slate-500">
-          เลือกภูมิภาค · {selectedSet.size}/{allRegions.length} · {compactNumber(selectedVolume)} {unit} ({Math.round(selectedPercent)}%)
-        </span>
+      <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
         <div className="flex gap-1.5">
           <button type="button" onClick={() => onChange(null)} className="rounded-md px-2 py-0.5 text-[11px] font-semibold text-slate-500 hover:bg-white dark:hover:bg-slate-800">
             ทั้งหมด
@@ -325,7 +318,8 @@ export function TimeVolumeBarChart({
   selectedRegions = null,
   unit = "m3",
   headerControls,
-  regionFilterPanel
+  regionFilterPanel,
+  regionSummary
 }: {
   dealers: Dealer[];
   focusRange?: ChartFocusRange;
@@ -334,11 +328,12 @@ export function TimeVolumeBarChart({
   unit?: string;
   headerControls?: React.ReactNode;
   regionFilterPanel?: React.ReactNode;
+  regionSummary?: React.ReactNode;
 }) {
   const [activeKey, setActiveKey] = useState("");
   const [dealerRegionFilter, setDealerRegionFilter] = useState<string>("");
   const [hoveredDonutIdx, setHoveredDonutIdx] = useState<number | null>(null);
-  const [showAllDealers, setShowAllDealers] = useState(false);
+  const [dealerPage, setDealerPage] = useState(0);
 
   const allRegions = useMemo(
     () => [...new Set(dealers.map((d) => d.region).filter(Boolean))].sort((a, b) => a.localeCompare(b, "th")),
@@ -412,6 +407,15 @@ export function TimeVolumeBarChart({
     ? (activeBucket?.dealerList.filter((d) => d.region === dealerRegionFilter) ?? [])
     : (activeBucket?.dealerList ?? []);
   const dealerLeaderboardMax = filteredDealers[0]?.volume ?? 1;
+  const dealerPageSize = 5;
+  const dealerPageCount = Math.max(1, Math.ceil(filteredDealers.length / dealerPageSize));
+  const currentDealerPage = Math.min(dealerPage, dealerPageCount - 1);
+  const dealerPageStart = currentDealerPage * dealerPageSize;
+  const pagedDealers = filteredDealers.slice(dealerPageStart, dealerPageStart + dealerPageSize);
+  const dealerPageItems = Array.from({ length: dealerPageCount }, (_, index) => index).filter((page) => {
+    if (dealerPageCount <= 5) return true;
+    return page === 0 || page === dealerPageCount - 1 || Math.abs(page - currentDealerPage) <= 1;
+  });
 
   return (
     <div className="space-y-3">
@@ -499,24 +503,33 @@ export function TimeVolumeBarChart({
         </div>
       )}
 
-      {/* Bento Grid Layout */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
-        {/* Card 1 — Ranked regions */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between min-h-[260px]">
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#eef0f4] pb-3 mb-3 dark:border-slate-800">
-              <div className="flex items-start gap-2">
-                <div>
-                  <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">ปริมาณการขายแยกตามพื้นที่ของ Dealer</h3>
-                  <p className="mt-0.5 text-[11px] font-medium text-slate-400">
-                    ยอดขายสะสมแยกตามพื้นที่การจัดส่งคอนกรีตของแต่ละภูมิภาค
-                  </p>
-                </div>
-              </div>
+      {/* Toolbar — range + region controls (kept above the cards, like the mockup keeps cards clean) */}
+      {(headerControls || regionFilterPanel) && (
+        <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{regionSummary}</span>
+            <div className="flex flex-wrap items-center justify-end gap-2">
               {headerControls}
             </div>
+          </div>
+          {regionFilterPanel && <div className="mt-2">{regionFilterPanel}</div>}
+        </div>
+      )}
 
-            {regionFilterPanel}
+      {/* Bento Grid Layout — 3 equal columns */}
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+        {/* Card 1 — Ranked regions */}
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between min-h-[300px]">
+          <div>
+            <div className="flex items-start justify-between gap-3 border-b border-[#eef0f4] pb-3 mb-3 dark:border-slate-800">
+              <div>
+                <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">ปริมาณการขายแยกตามพื้นที่ของ Dealer</h3>
+                <p className="mt-0.5 text-[11px] font-medium text-slate-400">
+                  ยอดขายสะสมแยกตามพื้นที่การจัดส่งคอนกรีต
+                </p>
+              </div>
+              <span className="shrink-0 whitespace-nowrap pt-0.5 text-[11px] font-medium text-slate-400">หน่วย : {unit}</span>
+            </div>
 
             <div className="space-y-3 mt-4">
               {rankedRegions.length > 0 ? (
@@ -552,7 +565,7 @@ export function TimeVolumeBarChart({
         </div>
 
         {/* Card 2 — Donut */}
-        <div className="lg:col-span-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col">
 	          <div className="border-b border-[#eef0f4] pb-2.5 mb-2 dark:border-slate-800">
             <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">สัดส่วนพื้นที่ขาย</h3>
             <p className="mt-0.5 text-[11px] font-medium text-slate-400">สัดส่วนร้อยละจำแนกตามภูมิภาค</p>
@@ -598,7 +611,7 @@ export function TimeVolumeBarChart({
         </div>
 
         {/* Card 3 — Leaderboard */}
-        <div className="lg:col-span-1 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-[#eef0f4] pb-3 mb-3 dark:border-slate-800">
               <div>
@@ -617,7 +630,7 @@ export function TimeVolumeBarChart({
                   value={dealerRegionFilter}
                   onChange={(value) => {
                     setDealerRegionFilter(value);
-                    setShowAllDealers(false);
+                    setDealerPage(0);
                   }}
                 />
               )}
@@ -625,21 +638,22 @@ export function TimeVolumeBarChart({
             
             <div className="space-y-2">
               {filteredDealers.length > 0 ? (
-                <div className={cn("space-y-2", showAllDealers && filteredDealers.length > 5 && "max-h-[220px] overflow-y-auto pr-1")}>
-                  {(showAllDealers ? filteredDealers : filteredDealers.slice(0, 5)).map((dealer, i) => {
+                <div className="space-y-2">
+                  {pagedDealers.map((dealer, i) => {
                     const color = getRegionColor(dealer.region, regions);
                     const share = (activeBucket?.value ?? 0) > 0 ? (dealer.volume / (activeBucket?.value ?? 1)) * 100 : 0;
                     const barShare = dealerLeaderboardMax > 0 ? (dealer.volume / dealerLeaderboardMax) * 100 : 0;
+                    const rank = dealerPageStart + i + 1;
                     return (
                       <div key={dealer.dealerId} className="flex items-center gap-3 border-b border-[#f8fafc] pb-2 last:border-0 last:pb-0 dark:border-slate-900">
                         <span className={cn(
 	                          "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold",
-                          i === 0 ? "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
-                            : i === 1 ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                            : i === 2 ? "bg-orange-50 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400"
+                          rank === 1 ? "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
+                            : rank === 2 ? "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                            : rank === 3 ? "bg-orange-50 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400"
                             : "bg-slate-50 text-slate-400 dark:bg-slate-900"
                         )}>
-                          {i + 1}
+                          {rank}
                         </span>
                         <div className="min-w-0 flex-1">
 	                          <span className="block truncate text-[13px] font-bold text-slate-800 dark:text-slate-200" title={dealer.name}>{dealer.name}</span>
@@ -663,15 +677,49 @@ export function TimeVolumeBarChart({
               )}
             </div>
           </div>
-          
-          {filteredDealers.length > 5 && (
-            <button
-              type="button"
-              onClick={() => setShowAllDealers((v) => !v)}
-	              className="mt-3 w-full rounded-xl border border-slate-100 dark:border-slate-800 py-2 text-xs font-bold text-slate-500 transition-colors hover:bg-slate-50 dark:hover:bg-slate-900"
-            >
-              {showAllDealers ? "ย่อกลับ" : `ดูทั้งหมด · +${filteredDealers.length - 5} ราย`}
-            </button>
+          {filteredDealers.length > dealerPageSize && (
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#eef0f4] pt-3 dark:border-slate-800">
+              <p className="text-[11px] font-medium text-slate-400">
+                แสดง {dealerPageStart + 1}-{Math.min(dealerPageStart + dealerPageSize, filteredDealers.length)} จาก {filteredDealers.length} ราย
+              </p>
+              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                <button
+                  type="button"
+                  disabled={currentDealerPage === 0}
+                  onClick={() => setDealerPage((page) => Math.max(0, page - 1))}
+                  className="rounded-lg border border-[#d9e3e6] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+                >
+                  Previous
+                </button>
+                {dealerPageItems.map((page, index) => (
+                  <Fragment key={page}>
+                    {index > 0 && page - dealerPageItems[index - 1] > 1 && (
+                      <span className="px-1 text-[11px] font-bold text-slate-400">...</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setDealerPage(page)}
+                      className={cn(
+                        "min-w-7 rounded-lg px-2 py-1.5 text-center text-[11px] font-bold transition-colors",
+                        page === currentDealerPage
+                          ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-950"
+                          : "border border-[#d9e3e6] bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+                      )}
+                    >
+                      {page + 1}
+                    </button>
+                  </Fragment>
+                ))}
+                <button
+                  type="button"
+                  disabled={currentDealerPage >= dealerPageCount - 1}
+                  onClick={() => setDealerPage((page) => Math.min(dealerPageCount - 1, page + 1))}
+                  className="rounded-lg border border-[#d9e3e6] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
           )}
         </div>
       </div>

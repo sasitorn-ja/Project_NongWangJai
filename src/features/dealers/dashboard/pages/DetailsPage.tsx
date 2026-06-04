@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Activity, BarChart3, Boxes, Building2, ChevronDown, Clock3, ListChecks, MapPin, ShoppingCart, Trophy, Truck, Users } from "lucide-react";
+import { Activity, BarChart3, Boxes, CalendarCheck, ChevronDown, Clock3, ListChecks, MapPin, ShoppingCart, Store, Trophy, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { compactNumber, formatNumber } from "@/lib/number";
@@ -15,6 +15,7 @@ import { DataTable } from "../table/DataTable";
 import { DualBarChart } from "../charts/DualBarChart";
 import { ProgressList } from "../charts/ProgressList";
 import { statusColumn } from "../table/columns";
+import { WangjaiAdvisor } from "../ui/WangjaiAdvisor";
 
 type AreaRow = {
   count: number;
@@ -59,14 +60,6 @@ const STATUS_META: Record<"active" | "idle" | "new", { label: string; dot: strin
   new: { label: "ใหม่", dot: "#3b82f6", pill: "bg-sky-50 text-sky-700 ring-sky-100 dark:bg-sky-900/30 dark:text-sky-300 dark:ring-sky-900/40" }
 };
 
-function initialsOf(name: string) {
-  const cleaned = name.trim();
-  if (!cleaned) return "?";
-  const parts = cleaned.split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[1][0]).toUpperCase();
-}
-
 /** All-dealers overview: simple stat strip kept above the charts. */
 function AllDealersStatStrip({
   customerCount,
@@ -108,108 +101,104 @@ function AllDealersStatStrip({
 function DealerProfileHero({
   dealer,
   fulfillmentRate,
+  orderCount,
   delivered,
   ordered,
   unit
 }: {
   dealer: Dealer;
   fulfillmentRate: number;
+  orderCount: number;
   delivered: number;
   ordered: number;
   unit: string;
 }) {
   const statusKey = getDealerStatusKey(dealer.status);
   const status = STATUS_META[statusKey];
-  const regionColor = getRegionColor(dealer.region || "");
   const pct = Math.max(0, Math.min(100, Math.round(fulfillmentRate)));
-  // Donut ring geometry
-  const size = 104;
-  const stroke = 11;
+  const size = 78;
+  const stroke = 8;
   const radius = (size - stroke) / 2;
   const circ = 2 * Math.PI * radius;
   const dash = (pct / 100) * circ;
 
   return (
-    <section className="overflow-hidden rounded-[22px] border border-[#e5e7eb] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
-      <div className="h-1.5 w-full" style={{ background: `linear-gradient(90deg, ${regionColor}, ${regionColor}22)` }} />
-      <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-        <div className="flex items-start gap-4">
-          <div
-            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-xl font-extrabold text-white shadow-sm"
-            style={{ backgroundColor: regionColor }}
-          >
-            {initialsOf(dealer.dealer_name)}
+    <section className="overflow-hidden rounded-lg border border-sky-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+      <div className="grid gap-3 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_132px_1px_160px_160px] xl:items-center">
+        <div className="flex items-start gap-3">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-300">
+            <Store size={28} strokeWidth={2.2} />
           </div>
           <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-bold text-sky-700 ring-1 ring-sky-100 dark:bg-sky-900/30 dark:text-sky-300 dark:ring-sky-900/40">
-                ID {dealer.dealer_id}
-              </span>
-              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 dark:ring-emerald-900/40">
-                {dealer.dealer_code}
-              </span>
-              <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-bold ring-1", status.pill)}>
-                <i className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: status.dot }} />
-                {status.label}
-              </span>
-            </div>
-            <h2 className="mt-2 truncate text-2xl font-extrabold leading-tight text-slate-950 dark:text-slate-50" title={dealer.dealer_name}>
+            <h2 className="truncate text-[18px] font-bold leading-tight text-slate-950 dark:text-slate-50" title={dealer.dealer_name}>
               {dealer.dealer_name}
             </h2>
-            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] font-medium text-slate-500 dark:text-slate-400">
-              <span className="inline-flex items-center gap-1.5">
-                <Building2 size={15} style={{ color: regionColor }} />
-                {dealer.region || "ไม่ระบุภูมิภาค"}
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] font-medium text-slate-600 dark:text-slate-400">
+              <span>
+                รหัส Dealer <strong className="ml-2 font-semibold text-sky-600">{dealer.dealer_code || dealer.dealer_id}</strong>
               </span>
-              <span className="inline-flex items-center gap-1.5">
-                <MapPin size={15} className="text-slate-400" />
-                {dealer.province || "ไม่ระบุจังหวัด"}
+              <span>
+                ภูมิภาค <strong className="ml-2 font-semibold text-sky-600">{dealer.region || "-"}</strong>
               </span>
-              {dealer.last_active_at ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock3 size={15} className="text-slate-400" />
-                  ใช้งานล่าสุด {dateText(dealer.last_active_at)}
+              <span>
+                จังหวัด <strong className="ml-2 font-semibold text-slate-800 dark:text-slate-200">{dealer.province || "-"}</strong>
+              </span>
+            </div>
+            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] font-medium text-slate-600 dark:text-slate-400">
+              <span>
+                สถานะ
+                <span className={cn("ml-2 inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[12px] font-semibold ring-1", status.pill)}>
+                  <i className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: status.dot }} />
+                  {status.label}
                 </span>
-              ) : null}
+              </span>
+              <span>ใช้งานล่าสุด <strong className="ml-2 font-semibold text-slate-800 dark:text-slate-200">{dateText(dealer.last_active_at ?? dealer.updated_at)}</strong></span>
             </div>
           </div>
         </div>
 
-        {/* Fulfillment ring */}
-        <div className="flex items-center gap-4 rounded-2xl border border-[#eef0f4] bg-[#fbfcfd] px-5 py-3 dark:border-slate-800 dark:bg-slate-900/50 lg:justify-self-end">
-          <div className="relative" style={{ width: size, height: size }}>
-            <svg width={size} height={size} className="-rotate-90">
-              <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
-              <circle
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                fill="none"
-                stroke="#10b981"
-                strokeWidth={stroke}
-                strokeLinecap="round"
-                strokeDasharray={`${dash} ${circ}`}
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl font-extrabold leading-none text-slate-950 dark:text-slate-50">{pct}%</span>
-              <span className="mt-0.5 text-[10px] font-semibold text-slate-400">ส่งสำเร็จ</span>
-            </div>
+        <div className="justify-self-start xl:justify-self-center">
+          <div className="mb-1 text-center text-[11px] font-semibold text-slate-600">อัตราส่งสำเร็จ</div>
+          <div className="relative mx-auto" style={{ width: size, height: size }}>
+            <svg width={size} height={size} className="-rotate-90 drop-shadow-sm">
+            <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
+            <circle
+              cx={size / 2}
+              cy={size / 2}
+              r={radius}
+              fill="none"
+              stroke="#10b981"
+              strokeWidth={stroke}
+              strokeLinecap="round"
+              strokeDasharray={`${dash} ${circ}`}
+            />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-[18px] font-bold leading-none text-slate-950 dark:text-slate-50">{pct}%</span>
           </div>
-          <div className="text-sm">
-            <div className="flex items-center gap-2 text-slate-500">
-              <Truck size={14} className="text-emerald-600" /> ส่งจริง
-            </div>
-            <div className="mt-0.5 text-lg font-bold text-slate-950 dark:text-slate-100">
-              {compactNumber(delivered)} <span className="text-xs font-semibold text-slate-400">{unit}</span>
-            </div>
-            <div className="mt-2 flex items-center gap-2 text-slate-500">
-              <ShoppingCart size={14} className="text-slate-400" /> ยอดสั่ง
-            </div>
-            <div className="mt-0.5 text-lg font-bold text-slate-950 dark:text-slate-100">
-              {compactNumber(ordered)} <span className="text-xs font-semibold text-slate-400">{unit}</span>
-            </div>
           </div>
+          <div className="mt-1 flex items-center justify-center gap-1 text-[10px] font-semibold text-emerald-600">
+            <CalendarCheck size={12} />
+            ส่งสำเร็จ
+          </div>
+        </div>
+
+        <div className="hidden h-16 w-px bg-slate-200 xl:block" />
+
+        <div>
+          <div className="text-[12px] font-medium text-slate-500">Ordered Volume</div>
+          <div className="mt-1.5 text-[24px] font-bold leading-none text-slate-950">
+            {compactNumber(ordered)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
+          </div>
+          <div className="mt-1.5 text-[11px] font-medium text-slate-500">จำนวน {formatNumber(orderCount)} orders</div>
+        </div>
+
+        <div>
+          <div className="text-[12px] font-medium text-slate-500">Delivered Volume</div>
+          <div className="mt-1.5 text-[24px] font-bold leading-none text-slate-950">
+            {compactNumber(delivered)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
+          </div>
+          <div className="mt-1.5 text-[11px] font-medium text-slate-500">จาก {formatNumber(orderCount)} orders</div>
         </div>
       </div>
     </section>
@@ -1033,6 +1022,18 @@ export function DetailsPage(props: DetailsPageProps) {
 
       {isAllDealers ? (
         <>
+          <WangjaiAdvisor
+            accent="sky"
+            compact
+            message="เริ่มจากภาพรวมทุก Dealer ก่อน แล้วเลือก Dealer เพื่อเจาะลึกพื้นที่ขาย กลุ่ม ลูกค้า และไซต์ที่มีผลต่อยอดส่งจริง"
+            stats={[
+              { label: "Scope", value: "ทุก Dealer" },
+              { label: "Delivered", value: `${compactNumber(totalAreaDelivered)} ${areaUnit}` },
+              { label: "Groups", value: formatNumber(totalGroups) }
+            ]}
+            title="เลือกมุมวิเคราะห์จากภาพรวม"
+          />
+
           <AllDealersStatStrip
             customerCount={orderCustomerRows.length || usageSummary.customerCreateCount}
             delivered={totalAreaDelivered}
@@ -1129,6 +1130,7 @@ export function DetailsPage(props: DetailsPageProps) {
             <DealerProfileHero
               dealer={props.selectedDealer}
               delivered={dealerDeliveredTotal}
+              orderCount={dealerOrders.length}
               ordered={dealerOrderedTotal}
               fulfillmentRate={dealerFulfillmentRate}
               unit={areaUnit}
@@ -1146,8 +1148,7 @@ export function DetailsPage(props: DetailsPageProps) {
             ]}
           />
 
-          {/* Operational row: order status + recent activity */}
-          <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(320px,1fr)_minmax(0,1.4fr)]">
+          <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             <Card className="dashboard-card">
               <CardHeader className="border-b border-[#d9e3e6]">
                 <CardTitle className="flex items-center gap-2 text-base">
@@ -1173,10 +1174,7 @@ export function DetailsPage(props: DetailsPageProps) {
                 <RecentActivityCard orders={dealerOrders} unit={areaUnit} />
               </CardContent>
             </Card>
-          </section>
 
-          {/* 2-column: Sites donut + Top 5 customers */}
-          <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(320px,1fr)_minmax(0,1.6fr)]">
             <Card className="dashboard-card">
               <CardHeader className="border-b border-[#d9e3e6]">
                 <CardTitle className="flex items-center gap-2 text-base">

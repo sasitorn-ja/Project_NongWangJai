@@ -3,7 +3,7 @@ import { Menu } from "lucide-react";
 import { DateRangeToolbar } from "../filters/DateRangeToolbar";
 import { DropdownSelect } from "../filters/DropdownSelect";
 import type { DatePreset } from "../lib/dates";
-import { type PageKey, getPageSubtitle, getPageTitle } from "../config/pageMeta";
+import { type PageKey, getPageTitle } from "../config/pageMeta";
 
 const DATE_PRESET_OPTIONS: Array<{ label: string; value: DatePreset }> = [
   { label: "ทุกช่วงเวลา", value: "all" },
@@ -37,7 +37,7 @@ export function Header({
   setDateTo: (value: string) => void;
 }) {
   return (
-    <header className="app-header sticky top-0 z-10 border-b border-[#d7e0e3] bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+    <header className="app-header sticky top-0 z-40 border-b border-[#edf1f5] bg-white dark:border-slate-800 dark:bg-slate-950">
 
       {/* ── Mobile layout (hidden on xl+) ── */}
       <div className="xl:hidden">
@@ -59,9 +59,6 @@ export function Header({
             <h1 className="truncate text-sm font-semibold text-slate-950 dark:text-slate-100 sm:text-base">
               {getPageTitle(page)}
             </h1>
-            <p className="truncate text-[10px] font-medium text-slate-500 dark:text-slate-400">
-              {getPageSubtitle(page)}
-            </p>
           </div>
 
 	          <DropdownSelect
@@ -96,7 +93,7 @@ export function Header({
       </div>
 
       {/* ── Desktop layout (hidden below xl) ── */}
-      <div className="hidden xl:flex xl:items-center xl:justify-between xl:gap-4 xl:px-5 xl:py-3">
+      <div className="hidden xl:flex xl:h-[78px] xl:items-center xl:justify-between xl:gap-4 xl:px-5">
         <div className="flex min-w-0 items-center gap-3">
           <button
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-transparent text-slate-700 outline-none hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-slate-300 dark:text-slate-300 dark:hover:bg-slate-800"
@@ -107,17 +104,15 @@ export function Header({
             <Menu size={17} />
           </button>
           <div className="min-w-0">
-            <h1 className="truncate text-xl font-semibold text-slate-950 dark:text-slate-100">
+            <h1 className="truncate text-[24px] font-bold leading-tight text-slate-950 dark:text-slate-100">
               {getPageTitle(page)}
             </h1>
-            <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">
-              {getPageSubtitle(page)}
-            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-	          <DateRangeToolbar
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <DateRangeToolbar
             dateFrom={dateFrom}
             datePreset={datePreset}
             dateTo={dateTo}
@@ -125,6 +120,7 @@ export function Header({
             setDatePreset={setDatePreset}
             setDateTo={setDateTo}
           />
+          </div>
         </div>
       </div>
 

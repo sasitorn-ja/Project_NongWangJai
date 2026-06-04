@@ -12,6 +12,7 @@ import { DataTable } from "../table/DataTable";
 import { GroupVolumeInsights } from "../charts/GroupVolumeInsights";
 import { CompactFunnelSummary } from "../charts/CompactFunnelSummary";
 import { statusColumn } from "../table/columns";
+import { WangjaiAdvisor } from "../ui/WangjaiAdvisor";
 
 type GroupsPageProps = {
   dealers: Dealer[];
@@ -65,6 +66,17 @@ export function GroupsPage({ dealers, groups, groupsState, selectedDealer, selec
   return (
     <>
       <DealerPicker dealers={dealers} selectedDealerId={selectedDealerId} setSelectedDealerId={setSelectedDealerId} title="เลือก Dealer เพื่อดูรายการกลุ่ม" />
+      <WangjaiAdvisor
+        accent="violet"
+        compact
+        message="เลือก Dealer แล้วผมจะช่วยเทียบกลุ่มที่มี Booked Volume กับ Delivered Volume สูง เพื่อดูว่ากลุ่มไหนควรตามต่อ"
+        stats={[
+          { label: "Dealer", value: selectedDealer?.dealer_name ?? "ยังไม่ได้เลือก" },
+          { label: "Groups", value: formatNumber(groups.length) },
+          { label: "Delivered", value: `${compactNumber(totalDelivered)} ${volumeUnit}` }
+        ]}
+        title="เจาะกลุ่มของ Dealer"
+      />
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={<Layers3 size={18} />} label="Groups" value={formatNumber(groups.length)} detail={selectedDealer?.dealer_name ?? "Select dealer"} />
         <MetricCard icon={<PackageCheck size={18} />} label="Delivered Volume" value={`${compactNumber(totalDelivered)} ${volumeUnit}`} detail="ปริมาณคอนกรีตส่งจริงของกลุ่ม" tone="green" />

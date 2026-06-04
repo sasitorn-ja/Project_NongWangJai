@@ -11,6 +11,7 @@ import type { DataColumn } from "../table/types";
 import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
 import { DataTable } from "../table/DataTable";
 import { TopCustomersFilter } from "../filters/TopCustomersFilter";
+import { WangjaiAdvisor } from "../ui/WangjaiAdvisor";
 
 export function TopCustomersPage({
   dealers,
@@ -239,7 +240,7 @@ export function TopCustomersPage({
     <>
       <Card className="dashboard-card">
         <CardContent className="space-y-4 p-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(260px,1.35fr)_auto]">
             <TopCustomersFilter
               label="Division"
               value={division}
@@ -273,32 +274,42 @@ export function TopCustomersPage({
               options={[{ label: "ทั้งหมด", value: "all" }, ...customerOptions.map((item) => ({ label: item, value: item }))]}
               searchable
               searchPlaceholder="ค้นหาชื่อ dealer"
-              className="xl:col-span-2"
             />
-          </div>
-
-          <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">TopN</div>
-            <div className="inline-flex w-fit flex-wrap items-center gap-1 rounded-2xl border border-[#d9e3e6] bg-[#f8fafb] p-1.5 shadow-inner shadow-slate-100/70">
-              {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-semibold shadow-sm transition-all duration-150",
-                    topN === value
-                      ? "border-slate-950 bg-slate-950 text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)]"
-                      : "border-transparent bg-white text-slate-700 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
-                  )}
-                  onClick={() => setTopN(value)}
-                >
-                  {value}
-                </button>
-              ))}
+            <div className="block space-y-1.5">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">TopN</div>
+              <div className="inline-flex w-fit flex-nowrap items-center gap-1 rounded-lg border border-[#d9e3e6] bg-[#f8fafb] p-1 shadow-inner shadow-slate-100/70">
+                {[1, 2, 3, 5, 10].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-md border text-[13px] font-semibold shadow-sm transition-all duration-150",
+                      topN === value
+                        ? "border-blue-600 bg-blue-600 text-white shadow-[0_10px_24px_rgba(37,99,235,0.25)]"
+                        : "border-transparent bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                    )}
+                    onClick={() => setTopN(value)}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      <WangjaiAdvisor
+        accent="amber"
+        compact
+        message="ผมจัดอันดับ Dealer จาก Delivered Volume ตามตัวกรองที่เลือก ใช้ TopN เพื่อดูผู้เล่นหลักของแต่ละเดือน"
+        stats={[
+          { label: "Top Dealer", value: topDealer?.customerName ?? "-" },
+          { label: "Delivered", value: `${compactNumber(totalVolume)} m3` },
+          { label: "TopN", value: formatNumber(topN) }
+        ]}
+        title="อันดับ Dealer ที่ควรโฟกัส"
+      />
 
       <section className="grid grid-cols-1">
         <SummaryKpiStrip

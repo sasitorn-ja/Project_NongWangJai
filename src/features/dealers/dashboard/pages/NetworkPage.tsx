@@ -5,22 +5,28 @@ import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
 import type { ApiState, Dealer } from "@/features/dealers/types";
 import { getRegionAccent, getRegionLabel } from "../lib/regions";
+import { WangjaiLogo } from "../ui/WangjaiLogo";
 
 function DealerNetworkCard({
   dealer,
   accent,
   dotClass,
-  onSelect
+  onSelect,
+  selected
 }: {
   dealer: Dealer;
     accent: "sky" | "emerald" | "amber" | "violet" | "cyan" | "teal" | "slate";
   dotClass: string;
   onSelect: (dealerId: number) => void;
+  selected: boolean;
 }) {
   return (
     <button
       type="button"
-      className="w-full rounded-2xl border border-[#d9e3e6] bg-white p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sky-200"
+      className={cn(
+        "w-full rounded-2xl border p-3 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-sky-200",
+        selected ? "border-sky-300 bg-sky-50/80 ring-2 ring-sky-100" : "border-[#d9e3e6] bg-white"
+      )}
       onClick={() => onSelect(dealer.dealer_id)}
     >
       <div className="flex items-start justify-between gap-3">
@@ -56,15 +62,21 @@ function DealerNetworkCard({
           <div className="mt-0.5 font-semibold text-slate-800">{dealer.unit || "m3"}</div>
         </div>
       </div>
+
+      <div className={cn("mt-3 rounded-xl px-3 py-2 text-center text-[11px] font-bold", selected ? "bg-sky-600 text-white" : "bg-slate-50 text-sky-700")}>
+        {selected ? "กำลังดูใน Dealer Analysis" : "ดู Dealer Analysis"}
+      </div>
     </button>
   );
 }
 
 function RegionNetworkColumn({
   onSelectDealer,
-  region
+  region,
+  selectedDealerId
 }: {
   onSelectDealer: (dealerId: number) => void;
+  selectedDealerId: number | null;
   region: {
     region: string;
     dealers: Dealer[];
@@ -118,6 +130,7 @@ function RegionNetworkColumn({
             dealer={dealer}
             dotClass={dotClasses[accent]}
             onSelect={onSelectDealer}
+            selected={selectedDealerId === dealer.dealer_id}
           />
         ))}
         {hiddenCount > 0 ? (
@@ -137,11 +150,13 @@ function RegionNetworkColumn({
 export function NetworkPage({
   apiState,
   dealers,
-  onSelectDealer
+  onSelectDealer,
+  selectedDealerId
 }: {
   apiState: ApiState;
   dealers: Dealer[];
   onSelectDealer: (dealerId: number) => void;
+  selectedDealerId: number | null;
 }) {
   const uniqueDealers = useMemo(() => {
     const byIdentity = new Map<string, Dealer>();
@@ -224,13 +239,25 @@ export function NetworkPage({
     <section className="space-y-4">
       <Card className="overflow-hidden border-0 bg-transparent shadow-none">
         <CardContent className="px-0 pt-0">
-          <div className="mx-auto max-w-[340px] rounded-[28px] bg-gradient-to-br from-sky-500 via-cyan-500 to-sky-600 px-7 py-8 text-center text-white shadow-[0_26px_60px_rgba(14,116,214,0.28)]">
-            <div className="text-xl font-semibold">CPAC - AI วางใจ</div>
-            <div className="mt-2 text-sm font-medium text-sky-50/95">Dealer Network ทั่วประเทศ</div>
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] font-semibold">
-              <span className="rounded-full bg-white/20 px-3 py-1.5">{formatNumber(totalDealers)} Dealers</span>
-              <span className="rounded-full bg-white/20 px-3 py-1.5">{formatNumber(totalGroups)} กลุ่ม</span>
-              <span className="rounded-full bg-white/20 px-3 py-1.5">{compactNumber(uniqueDealers.reduce((sum, dealer) => sum + dealer.volume, 0))} m3</span>
+          <div className="mx-auto grid max-w-[720px] grid-cols-[112px_minmax(0,1fr)] items-center gap-5 rounded-lg border border-sky-200 bg-gradient-to-br from-sky-600 via-blue-600 to-sky-500 px-5 py-4 text-white shadow-[0_16px_36px_rgba(14,116,214,0.22)]">
+            <WangjaiLogo variant="full" className="h-[120px] object-contain drop-shadow-[0_12px_18px_rgba(15,23,42,0.18)]" />
+            <div className="min-w-0 text-center">
+              <div className="text-[26px] font-bold leading-tight">CPAC - AI วางใจ</div>
+              <div className="mt-1 text-[16px] font-medium text-sky-50/95">Dealer Network ทั่วประเทศ</div>
+              <div className="mt-4 grid grid-cols-3 gap-3 text-sky-950">
+                <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
+                  <div className="text-[24px] font-bold leading-none text-sky-600">{formatNumber(totalDealers)}</div>
+                  <div className="mt-0.5 text-[12px] font-semibold text-slate-500">Dealers</div>
+                </div>
+                <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
+                  <div className="text-[24px] font-bold leading-none text-sky-600">{formatNumber(totalGroups)}</div>
+                  <div className="mt-0.5 text-[12px] font-semibold text-slate-500">กลุ่ม</div>
+                </div>
+                <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
+                  <div className="text-[24px] font-bold leading-none text-sky-600">{compactNumber(uniqueDealers.reduce((sum, dealer) => sum + dealer.volume, 0))}</div>
+                  <div className="mt-0.5 text-[12px] font-semibold text-slate-500">Delivered m3</div>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -242,7 +269,7 @@ export function NetworkPage({
           <div className="h-px w-full bg-[#b7d7f5]" />
           <div className="grid gap-4 pt-6" style={{ gridTemplateColumns: `repeat(${Math.max(regionColumns.length, 1)}, minmax(0, 1fr))` }}>
             {regionColumns.map((region) => (
-              <RegionNetworkColumn key={region.region} onSelectDealer={onSelectDealer} region={region} />
+              <RegionNetworkColumn key={region.region} onSelectDealer={onSelectDealer} region={region} selectedDealerId={selectedDealerId} />
             ))}
           </div>
         </div>

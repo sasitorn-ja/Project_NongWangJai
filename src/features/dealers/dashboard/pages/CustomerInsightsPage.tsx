@@ -12,6 +12,7 @@ import { DealerPicker } from "../filters/DealerPicker";
 import { ShadcnTabs } from "../ui/ShadcnTabs";
 import { DataTable } from "../table/DataTable";
 import { DualBarChart } from "../charts/DualBarChart";
+import { WangjaiAdvisor } from "../ui/WangjaiAdvisor";
 
 export function CustomerInsightsPage({
   dealers,
@@ -195,6 +196,19 @@ export function CustomerInsightsPage({
         selectedDealerId={selectedDealerId}
         setSelectedDealerId={setSelectedDealerId}
         title="เลือก Dealer เพื่อดูลูกค้าและไซต์ของ dealer นั้น"
+      />
+
+      <WangjaiAdvisor
+        accent="emerald"
+        compact
+        message="ผมช่วยแยกมุมลูกค้าและไซต์ให้เห็นเร็วขึ้น เลือก Dealer ด้านบนเพื่อดูว่าลูกค้าหรือไซต์ไหนสร้าง Delivered Volume หลัก"
+        stats={[
+          { label: "Scope", value: currentDealer?.dealer_name ?? "ทุก Dealer" },
+          { label: "Customers", value: formatNumber(totalCustomers) },
+          { label: "Sites", value: formatNumber(totalSites) },
+          { label: "Delivered", value: `${compactNumber(totalDelivered)} m3` }
+        ]}
+        title="มุมมองลูกค้าและไซต์สำคัญ"
       />
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

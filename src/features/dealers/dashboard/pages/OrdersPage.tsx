@@ -10,6 +10,7 @@ import { getOrderStatusKey, orderStatusText } from "../lib/status";
 import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
 import { DealerPicker } from "../filters/DealerPicker";
 import { ShadcnPagination } from "../table/DataTable";
+import { WangjaiAdvisor } from "../ui/WangjaiAdvisor";
 
 const MOBILE_PAGE_SIZE = 8;
 const DESKTOP_PAGE_SIZE = 15;
@@ -402,6 +403,18 @@ export function OrdersPage({
         selectedDealerId={selectedDealerId}
         setSelectedDealerId={setSelectedDealerId}
         title="เลือก Dealer หรือดูรายการ Order ทั้งหมด"
+      />
+
+      <WangjaiAdvisor
+        accent="slate"
+        compact
+        message="ผมอยู่เป็นตัวช่วยตรวจรายการ order: ค้นหาลูกค้า ไซต์ เลข order หรือสินค้า แล้วกางแถวเพื่อดูรายละเอียดงานเท"
+        stats={[
+          { label: "Scope", value: selectedDealer?.dealer_name ?? "ทุก Dealer" },
+          { label: "Orders", value: formatNumber(dealerOrders.length) },
+          { label: "Delivered", value: `${compactNumber(totalDelivered)} m³` }
+        ]}
+        title="เช็กรายการ Order แบบเร็ว"
       />
 
       <section className="grid grid-cols-1">

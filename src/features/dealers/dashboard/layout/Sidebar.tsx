@@ -1,8 +1,7 @@
-import cpacLogo from "@/assets/cpac-logo.png";
-
 import type { PageKey } from "../config/pageMeta";
 import { DASHBOARD_NAV_ITEMS } from "../config/navigation";
 import { SideNavItem } from "../ui/SideNavItem";
+import { WangjaiLogo } from "../ui/WangjaiLogo";
 
 export function Sidebar({
   collapsed,
@@ -17,19 +16,11 @@ export function Sidebar({
 }) {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-16 items-center gap-3 px-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#d9e3e6]/70 bg-transparent shadow-sm dark:border-slate-700">
-          <img src={cpacLogo} alt="CPAC" className="h-full w-full object-contain" />
-        </div>
-        {(!collapsed || mobileNavOpen) && (
-          <div className="min-w-0">
-            <div className="truncate text-base font-semibold text-slate-950 dark:text-slate-100">Nong WangJai</div>
-            <div className="truncate text-xs font-medium text-slate-500 dark:text-slate-400">Dealer Intelligence</div>
-          </div>
-        )}
+      <div className="flex h-[94px] items-center gap-3 px-4">
+        <WangjaiLogo showText={!collapsed || mobileNavOpen} />
       </div>
 
-      <nav className="space-y-1 px-2.5">
+      <nav className="space-y-2 px-2.5 py-3">
         {DASHBOARD_NAV_ITEMS.map((item) => {
           const Icon = item.icon;
 
@@ -45,6 +36,14 @@ export function Sidebar({
           );
         })}
       </nav>
+
+      <div className="mt-auto px-4 pb-6">
+        <div className="border-t border-slate-200 pt-6 dark:border-slate-800">
+          <div className={collapsed && !mobileNavOpen ? "mx-auto flex h-8 w-12 items-center justify-center bg-sky-500 text-[16px] font-black leading-none text-white" : "flex h-11 w-[76px] items-center justify-center bg-sky-500 text-[28px] font-black leading-none text-white"}>
+            CPAC
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

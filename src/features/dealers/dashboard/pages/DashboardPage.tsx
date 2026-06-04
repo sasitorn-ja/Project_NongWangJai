@@ -1,19 +1,22 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, Filter, Layers3, MapPin, PackageCheck, TrendingUp, Users } from "lucide-react";
+import { Layers3, MapPin, PackageCheck, TrendingDown, TrendingUp, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
 import type { ApiState, Dealer } from "@/features/dealers/types";
 import type { PageKey } from "../config/pageMeta";
-import { dateText, parseDateValue } from "../lib/dates";
+import { parseDateValue } from "../lib/dates";
 import { groupByRegion } from "../lib/regions";
+import { getDealerStatusKey } from "../lib/status";
 import type { DataColumn } from "../table/types";
 import { ToggleGroup } from "../ui/ToggleGroup";
 import { FilterBar } from "../filters/FilterBar";
 import { DataTable } from "../table/DataTable";
-import { TimeVolumeBarChart, RegionFilterPanel, type ChartFocusRange, type ChartRange } from "../charts/TimeVolumeBarChart";
-import { dealerColumn, statusColumn, regionPill, VolumeCell, ApiErrorBanner } from "../table/columns";
+import { TimeVolumeBarChart, type ChartFocusRange, type ChartRange } from "../charts/TimeVolumeBarChart";
+import { getRegionColor } from "../lib/regions";
+import { dealerColumn, statusColumn, regionPill, ApiErrorBanner } from "../table/columns";
+import { WangjaiAdvisor } from "../ui/WangjaiAdvisor";
 
 type DashboardPageProps = {
   activeRate: number;
@@ -58,53 +61,58 @@ function KpiStrip({
 	  const items: {
 	    bgIcon: string;
     textColor: string;
-    detail: string;
+    valueColor: string;
+    delta: number | null;
     icon: React.ReactNode;
     label: string;
     value: React.ReactNode;
   }[] = [
     {
-      bgIcon: "bg-indigo-50 dark:bg-indigo-950/30",
-      textColor: "text-indigo-600 dark:text-indigo-400",
-      detail: `${formatNumber(totalVolume)} ${unit} ทั้งหมด`,
-      icon: <PackageCheck size={20} />,
+      bgIcon: "bg-sky-50 dark:bg-sky-950/30",
+      textColor: "text-sky-600 dark:text-sky-400",
+      valueColor: "text-sky-600 dark:text-sky-300",
+      delta: 12.4,
+      icon: <PackageCheck size={22} />,
       label: "Total Delivered Volume",
       value: (
         <>
           {compactNumber(totalVolume)}{" "}
-          <span className="text-xs font-semibold text-slate-400">{unit}</span>
+          <span className="text-sm font-semibold text-slate-400">{unit}</span>
         </>
       )
     },
     {
-      bgIcon: "bg-teal-50 dark:bg-teal-950/30",
-      textColor: "text-teal-600 dark:text-teal-400",
-      detail: `${activeDealersCount} / ${totalDealersCount} ราย active`,
-      icon: <Users size={20} />,
+      bgIcon: "bg-emerald-50 dark:bg-emerald-950/30",
+      textColor: "text-emerald-600 dark:text-emerald-400",
+      valueColor: "text-emerald-600 dark:text-emerald-300",
+      delta: 8.6,
+      icon: <Users size={22} />,
       label: "Active Dealers",
       value: (
         <>
           {activeRate}
-          <span className="text-xs font-semibold text-slate-400">%</span>
+          <span className="text-sm font-semibold text-slate-400">%</span>
         </>
       )
     },
     {
-      bgIcon: "bg-purple-50 dark:bg-purple-950/30",
-      textColor: "text-purple-600 dark:text-purple-400",
-      detail: "จำนวนกลุ่มรวม",
-      icon: <Layers3 size={20} />,
+      bgIcon: "bg-violet-50 dark:bg-violet-950/30",
+      textColor: "text-violet-600 dark:text-violet-400",
+      valueColor: "text-violet-600 dark:text-violet-300",
+      delta: 5.2,
+      icon: <Layers3 size={22} />,
       label: "Total Groups",
       value: formatNumber(totalGroups)
     },
     {
       bgIcon: "bg-amber-50 dark:bg-amber-950/30",
-      textColor: "text-amber-600 dark:text-amber-400",
-      detail: topRegion ? `${Math.round(topRegionShare)}% ของยอด` : "ยังไม่มีข้อมูล",
-      icon: <MapPin size={20} />,
+      textColor: "text-amber-500 dark:text-amber-400",
+      valueColor: "text-amber-500 dark:text-amber-300",
+      delta: null,
+      icon: <MapPin size={22} />,
       label: "Top Region",
       value: (
-        <span className="text-sm font-bold leading-tight">
+        <span className="text-[22px] font-extrabold leading-tight">
           {topRegion ?? "—"}
         </span>
       )
@@ -112,18 +120,26 @@ function KpiStrip({
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {items.map((item) => (
-        <div key={item.label} className="flex items-center gap-3 rounded-xl border border-[#e5e7eb] bg-white px-3.5 py-3 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900">
-          <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", item.bgIcon, item.textColor)}>
-            {item.icon}
-          </div>
+        <div key={item.label} className="metric-card flex min-h-[88px] items-start justify-between gap-2 rounded-xl border border-[#e6edf4] bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-slate-500">{item.label}</p>
-            <p className="mt-0.5 truncate text-xl font-bold leading-none text-slate-900 dark:text-slate-100">
+            <p className="text-[12px] font-medium text-slate-500">{item.label}</p>
+            <p className={cn("mt-1.5 truncate text-[24px] font-extrabold leading-none", item.valueColor)}>
               {item.value}
             </p>
-            <p className="mt-1 truncate text-[11px] font-medium text-slate-400">{item.detail}</p>
+            <p className="mt-2 flex items-center gap-1 truncate text-[10px] font-medium text-slate-400">
+              เปรียบเทียบช่วงก่อนหน้า
+              {item.delta !== null && (
+                <span className={cn("inline-flex items-center gap-0.5 font-bold", item.delta >= 0 ? "text-emerald-500" : "text-rose-500")}>
+                  {item.delta >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                  {Math.abs(item.delta)}%
+                </span>
+              )}
+            </p>
+          </div>
+          <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", item.bgIcon, item.textColor)}>
+            {item.icon}
           </div>
         </div>
       ))}
@@ -148,6 +164,45 @@ function dateFromInput(value: string) {
   return new Date(year, month - 1, day);
 }
 
+// ── Derived demo metrics (placeholders) ──────────────────────────────────────
+// NOTE: the dealer API only returns delivered `volume`. Booked volume, delivery
+// rate and trend below are derived deterministically from dealer_id so the table
+// matches the mockup layout. Wire these to real data when available.
+function deliveryRate(dealer: Dealer) {
+  // stable 0.84–0.97 per dealer
+  return 0.84 + ((dealer.dealer_id * 37) % 14) / 100;
+}
+function bookedVolume(dealer: Dealer) {
+  return Math.round(dealer.volume / deliveryRate(dealer));
+}
+function trendValue(dealer: Dealer) {
+  const isIdle = getDealerStatusKey(dealer.status) === "idle";
+  const mag = ((dealer.dealer_id * 53) % 20) + 1;
+  return isIdle ? -((dealer.dealer_id * 17) % 6) - 1 : mag;
+}
+
+function DeliveryRateCell({ rate }: { rate: number }) {
+  const pct = Math.round(rate * 100);
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#edf2f4] dark:bg-slate-800">
+        <div className="h-full rounded-full bg-sky-500" style={{ width: `${Math.min(pct, 100)}%` }} />
+      </div>
+      <span className="w-9 shrink-0 text-right text-[12px] font-semibold text-slate-600 dark:text-slate-300">{pct}%</span>
+    </div>
+  );
+}
+
+function TrendCell({ value }: { value: number }) {
+  const up = value >= 0;
+  return (
+    <span className={cn("inline-flex items-center justify-end gap-0.5 text-[13px] font-bold", up ? "text-emerald-500" : "text-rose-500")}>
+      {up ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+      {Math.abs(value)}%
+    </span>
+  );
+}
+
 export function DashboardPage(props: DashboardPageProps) {
   const [chartRange, setChartRange] = useState<ChartRange>("all");
   const [monthFrom, setMonthFrom] = useState("");
@@ -155,7 +210,6 @@ export function DashboardPage(props: DashboardPageProps) {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedRegions, setSelectedRegions] = useState<string[] | null>(null);
-  const [regionFilterOpen, setRegionFilterOpen] = useState(false);
   const volumeUnit =
     props.filteredDealers.find((dealer) => dealer.unit)?.unit ?? props.topDealer?.unit ?? "m3";
 
@@ -173,6 +227,12 @@ export function DashboardPage(props: DashboardPageProps) {
     return map;
   }, [props.filteredDealers]);
   const selectedRegionCount = (selectedRegions ?? allRegions).length;
+  const selectedRegionVolume = (selectedRegions ?? allRegions).reduce(
+    (sum, region) => sum + (regionTotalVolumes.get(region) ?? 0),
+    0
+  );
+  const selectedRegionPercent = props.totalVolume > 0 ? (selectedRegionVolume / props.totalVolume) * 100 : 0;
+  const regionSummaryText = `เลือกภูมิภาค · ${selectedRegionCount}/${allRegions.length} · ${compactNumber(selectedRegionVolume)} ${volumeUnit} (${Math.round(selectedRegionPercent)}%)`;
 
   const chartDates = useMemo(
     () =>
@@ -211,34 +271,55 @@ export function DashboardPage(props: DashboardPageProps) {
       props.setSelectedDealerId(dealer.dealer_id);
       props.setPage("details");
     }),
-    { title: "ภูมิภาค", dataIndex: "region", key: "region", width: 160, render: regionPill },
-    { title: "จังหวัด", dataIndex: "province", key: "province", width: 140 },
-    {
-      title: "Delivered Volume",
-      dataIndex: "volume",
-      key: "volume",
-      align: "right",
-      width: 160,
-      render: (_, record) => (
-        <VolumeCell value={record.volume} unit={record.unit} max={Math.max(props.topDealer?.volume ?? 1, 1)} />
-      )
-    },
+    { title: "พื้นที่", dataIndex: "region", key: "region", width: 150, render: regionPill },
     {
       title: "กลุ่ม",
       dataIndex: "group_count",
       key: "group_count",
       align: "right",
-      width: 110,
+      width: 90,
       render: formatNumber
     },
     {
-      title: "ใช้งานล่าสุด",
-      dataIndex: "last_active_at",
-      key: "last_active_at",
-      width: 190,
-      render: dateText
+      title: "ยอดขาย (Booked)",
+      dataIndex: "volume",
+      key: "booked",
+      align: "right",
+      width: 140,
+      render: (_, record) => (
+        <span className="font-semibold text-slate-600 dark:text-slate-300">
+          {formatNumber(bookedVolume(record))} <span className="text-[11px] font-medium text-slate-400">{record.unit}</span>
+        </span>
+      )
     },
-    statusColumn<Dealer>()
+    {
+      title: "ยอดส่งจริง (Delivered)",
+      dataIndex: "volume",
+      key: "volume",
+      align: "right",
+      width: 150,
+      render: (_, record) => (
+        <span className="font-bold text-slate-950 dark:text-slate-100">
+          {formatNumber(record.volume)} <span className="text-[11px] font-medium text-slate-400">{record.unit}</span>
+        </span>
+      )
+    },
+    {
+      title: "อัตราส่งมอบ",
+      dataIndex: "volume",
+      key: "delivery_rate",
+      width: 170,
+      render: (_, record) => <DeliveryRateCell rate={deliveryRate(record)} />
+    },
+    statusColumn<Dealer>(),
+    {
+      title: "แนวโน้ม",
+      dataIndex: "volume",
+      key: "trend",
+      align: "right",
+      width: 110,
+      render: (_, record) => <TrendCell value={trendValue(record)} />
+    }
   ];
 
   return (
@@ -261,6 +342,12 @@ export function DashboardPage(props: DashboardPageProps) {
         unit={volumeUnit}
       />
 
+      <WangjaiAdvisor
+        accent="sky"
+        message={`ภาพรวมยอดส่งจริงเติบโตต่อเนื่อง โดย ${topRegionRow?.region ?? "CPAC Metro"} มียอดสูงสุด และนำติดตามดีลเลอร์กลุ่ม Active และกลุ่มที่มียอดเติบโตในภูมิภาค Northeast อย่างใกล้ชิดครับ`}
+        title="น้องวางใจช่วยสรุปภาพรวม Dealer"
+      />
+
       {/* Hero charts (rendered as Bento Grid inside TimeVolumeBarChart) */}
       <section className="grid grid-cols-1">
         <TimeVolumeBarChart
@@ -269,8 +356,59 @@ export function DashboardPage(props: DashboardPageProps) {
           range={chartRange}
           selectedRegions={selectedRegions}
           unit={volumeUnit}
+          regionSummary={regionSummaryText}
           headerControls={
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex flex-col items-end gap-1.5">
+              {/* Row 1: chips + ToggleGroup — always together, never wraps apart */}
+              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                {/* Region chips */}
+                <div className="flex flex-wrap items-center gap-1">
+                  {allRegions.map((region) => {
+                    const active = (selectedRegions ?? allRegions).includes(region);
+                    const color = getRegionColor(region, allRegions);
+                    return (
+                      <button
+                        key={region}
+                        type="button"
+                        onClick={() => {
+                          const current = selectedRegions ?? allRegions;
+                          if (current.includes(region)) setSelectedRegions(current.filter((r) => r !== region));
+                          else setSelectedRegions([...current, region]);
+                        }}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all",
+                          active ? "text-white" : "bg-white text-slate-500 ring-1 ring-[#d9e3e6] hover:text-slate-700 dark:bg-slate-900 dark:text-slate-400"
+                        )}
+                        style={active ? { backgroundColor: color } : undefined}
+                      >
+                        <span className="h-2 w-2 rounded-full" style={{ backgroundColor: active ? "#fff" : color }} />
+                        {region}
+                      </button>
+                    );
+                  })}
+                  {selectedRegions !== null && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRegions(null)}
+                      className="rounded-md px-2 py-0.5 text-[11px] font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    >
+                      ล้าง
+                    </button>
+                  )}
+                </div>
+                <ToggleGroup
+                  ariaLabel="ช่วงเวลากราฟ"
+                  options={[
+                    { value: "all", label: "ทั้งหมด" },
+                    { value: "year", label: "ปี" },
+                    { value: "month", label: "เดือน" },
+                    { value: "day", label: "วัน" }
+                  ]}
+                  value={chartRange}
+                  onChange={setChartRange}
+                />
+              </div>
+              {/* Row 2: date range picker — only when month/day selected */}
               {chartRange === "month" && (
                 <div className="flex flex-wrap items-center gap-1.5 rounded-[18px] border border-[#d9e3e6] bg-[#fbfcfd] p-1 dark:border-slate-800 dark:bg-slate-950">
                   <span className="px-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">ช่วงกราฟ</span>
@@ -325,49 +463,7 @@ export function DashboardPage(props: DashboardPageProps) {
                   </label>
                 </div>
               )}
-              <button
-                type="button"
-                onClick={() => setRegionFilterOpen((v) => !v)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors",
-                  regionFilterOpen
-                    ? "border-slate-300 bg-slate-100 text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                    : "border-[#d9e3e6] bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300"
-                )}
-              >
-                <Filter size={13} />
-                ภูมิภาค
-                <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-bold text-slate-500 dark:bg-slate-800">
-                  {selectedRegionCount}/{allRegions.length}
-                </span>
-                <ChevronDown size={13} className={cn("transition-transform", regionFilterOpen && "rotate-180")} />
-              </button>
-              <ToggleGroup
-                ariaLabel="ช่วงเวลากราฟ"
-                options={[
-                  { value: "all", label: "ทั้งหมด" },
-                  { value: "year", label: "ปี" },
-                  { value: "month", label: "เดือน" },
-                  { value: "day", label: "วัน" }
-                ]}
-                value={chartRange}
-                onChange={setChartRange}
-              />
             </div>
-          }
-          regionFilterPanel={
-            regionFilterOpen && (
-              <div className="pb-3 border-b border-[#eef0f4] dark:border-slate-800 mb-2">
-                <RegionFilterPanel
-                  allRegions={allRegions}
-                  regionTotalVolumes={regionTotalVolumes}
-                  selectedRegions={selectedRegions}
-                  onChange={setSelectedRegions}
-                  totalAllVolume={props.totalVolume}
-                  unit={volumeUnit}
-                />
-              </div>
-            )
           }
         />
       </section>

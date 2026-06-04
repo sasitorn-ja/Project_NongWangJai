@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { Database, PackageCheck, TrendingUp, Users } from "lucide-react";
+import { ClipboardList, Cuboid, Star, TrendingUp, Truck } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import productImage from "@/assets/top-products-cpac-truck-transparent.png";
 import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
 import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
@@ -11,6 +12,56 @@ import type { DataColumn } from "../table/types";
 import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
 import { DataTable } from "../table/DataTable";
 import { TopCustomersFilter } from "../filters/TopCustomersFilter";
+import { WangjaiLogo } from "../ui/WangjaiLogo";
+
+function ProductInsightBanner() {
+  return (
+    <section className="relative overflow-hidden rounded-lg border border-sky-100 bg-gradient-to-r from-white via-sky-50/90 to-sky-100 px-4 py-3 shadow-[0_10px_28px_-18px_rgba(14,116,214,0.45)]">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.88)_0%,rgba(255,255,255,0.24)_46%,rgba(186,230,253,0.52)_100%)]" />
+      <div className="pointer-events-none absolute -left-10 -top-14 h-36 w-36 rounded-full bg-white/80 blur-2xl" />
+      <div className="pointer-events-none absolute right-[7%] top-2 h-24 w-56 rounded-full bg-sky-300/20 blur-2xl" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[42%] bg-[radial-gradient(circle_at_72%_52%,rgba(14,165,233,0.2),transparent_56%)] md:block" />
+
+      <div className="relative z-10 grid grid-cols-[58px_minmax(0,1fr)] items-center gap-3 md:grid-cols-[72px_minmax(0,1fr)_minmax(260px,390px)] md:gap-4">
+        <div className="relative flex h-[74px] items-center justify-center">
+          <div className="absolute bottom-1 h-10 w-12 rounded-full bg-sky-300/20 blur-lg" />
+          <WangjaiLogo variant="full" className="relative h-[76px] object-contain drop-shadow-[0_12px_18px_rgba(14,116,214,0.22)]" />
+        </div>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-sky-600 px-3 py-1 text-[12px] font-bold text-white shadow-sm shadow-sky-300/40">
+              น้องวางใจ
+            </span>
+            <h2 className="min-w-0 text-[15px] font-extrabold leading-6 text-sky-700 md:text-[16px]">
+              ดูสินค้าขายดีจาก Delivered Volume และจำนวน order
+            </h2>
+          </div>
+          <p className="mt-1.5 max-w-[54rem] text-[13px] font-medium leading-5 text-slate-600">
+            คุณสามารถเลือกช่วงเวลา ประเภทสินค้า และจำนวน Top N เพื่อวิเคราะห์แนวโน้มการขาย
+          </p>
+          <div className="mt-2 hidden items-center gap-2 text-[11px] font-semibold text-slate-400 sm:flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
+            Delivered Volume
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Order Count
+            <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+            Top N Ranking
+          </div>
+        </div>
+
+        <div className="pointer-events-none relative hidden h-[96px] items-center justify-end md:flex">
+          <div className="absolute bottom-2 right-8 h-5 w-56 rounded-full bg-slate-900/10 blur-md" />
+          <div className="absolute right-1 top-3 h-16 w-52 rounded-full bg-white/55 blur-xl" />
+          <img
+            alt="CPAC concrete truck"
+            className="relative h-[96px] w-full max-w-[390px] object-contain object-right drop-shadow-[0_14px_20px_rgba(15,23,42,0.18)]"
+            src={productImage}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export function TopProductsPage({
   dealers,
@@ -26,7 +77,7 @@ export function TopProductsPage({
   const [month, setMonth] = useState("all");
   const [year, setYear] = useState("all");
   const [productFilter, setProductFilter] = useState("all");
-  const [topN, setTopN] = useState(5);
+  const [topN, setTopN] = useState(10);
 
   const dealerMap = useMemo(() => new Map(dealers.map((dealer) => [dealer.dealer_id, dealer])), [dealers]);
 
@@ -128,7 +179,9 @@ export function TopProductsPage({
       return acc;
     }, new Map());
 
-    return Array.from(rows.values()).sort((a, b) => b.delivered - a.delivered);
+    return Array.from(rows.values())
+      .sort((a, b) => b.delivered - a.delivered)
+      .map((row, index) => ({ ...row, rank: index + 1 }));
   }, [filteredOrders]);
 
   const monthlyRows = useMemo(() => {
@@ -175,7 +228,7 @@ export function TopProductsPage({
     }, new Map());
 
     return Array.from(grouped.values())
-      .sort((a, b) => a.monthKey.localeCompare(b.monthKey))
+      .sort((a, b) => b.monthKey.localeCompare(a.monthKey))
       .map((row) => ({
         delivered: row.delivered,
         monthKey: row.monthKey,
@@ -194,16 +247,25 @@ export function TopProductsPage({
 
   const productColumns: DataColumn<(typeof productRows)[number]>[] = [
     {
+      title: "#",
+      key: "rank",
+      dataIndex: "rank",
+      align: "center",
+      width: 32,
+      render: (value) => <span className="font-semibold text-slate-500">{formatNumber(Number(value))}</span>
+    },
+    {
       title: "รหัสสินค้า",
       key: "productCode",
       dataIndex: "productCode",
-      width: 180
+      width: 94,
+      render: (value) => <span className="font-semibold text-blue-600">{String(value)}</span>
     },
     {
       title: "ชื่อสินค้า",
       key: "productName",
       dataIndex: "productName",
-      width: 320,
+      width: 190,
       render: (_, record) => (
         <div className="min-w-0">
           <div className="truncate text-[13px] font-semibold leading-5 text-slate-900">{record.productName}</div>
@@ -216,7 +278,7 @@ export function TopProductsPage({
       key: "orderCount",
       dataIndex: "orderCount",
       align: "right",
-      width: 110,
+      width: 62,
       render: formatNumber
     },
     {
@@ -224,7 +286,7 @@ export function TopProductsPage({
       key: "ordered",
       dataIndex: "ordered",
       align: "right",
-      width: 130,
+      width: 74,
       render: formatNumber
     },
     {
@@ -232,14 +294,14 @@ export function TopProductsPage({
       key: "delivered",
       dataIndex: "delivered",
       align: "right",
-      width: 130,
+      width: 74,
       render: formatNumber
     },
     {
       title: "ขายล่าสุด",
       key: "latestPour",
       dataIndex: "latestPour",
-      width: 190,
+      width: 94,
       render: (value) => {
         if (!value) return "-";
         const date = new Date(String(value));
@@ -250,17 +312,17 @@ export function TopProductsPage({
   ];
 
   const monthlyColumns: DataColumn<(typeof monthlyRows)[number]>[] = [
-    { title: "Month", key: "month", dataIndex: "monthLabel", sortAccessor: (record) => record.monthKey, width: 120 },
-    { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
+    { title: "Month", key: "month", dataIndex: "monthLabel", sortAccessor: (record) => record.monthKey, width: 78 },
+    { title: "Delivered", key: "delivered", dataIndex: "delivered", align: "right", width: 78, render: formatNumber },
     {
       title: "TopN Product",
       key: "topProducts",
       sortable: false,
       render: (_, record) => (
-        <div className="space-y-1">
-          {record.topProducts.map((product, productIndex) => (
-            <div key={`${record.monthKey}-${product.productCode}-${productIndex}`} className="line-clamp-2 text-sm text-slate-800">
-              {product.productName} ({product.productCode}), {formatNumber(product.delivered)} m3
+        <div className="space-y-0.5">
+          {record.topProducts.slice(0, 2).map((product, productIndex) => (
+            <div key={`${record.monthKey}-${product.productCode}-${productIndex}`} className="truncate text-[12px] font-semibold text-slate-800">
+              {product.productCode}
             </div>
           ))}
         </div>
@@ -272,7 +334,7 @@ export function TopProductsPage({
     <>
       <Card className="dashboard-card">
         <CardContent className="space-y-4 p-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(260px,1.35fr)_auto]">
             <TopCustomersFilter
               label="Division"
               value={division}
@@ -306,51 +368,54 @@ export function TopProductsPage({
               options={[{ label: "ทั้งหมด", value: "all" }, ...productOptions]}
               searchable
               searchPlaceholder="ค้นหารหัสหรือชื่อสินค้า"
-              className="xl:col-span-2"
             />
-          </div>
-
-          <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">TopN</div>
-            <div className="inline-flex w-fit flex-wrap items-center gap-1 rounded-2xl border border-[#d9e3e6] bg-[#f8fafb] p-1.5 shadow-inner shadow-slate-100/70">
-              {Array.from({ length: 10 }, (_, index) => index + 1).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-semibold shadow-sm transition-all duration-150",
-                    topN === value
-                      ? "border-slate-950 bg-slate-950 text-white shadow-[0_10px_24px_rgba(15,23,42,0.18)]"
-                      : "border-transparent bg-white text-slate-700 hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50"
-                  )}
-                  onClick={() => setTopN(value)}
-                >
-                  {value}
-                </button>
-              ))}
+            <div className="block space-y-1.5">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">TopN</div>
+              <div className="inline-flex w-fit flex-nowrap items-center gap-1 rounded-lg border border-[#d9e3e6] bg-[#f8fafb] p-1 shadow-inner shadow-slate-100/70">
+                {[1, 3, 5, 10].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-md border text-[13px] font-semibold shadow-sm transition-all duration-150",
+                      topN === value
+                        ? "border-blue-600 bg-blue-600 text-white shadow-[0_10px_24px_rgba(37,99,235,0.25)]"
+                        : "border-transparent bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+                    )}
+                    onClick={() => setTopN(value)}
+                  >
+                    {value}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
+      <ProductInsightBanner />
+
       <section className="grid grid-cols-1">
         <SummaryKpiStrip
           items={[
             {
+              accent: "violet",
               detail: "จำนวนสินค้าที่อยู่ในผลลัพธ์ปัจจุบัน",
-              icon: <PackageCheck size={14} />,
+              icon: <Cuboid size={18} />,
               label: "Products",
               value: formatNumber(totalProducts)
             },
             {
+              accent: "emerald",
               detail: "จำนวนรายการ order ที่ใช้คำนวณสินค้าขายดี",
-              icon: <Database size={14} />,
+              icon: <ClipboardList size={18} />,
               label: "Order Count",
               value: formatNumber(totalOrders)
             },
             {
+              accent: "sky",
               detail: "ปริมาณส่งจริงรวมของสินค้าที่ถูกกรอง",
-              icon: <TrendingUp size={14} />,
+              icon: <Truck size={18} />,
               label: "Delivered Volume",
               value: (
                 <>
@@ -360,8 +425,9 @@ export function TopProductsPage({
               )
             },
             {
+              accent: "violet",
               detail: bestseller?.productName ?? "ยังไม่มีข้อมูลสินค้า",
-              icon: <Users size={14} />,
+              icon: <Star size={18} />,
               label: "Best Seller",
               value: <span className="text-base font-bold leading-tight">{bestseller?.productCode ?? "-"}</span>
             }
@@ -369,14 +435,21 @@ export function TopProductsPage({
         />
       </section>
 
-      <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,.9fr)]">
+      <section className="grid grid-cols-1 gap-2.5 xl:grid-cols-[270px_minmax(0,1fr)]">
         <Card className="dashboard-card overflow-hidden">
           <CardHeader className="border-b border-[#d9e3e6]">
-            <CardTitle className="text-lg">Top N Products</CardTitle>
-            <p className="text-xs font-medium text-slate-500">สรุปรายเดือนจาก Delivered Volume พร้อมรายการสินค้าขายดี Top {topN} ของแต่ละเดือน</p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardTitle className="text-lg">Top N Products</CardTitle>
+                <p className="mt-1 text-xs font-medium text-slate-500">สรุปยอดขาย Top N รายเดือน</p>
+              </div>
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+                <TrendingUp size={18} />
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
-            <DataTable columns={monthlyColumns} data={monthlyRows} loading={ordersState === "loading"} rowKey="monthKey" minWidth={760} />
+            <DataTable columns={monthlyColumns} data={monthlyRows} loading={ordersState === "loading"} rowKey="monthKey" minWidth={0} pageSize={6} />
           </CardContent>
         </Card>
 
@@ -386,7 +459,7 @@ export function TopProductsPage({
             <p className="text-xs font-medium text-slate-500">สรุปสินค้าตาม Order Count และ Delivered Volume</p>
           </CardHeader>
           <CardContent className="p-0">
-            <DataTable columns={productColumns} data={productRows} loading={ordersState === "loading"} rowKey="key" minWidth={980} pageSize={10} />
+            <DataTable columns={productColumns} data={productRows} loading={ordersState === "loading"} rowKey="key" minWidth={0} pageSize={10} />
           </CardContent>
         </Card>
       </section>

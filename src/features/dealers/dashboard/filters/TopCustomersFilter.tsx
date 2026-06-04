@@ -81,7 +81,7 @@ export function TopCustomersFilter({
       <div className="relative">
         <button
           type="button"
-          className="flex h-10 w-full items-center justify-between gap-3 rounded-lg border border-[#d5e0e3] bg-white px-3 text-left text-sm font-medium text-slate-800 shadow-sm outline-none transition-colors hover:border-slate-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+          className="flex h-9 w-full items-center justify-between gap-3 rounded-lg border border-[#d5e0e3] bg-white px-3 text-left text-[13px] font-medium text-slate-800 shadow-sm outline-none transition-colors hover:border-slate-300 focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
           onClick={() => {
             if (open) {
               closeDropdown();

@@ -32,12 +32,11 @@ export function DateRangeToolbar({
     <div className="grid w-full gap-2 xl:flex xl:w-auto xl:flex-nowrap xl:items-center xl:justify-end">
       {/* Preset dropdown — full width on mobile, auto on xl */}
       <DropdownSelect
-        buttonClassName="h-10 rounded-2xl px-3.5 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+        buttonClassName="h-11 rounded-lg px-4 text-sm shadow-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
         className="col-span-2 xl:min-w-[210px]"
         leading={(
           <>
             <CalendarDays size={15} className="shrink-0 text-slate-500" />
-            <span className="shrink-0 text-xs font-semibold text-slate-500">กรองวันที่</span>
           </>
         )}
         options={DATE_PRESET_OPTIONS}
@@ -50,7 +49,7 @@ export function DateRangeToolbar({
         <div className="grid grid-cols-2 gap-2 xl:contents">
           <input
             aria-label="วันที่เริ่มต้น"
-            className="h-10 w-full rounded-2xl border border-[#d5e0e3] bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 xl:min-w-[150px]"
+            className="h-11 w-full rounded-lg border border-[#d5e0e3] bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 xl:min-w-[150px]"
             title="วันที่เริ่มต้น"
             type="date"
             value={dateFrom}
@@ -61,7 +60,7 @@ export function DateRangeToolbar({
           />
           <input
             aria-label="วันที่สิ้นสุด"
-            className="h-10 w-full rounded-2xl border border-[#d5e0e3] bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 xl:min-w-[150px]"
+            className="h-11 w-full rounded-lg border border-[#d5e0e3] bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 xl:min-w-[150px]"
             title="วันที่สิ้นสุด"
             type="date"
             value={dateTo}
