@@ -37,7 +37,7 @@ export function TopCustomersPage({
         const dealer = dealerMap.get(order.dealer_id);
         const region = dealer?.region ?? "-";
         const provinceName = dealer?.province ?? "-";
-        const monthKey = getMonthKey(order.pour_datetime ?? order.updated_at ?? order.created_at);
+        const monthKey = getMonthKey(order.pour_datetime);
         const customerName = dealer?.dealer_name?.trim() || order.dealer_name?.trim() || "ไม่ระบุ dealer";
         const customerCode = dealer?.dealer_code?.trim() || order.dealer_code?.trim() || "-";
         const siteKey = order.site?.site_code?.trim() || order.site?.site_id?.toString() || "";

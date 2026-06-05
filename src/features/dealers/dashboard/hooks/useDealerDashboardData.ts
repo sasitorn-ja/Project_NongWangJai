@@ -177,7 +177,7 @@ export function useDealerDashboardData({
   const filteredOrders = useMemo(() => {
     const q = normalizeSearch(orderSearch);
     return orders.filter((order) => {
-      const matchDate = isWithinDateRange(order.pour_datetime ?? order.updated_at ?? order.created_at, dateFrom, dateTo);
+      const matchDate = isWithinDateRange(order.pour_datetime, dateFrom, dateTo);
       if (!matchDate) return false;
       if (!q) return true;
 

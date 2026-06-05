@@ -31,6 +31,14 @@ type AreaRow = {
 const AREA_CHART_LIMIT = 8;
 const OTHER_AREAS_KEY = "__other_areas";
 
+function getOrderUpdateDateText(order: OrderItem) {
+  return order.updated_at ?? null;
+}
+
+function getOrderCreatedDateText(order: OrderItem) {
+  return order.created_at ?? null;
+}
+
 function formatPercent(value: number) {
   return `${new Intl.NumberFormat("th-TH", {
     maximumFractionDigits: 0
@@ -317,7 +325,8 @@ function RecentActivityCard({ orders, unit }: { orders: OrderItem[]; unit: strin
     return [...orders]
       .map((row) => ({
         row,
-        date: parseDateValue(row.pour_datetime ?? row.updated_at ?? row.created_at)
+        date: parseDateValue(row.pour_datetime) ?? parseDateValue(getOrderUpdateDateText(row)),
+        dateKind: row.pour_datetime ? "เวลาเท" : "แก้ไขข้อมูล"
       }))
       .filter((item) => item.date)
       .sort((a, b) => (b.date as Date).getTime() - (a.date as Date).getTime())
@@ -328,14 +337,14 @@ function RecentActivityCard({ orders, unit }: { orders: OrderItem[]; unit: strin
     return (
       <div className="flex h-[160px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[#d9e3e6] bg-[#fbfcfc] dark:border-slate-800 dark:bg-slate-900/40">
         <div className="text-sm font-semibold text-slate-600">ยังไม่มีกิจกรรม</div>
-        <div className="text-xs font-medium text-slate-400">รายการเทล่าสุดจะแสดงที่นี่</div>
+        <div className="text-xs font-medium text-slate-400">กิจกรรมล่าสุดจะแสดงที่นี่</div>
       </div>
     );
   }
 
   return (
     <div className="space-y-1">
-      {recent.map(({ row, date }, i) => {
+      {recent.map(({ row, date, dateKind }, i) => {
         const statusKey = getOrderStatusKey(row.status?.order);
         const meta = ORDER_STATUS_META[statusKey];
         const customer = row.customer?.name?.trim() || "ไม่ระบุลูกค้า";
@@ -352,7 +361,9 @@ function RecentActivityCard({ orders, unit }: { orders: OrderItem[]; unit: strin
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-sm font-semibold text-slate-800 dark:text-slate-200" title={customer}>{customer}</span>
-                <span className="shrink-0 text-[11px] font-semibold text-slate-400">{dateText(date?.toISOString())}</span>
+                <span className="shrink-0 text-[11px] font-semibold text-slate-400">
+                  {dateKind}: {dateText(date?.toISOString())}
+                </span>
               </div>
               <div className="flex items-center justify-between gap-2 text-[11px] font-medium text-slate-400">
                 <span className="truncate" title={site}>{site}</span>
@@ -883,6 +894,8 @@ export function DetailsPage(props: DetailsPageProps) {
           delivered: number;
           key: string;
           latestPour: string | null;
+          latestCreated: string | null;
+          latestUpdate: string | null;
           ordered: number;
           orderCount: number;
           siteCount: number;
@@ -900,6 +913,8 @@ export function DetailsPage(props: DetailsPageProps) {
           delivered: 0,
           key,
           latestPour: null,
+          latestCreated: null,
+          latestUpdate: null,
           ordered: 0,
           orderCount: 0,
           siteCount: 0,
@@ -911,10 +926,24 @@ export function DetailsPage(props: DetailsPageProps) {
       current.delivered += row.quantity?.delivered ?? 0;
       if (row.site?.site_code) current.uniqueSites.add(row.site.site_code);
 
-      const candidateDate = parseDateValue(row.pour_datetime ?? row.updated_at ?? row.created_at);
-      const currentDate = parseDateValue(current.latestPour);
-      if (candidateDate && (!currentDate || candidateDate > currentDate)) {
-        current.latestPour = row.pour_datetime ?? row.updated_at ?? row.created_at ?? null;
+      const pourDate = parseDateValue(row.pour_datetime);
+      const currentPourDate = parseDateValue(current.latestPour);
+      if (pourDate && (!currentPourDate || pourDate > currentPourDate)) {
+        current.latestPour = row.pour_datetime ?? null;
+      }
+
+      const createdText = getOrderCreatedDateText(row);
+      const createdDate = parseDateValue(createdText);
+      const currentCreatedDate = parseDateValue(current.latestCreated);
+      if (createdDate && (!currentCreatedDate || createdDate > currentCreatedDate)) {
+        current.latestCreated = createdText;
+      }
+
+      const updateText = getOrderUpdateDateText(row);
+      const updateDate = parseDateValue(updateText);
+      const currentUpdateDate = parseDateValue(current.latestUpdate);
+      if (updateDate && (!currentUpdateDate || updateDate > currentUpdateDate)) {
+        current.latestUpdate = updateText;
       }
 
       current.siteCount = current.uniqueSites.size;
@@ -934,6 +963,8 @@ export function DetailsPage(props: DetailsPageProps) {
           delivered: number;
           key: string;
           latestPour: string | null;
+          latestCreated: string | null;
+          latestUpdate: string | null;
           ordered: number;
           siteCode: string;
           siteName: string;
@@ -949,6 +980,8 @@ export function DetailsPage(props: DetailsPageProps) {
           delivered: 0,
           key,
           latestPour: null,
+          latestCreated: null,
+          latestUpdate: null,
           ordered: 0,
           siteCode,
           siteName
@@ -957,10 +990,24 @@ export function DetailsPage(props: DetailsPageProps) {
       current.ordered += row.quantity?.ordered ?? 0;
       current.delivered += row.quantity?.delivered ?? 0;
 
-      const candidateDate = parseDateValue(row.pour_datetime ?? row.updated_at ?? row.created_at);
-      const currentDate = parseDateValue(current.latestPour);
-      if (candidateDate && (!currentDate || candidateDate > currentDate)) {
-        current.latestPour = row.pour_datetime ?? row.updated_at ?? row.created_at ?? null;
+      const pourDate = parseDateValue(row.pour_datetime);
+      const currentPourDate = parseDateValue(current.latestPour);
+      if (pourDate && (!currentPourDate || pourDate > currentPourDate)) {
+        current.latestPour = row.pour_datetime ?? null;
+      }
+
+      const createdText = getOrderCreatedDateText(row);
+      const createdDate = parseDateValue(createdText);
+      const currentCreatedDate = parseDateValue(current.latestCreated);
+      if (createdDate && (!currentCreatedDate || createdDate > currentCreatedDate)) {
+        current.latestCreated = createdText;
+      }
+
+      const updateText = getOrderUpdateDateText(row);
+      const updateDate = parseDateValue(updateText);
+      const currentUpdateDate = parseDateValue(current.latestUpdate);
+      if (updateDate && (!currentUpdateDate || updateDate > currentUpdateDate)) {
+        current.latestUpdate = updateText;
       }
 
       acc.set(key, current);
@@ -989,7 +1036,9 @@ export function DetailsPage(props: DetailsPageProps) {
     { title: "Order Count", key: "orderCount", dataIndex: "orderCount", align: "right", width: 130, render: formatNumber },
     { title: "Ordered Volume", key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
     { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
-    { title: "Pour ล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
+    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText },
+    { title: "วันที่สร้างข้อมูลล่าสุด", key: "latestCreated", dataIndex: "latestCreated", width: 190, render: dateText },
+    { title: "วันที่แก้ไขข้อมูล", key: "latestUpdate", dataIndex: "latestUpdate", width: 190, render: dateText }
   ];
 
   const siteColumns: DataColumn<(typeof orderSiteRows)[number]>[] = [
@@ -997,7 +1046,9 @@ export function DetailsPage(props: DetailsPageProps) {
     { title: "Customer", key: "customerName", dataIndex: "customerName", width: 240 },
     { title: "Ordered Volume", key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
     { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
-    { title: "Pour ล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
+    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText },
+    { title: "วันที่สร้างข้อมูลล่าสุด", key: "latestCreated", dataIndex: "latestCreated", width: 190, render: dateText },
+    { title: "วันที่แก้ไขข้อมูล", key: "latestUpdate", dataIndex: "latestUpdate", width: 190, render: dateText }
   ];
 
   const groupColumns: DataColumn<DealerGroup>[] = [
@@ -1168,7 +1219,7 @@ export function DetailsPage(props: DetailsPageProps) {
                   <Activity size={16} />
                   กิจกรรมล่าสุด
                 </CardTitle>
-                <p className="text-[11px] font-medium text-slate-500">รายการเทคอนกรีตล่าสุด 6 รายการ</p>
+                <p className="text-[11px] font-medium text-slate-500">เรียงจากเวลาเทก่อน ถ้าไม่มีจะแสดงวันที่แก้ไขข้อมูล</p>
               </CardHeader>
               <CardContent>
                 <RecentActivityCard orders={dealerOrders} unit={areaUnit} />
@@ -1222,7 +1273,7 @@ export function DetailsPage(props: DetailsPageProps) {
             content: (
               <Card className="dashboard-card overflow-hidden">
                 <CardContent className="p-0">
-                  <DataTable columns={customerColumns} data={orderCustomerRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={1040} pageSize={10} />
+                  <DataTable columns={customerColumns} data={orderCustomerRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={1420} pageSize={10} />
                 </CardContent>
               </Card>
             )
@@ -1233,7 +1284,7 @@ export function DetailsPage(props: DetailsPageProps) {
             content: (
               <Card className="dashboard-card overflow-hidden">
                 <CardContent className="p-0">
-                  <DataTable columns={siteColumns} data={orderSiteRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={1080} pageSize={10} />
+                  <DataTable columns={siteColumns} data={orderSiteRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={1460} pageSize={10} />
                 </CardContent>
               </Card>
             )

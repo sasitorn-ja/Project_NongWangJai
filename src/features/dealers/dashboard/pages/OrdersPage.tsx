@@ -36,6 +36,31 @@ function getOrderDateText(order: OrderItem) {
   return order.pour_datetime ?? order.updated_at ?? order.created_at ?? null;
 }
 
+function getPourDateText(order: OrderItem) {
+  return order.pour_datetime ?? null;
+}
+
+function getOrderUpdateDateText(order: OrderItem) {
+  return order.updated_at ?? null;
+}
+
+function getOrderCreatedDateText(order: OrderItem) {
+  return order.created_at ?? null;
+}
+
+function CompactDateTime({ value }: { value?: string | null }) {
+  const text = dateText(value);
+  const parts = text.split(" ");
+  if (parts.length < 3) return <span>{text}</span>;
+
+  return (
+    <span className="block leading-4">
+      <span className="block whitespace-nowrap">{parts.slice(0, 3).join(" ")}</span>
+      <span className="block whitespace-nowrap">{parts.slice(3).join(" ")}</span>
+    </span>
+  );
+}
+
 function StatusBadge({ status }: { status?: string | null }) {
   const statusKey = getOrderStatusKey(status);
   return (
@@ -172,25 +197,31 @@ function CustomerAccordionRow({
       {expanded && (
         <div className="border-t border-slate-100 bg-white px-5 py-3">
           <div className="max-h-[420px] overflow-auto rounded-lg border border-[#d9e3e6]">
-            <table className="w-full min-w-[1120px] border-collapse text-[15px]">
+            <table className="w-full table-fixed border-collapse text-[14px]">
               <thead className="sticky top-0 z-10">
                 <tr className="border-b border-[#d9e3e6] bg-[#f6f8f9]">
-                  <th className="w-[38%] border-r border-[#e5e9ec] px-3 py-2.5 text-left text-[13px] font-semibold text-slate-500">
+                  <th className="w-[27%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     Order / Product
                   </th>
-                  <th className="w-[28%] border-r border-[#e5e9ec] px-3 py-2.5 text-left text-[13px] font-semibold text-slate-500">
+                  <th className="w-[24%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     Site
                   </th>
-                  <th className="w-[9%] border-r border-[#e5e9ec] px-3 py-2.5 text-right text-[13px] font-semibold text-slate-500">
-                    ปริมาณที่สั่ง
+                  <th className="w-[7%] border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
+                    ที่สั่ง
                   </th>
-                  <th className="w-[9%] border-r border-[#e5e9ec] px-3 py-2.5 text-right text-[13px] font-semibold text-slate-500">
-                    ปริมาณส่งจริง
+                  <th className="w-[7%] border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
+                    ส่งจริง
                   </th>
-                  <th className="w-[10%] border-r border-[#e5e9ec] px-3 py-2.5 text-left text-[13px] font-semibold text-slate-500">
-                    Pour Time ↓
+                  <th className="w-[11%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                    เวลาเท
                   </th>
-                  <th className="w-[6%] px-3 py-2.5 text-left text-[13px] font-semibold text-slate-500">
+                  <th className="w-[11%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                    สร้างข้อมูล
+                  </th>
+                  <th className="w-[11%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                    แก้ไขข้อมูล ↓
+                  </th>
+                  <th className="w-[6%] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     สถานะ
                   </th>
                 </tr>
@@ -209,43 +240,49 @@ function CustomerAccordionRow({
                       key={rowKey}
                       className="border-b border-[#edf1f2] transition-colors last:border-b-0 hover:bg-[#f3faf8]"
                     >
-                      <td className="border-r border-[#edf1f2] px-3 py-2.5 align-middle">
+                      <td className="border-r border-[#edf1f2] px-2.5 py-2 align-middle">
                         <div className="min-w-0">
-                          <div className="truncate font-semibold text-slate-950" title={order.order?.product_sku ?? "-"}>
+                          <div className="truncate text-[13px] font-semibold text-slate-950" title={order.order?.product_sku ?? "-"}>
                             {order.order?.product_sku ?? "-"}
                           </div>
-                          <div className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
+                          <div className="mt-0.5 line-clamp-2 text-[11px] font-medium leading-4 text-slate-500" title={order.order?.product_name ?? "-"}>
                             {order.order?.product_name ?? "-"}
                           </div>
                         </div>
                       </td>
-                      <td className="border-r border-[#edf1f2] px-3 py-2.5 align-middle">
+                      <td className="border-r border-[#edf1f2] px-2.5 py-2 align-middle">
                         <div className="min-w-0">
                           <div className="truncate text-xs font-semibold text-slate-600" title={order.site?.site_code ?? "-"}>
                             {order.site?.site_code ?? "-"}
                           </div>
-                          <div className="mt-0.5 truncate text-sm font-medium text-slate-800" title={order.site?.site_name ?? "-"}>
+                          <div className="mt-0.5 line-clamp-2 text-[12px] font-medium leading-4 text-slate-800" title={order.site?.site_name ?? "-"}>
                             {order.site?.site_name ?? "-"}
                           </div>
                         </div>
                       </td>
-                      <td className="border-r border-[#edf1f2] px-3 py-2.5 text-right align-middle font-semibold text-slate-800">
+                      <td className="border-r border-[#edf1f2] px-2.5 py-2 text-right align-middle font-semibold text-slate-800">
                         {formatNumber(order.quantity?.ordered ?? 0)}
                         <span className="ml-1 text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span>
                       </td>
                       <td
                         className={cn(
-                          "border-r border-[#edf1f2] px-3 py-2.5 text-right align-middle font-semibold",
+                          "border-r border-[#edf1f2] px-2.5 py-2 text-right align-middle font-semibold",
                           (order.quantity?.delivered ?? 0) > 0 ? "text-slate-800" : "text-slate-400"
                         )}
                       >
                         {formatNumber(order.quantity?.delivered ?? 0)}
                         <span className="ml-1 text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span>
                       </td>
-                      <td className="border-r border-[#edf1f2] px-3 py-2.5 align-middle text-xs font-medium text-slate-600">
-                        {dateText(getOrderDateText(order))}
+                      <td className="border-r border-[#edf1f2] px-2.5 py-2 align-middle text-[11px] font-medium text-slate-600">
+                        <CompactDateTime value={getPourDateText(order)} />
                       </td>
-                      <td className="px-3 py-2.5 align-middle">
+                      <td className="border-r border-[#edf1f2] px-2.5 py-2 align-middle text-[11px] font-medium text-slate-600">
+                        <CompactDateTime value={getOrderCreatedDateText(order)} />
+                      </td>
+                      <td className="border-r border-[#edf1f2] px-2.5 py-2 align-middle text-[11px] font-medium text-slate-600">
+                        <CompactDateTime value={getOrderUpdateDateText(order)} />
+                      </td>
+                      <td className="px-2.5 py-2 align-middle">
                         <StatusBadge status={order.status?.order} />
                       </td>
                     </tr>
@@ -324,8 +361,16 @@ function MobileCustomerCard({
                     <div className="truncate font-medium text-slate-500">{order.site?.site_name ?? "-"}</div>
                   </div>
                   <div>
-                    <div className="text-slate-400">เทเวลา</div>
-                    <div className="font-medium text-slate-700">{dateText(getOrderDateText(order))}</div>
+                    <div className="text-slate-400">เวลาเท</div>
+                    <div className="font-medium text-slate-700">{dateText(getPourDateText(order))}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-400">วันที่สร้างข้อมูล</div>
+                    <div className="font-medium text-slate-700">{dateText(getOrderCreatedDateText(order))}</div>
+                  </div>
+                  <div>
+                    <div className="text-slate-400">วันที่แก้ไขข้อมูล</div>
+                    <div className="font-medium text-slate-700">{dateText(getOrderUpdateDateText(order))}</div>
                   </div>
                   <div>
                     <div className="text-slate-400">ปริมาณที่สั่ง</div>
@@ -465,7 +510,7 @@ export function OrdersPage({
             <div>
               <CardTitle className="text-base">Order List ของ Dealer</CardTitle>
               <p className="mt-0.5 text-xs font-medium text-slate-500">
-                รวมตามลูกค้า · เรียงตามเวลาเทล่าสุดจากใหม่ไปเก่า · แตะเพื่อกางดูออเดอร์ของลูกค้านั้น
+                รวมตามลูกค้า · เรียงตามข้อมูลล่าสุดจากใหม่ไปเก่า · แตะเพื่อกางดูออเดอร์ของลูกค้านั้น
               </p>
             </div>
             <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
@@ -525,7 +570,7 @@ export function OrdersPage({
             <div>
               <CardTitle className="text-lg">Order List ของ Dealer</CardTitle>
               <p className="mt-1 text-xs font-medium text-slate-500">
-                รวมตามลูกค้า · เรียงตามเวลาเทล่าสุดจากใหม่ไปเก่า · คลิกแถวเพื่อกางดูออเดอร์ของลูกค้านั้น
+                รวมตามลูกค้า · เรียงตามข้อมูลล่าสุดจากใหม่ไปเก่า · คลิกแถวเพื่อกางดูออเดอร์ของลูกค้านั้น
               </p>
             </div>
             <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
@@ -577,7 +622,7 @@ export function OrdersPage({
           <span className="text-right">จำนวนออเดอร์</span>
           <span className="text-right">จำนวนที่สั่ง</span>
           <span className="text-right">จำนวนที่ส่งจริง</span>
-          <span>เทล่าสุด ↓</span>
+          <span>ข้อมูลล่าสุด ↓</span>
         </div>
 
         <CardContent className="p-0">

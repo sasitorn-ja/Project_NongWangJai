@@ -14,6 +14,14 @@ import { DataTable } from "../table/DataTable";
 import { TopCustomersFilter } from "../filters/TopCustomersFilter";
 import { WangjaiLogo } from "../ui/WangjaiLogo";
 
+function getOrderUpdateDateText(order: OrderItem) {
+  return order.updated_at ?? null;
+}
+
+function getOrderCreatedDateText(order: OrderItem) {
+  return order.created_at ?? null;
+}
+
 function ProductInsightBanner() {
   return (
     <section className="relative overflow-hidden rounded-lg border border-sky-100 bg-gradient-to-r from-white via-sky-50/90 to-sky-100 px-4 py-3 shadow-[0_10px_28px_-18px_rgba(14,116,214,0.45)]">
@@ -87,7 +95,7 @@ export function TopProductsPage({
         const dealer = dealerMap.get(order.dealer_id);
         const region = dealer?.region ?? "-";
         const provinceName = dealer?.province ?? "-";
-        const monthKey = getMonthKey(order.pour_datetime ?? order.updated_at ?? order.created_at);
+        const monthKey = getMonthKey(order.pour_datetime);
         const productCode = order.order?.product_sku?.trim() || "-";
         const productName = order.order?.product_name?.trim() || "ไม่ระบุสินค้า";
         const productKey = `${productCode}::${productName}`;
@@ -146,6 +154,8 @@ export function TopProductsPage({
         {
           key: string;
           latestPour: string | null;
+          latestCreated: string | null;
+          latestUpdate: string | null;
           orderCount: number;
           ordered: number;
           productCode: string;
@@ -158,6 +168,8 @@ export function TopProductsPage({
         acc.get(order.productKey) ?? {
           key: order.productKey,
           latestPour: null,
+          latestCreated: null,
+          latestUpdate: null,
           orderCount: 0,
           ordered: 0,
           productCode: order.productCode,
@@ -169,10 +181,24 @@ export function TopProductsPage({
       current.ordered += order.ordered;
       current.delivered += order.delivered;
 
-      const candidateDate = parseDateValue(order.pour_datetime ?? order.updated_at ?? order.created_at);
-      const currentDate = parseDateValue(current.latestPour);
-      if (candidateDate && (!currentDate || candidateDate > currentDate)) {
-        current.latestPour = order.pour_datetime ?? order.updated_at ?? order.created_at ?? null;
+      const pourDate = parseDateValue(order.pour_datetime);
+      const currentPourDate = parseDateValue(current.latestPour);
+      if (pourDate && (!currentPourDate || pourDate > currentPourDate)) {
+        current.latestPour = order.pour_datetime ?? null;
+      }
+
+      const createdText = getOrderCreatedDateText(order);
+      const createdDate = parseDateValue(createdText);
+      const currentCreatedDate = parseDateValue(current.latestCreated);
+      if (createdDate && (!currentCreatedDate || createdDate > currentCreatedDate)) {
+        current.latestCreated = createdText;
+      }
+
+      const updateText = getOrderUpdateDateText(order);
+      const updateDate = parseDateValue(updateText);
+      const currentUpdateDate = parseDateValue(current.latestUpdate);
+      if (updateDate && (!currentUpdateDate || updateDate > currentUpdateDate)) {
+        current.latestUpdate = updateText;
       }
 
       acc.set(order.productKey, current);
@@ -298,9 +324,33 @@ export function TopProductsPage({
       render: formatNumber
     },
     {
-      title: "ขายล่าสุด",
+      title: "เวลาเทล่าสุด",
       key: "latestPour",
       dataIndex: "latestPour",
+      width: 94,
+      render: (value) => {
+        if (!value) return "-";
+        const date = new Date(String(value));
+        if (Number.isNaN(date.getTime())) return String(value);
+        return new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short" }).format(date);
+      }
+    },
+    {
+      title: "วันที่สร้างข้อมูลล่าสุด",
+      key: "latestCreated",
+      dataIndex: "latestCreated",
+      width: 94,
+      render: (value) => {
+        if (!value) return "-";
+        const date = new Date(String(value));
+        if (Number.isNaN(date.getTime())) return String(value);
+        return new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short" }).format(date);
+      }
+    },
+    {
+      title: "วันที่แก้ไขข้อมูล",
+      key: "latestUpdate",
+      dataIndex: "latestUpdate",
       width: 94,
       render: (value) => {
         if (!value) return "-";
@@ -459,7 +509,7 @@ export function TopProductsPage({
             <p className="text-xs font-medium text-slate-500">สรุปสินค้าตาม Order Count และ Delivered Volume</p>
           </CardHeader>
           <CardContent className="p-0">
-            <DataTable columns={productColumns} data={productRows} loading={ordersState === "loading"} rowKey="key" minWidth={0} pageSize={10} />
+            <DataTable columns={productColumns} data={productRows} loading={ordersState === "loading"} rowKey="key" minWidth={1210} pageSize={10} />
           </CardContent>
         </Card>
       </section>

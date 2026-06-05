@@ -43,7 +43,7 @@ export function MonthlyTrendChart({
   const allMonths = useMemo<MonthData[]>(() => {
     const map = new Map<string, MonthData>();
     orders.forEach((order) => {
-      const date = parseDateValue(order.pour_datetime ?? order.created_at ?? order.updated_at);
+      const date = parseDateValue(order.pour_datetime);
       if (!date) return;
       const key = monthKey(date);
       const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);

@@ -14,6 +14,14 @@ import { DataTable } from "../table/DataTable";
 import { DualBarChart } from "../charts/DualBarChart";
 import { WangjaiAdvisor } from "../ui/WangjaiAdvisor";
 
+function getUpdateDateText(order: OrderItem) {
+  return order.updated_at ?? null;
+}
+
+function getCreatedDateText(order: OrderItem) {
+  return order.created_at ?? null;
+}
+
 export function CustomerInsightsPage({
   dealers,
   orders,
@@ -57,6 +65,8 @@ export function CustomerInsightsPage({
           ordered: number;
           delivered: number;
           latestPour: string | null;
+          latestCreated: string | null;
+          latestUpdate: string | null;
         }
       >
     >((acc, row) => {
@@ -71,7 +81,9 @@ export function CustomerInsightsPage({
           uniqueSites: new Set<string>(),
           ordered: 0,
           delivered: 0,
-          latestPour: null
+          latestPour: null,
+          latestCreated: null,
+          latestUpdate: null
         };
 
       current.orderCount += 1;
@@ -79,10 +91,24 @@ export function CustomerInsightsPage({
       current.delivered += row.quantity?.delivered ?? 0;
       if (row.site?.site_code) current.uniqueSites.add(row.site.site_code);
 
-      const candidateDate = parseDateValue(row.pour_datetime ?? row.updated_at ?? row.created_at);
-      const currentDate = parseDateValue(current.latestPour);
-      if (candidateDate && (!currentDate || candidateDate > currentDate)) {
-        current.latestPour = row.pour_datetime ?? row.updated_at ?? row.created_at ?? null;
+      const pourDate = parseDateValue(row.pour_datetime);
+      const currentPourDate = parseDateValue(current.latestPour);
+      if (pourDate && (!currentPourDate || pourDate > currentPourDate)) {
+        current.latestPour = row.pour_datetime ?? null;
+      }
+
+      const createdText = getCreatedDateText(row);
+      const createdDate = parseDateValue(createdText);
+      const currentCreatedDate = parseDateValue(current.latestCreated);
+      if (createdDate && (!currentCreatedDate || createdDate > currentCreatedDate)) {
+        current.latestCreated = createdText;
+      }
+
+      const updateText = getUpdateDateText(row);
+      const updateDate = parseDateValue(updateText);
+      const currentUpdateDate = parseDateValue(current.latestUpdate);
+      if (updateDate && (!currentUpdateDate || updateDate > currentUpdateDate)) {
+        current.latestUpdate = updateText;
       }
 
       acc.set(key, current);
@@ -109,6 +135,8 @@ export function CustomerInsightsPage({
           ordered: number;
           delivered: number;
           latestPour: string | null;
+          latestCreated: string | null;
+          latestUpdate: string | null;
         }
       >
     >((acc, row) => {
@@ -124,16 +152,32 @@ export function CustomerInsightsPage({
           customerName,
           ordered: 0,
           delivered: 0,
-          latestPour: null
+          latestPour: null,
+          latestCreated: null,
+          latestUpdate: null
         };
 
       current.ordered += row.quantity?.ordered ?? 0;
       current.delivered += row.quantity?.delivered ?? 0;
 
-      const candidateDate = parseDateValue(row.pour_datetime ?? row.updated_at ?? row.created_at);
-      const currentDate = parseDateValue(current.latestPour);
-      if (candidateDate && (!currentDate || candidateDate > currentDate)) {
-        current.latestPour = row.pour_datetime ?? row.updated_at ?? row.created_at ?? null;
+      const pourDate = parseDateValue(row.pour_datetime);
+      const currentPourDate = parseDateValue(current.latestPour);
+      if (pourDate && (!currentPourDate || pourDate > currentPourDate)) {
+        current.latestPour = row.pour_datetime ?? null;
+      }
+
+      const createdText = getCreatedDateText(row);
+      const createdDate = parseDateValue(createdText);
+      const currentCreatedDate = parseDateValue(current.latestCreated);
+      if (createdDate && (!currentCreatedDate || createdDate > currentCreatedDate)) {
+        current.latestCreated = createdText;
+      }
+
+      const updateText = getUpdateDateText(row);
+      const updateDate = parseDateValue(updateText);
+      const currentUpdateDate = parseDateValue(current.latestUpdate);
+      if (updateDate && (!currentUpdateDate || updateDate > currentUpdateDate)) {
+        current.latestUpdate = updateText;
       }
 
       acc.set(key, current);
@@ -166,7 +210,9 @@ export function CustomerInsightsPage({
     { title: "Order Count", key: "orderCount", dataIndex: "orderCount", align: "right", width: 130, render: formatNumber },
     { title: "Ordered Volume", key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
     { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
-    { title: "Pour ล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
+    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText },
+    { title: "วันที่สร้างข้อมูลล่าสุด", key: "latestCreated", dataIndex: "latestCreated", width: 190, render: dateText },
+    { title: "วันที่แก้ไขข้อมูล", key: "latestUpdate", dataIndex: "latestUpdate", width: 190, render: dateText }
   ];
 
   const siteColumns: DataColumn<(typeof siteRows)[number]>[] = [
@@ -185,7 +231,9 @@ export function CustomerInsightsPage({
     { title: "Dealer", key: "customerName", dataIndex: "customerName", width: 240 },
     { title: "Ordered Volume", key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
     { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
-    { title: "Pour ล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
+    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText },
+    { title: "วันที่สร้างข้อมูลล่าสุด", key: "latestCreated", dataIndex: "latestCreated", width: 190, render: dateText },
+    { title: "วันที่แก้ไขข้อมูล", key: "latestUpdate", dataIndex: "latestUpdate", width: 190, render: dateText }
   ];
 
   return (
@@ -310,7 +358,7 @@ export function CustomerInsightsPage({
                   <CardTitle className="text-lg">Customer Summary Table</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <DataTable columns={customerColumns} data={customerRows} loading={ordersState === "loading"} rowKey="key" minWidth={1040} pageSize={10} />
+                  <DataTable columns={customerColumns} data={customerRows} loading={ordersState === "loading"} rowKey="key" minWidth={1420} pageSize={10} />
                 </CardContent>
               </Card>
             )
@@ -324,7 +372,7 @@ export function CustomerInsightsPage({
                   <CardTitle className="text-lg">Site Summary Table</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <DataTable columns={siteColumns} data={siteRows} loading={ordersState === "loading"} rowKey="key" minWidth={1080} pageSize={10} />
+                  <DataTable columns={siteColumns} data={siteRows} loading={ordersState === "loading"} rowKey="key" minWidth={1460} pageSize={10} />
                 </CardContent>
               </Card>
             )
