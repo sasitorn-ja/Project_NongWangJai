@@ -26,7 +26,7 @@ export function WangjaiLogo({
 
   return (
     <div className={cn("flex min-w-0 items-center gap-2.5", className)}>
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center">
         <img
           alt="น้องวางใจ"
           className={cn("h-full w-full object-contain drop-shadow-[0_6px_10px_rgba(14,116,214,0.16)]", imageClassName)}
@@ -35,8 +35,8 @@ export function WangjaiLogo({
       </div>
       {showText ? (
         <div className="min-w-0">
-          <div className="truncate text-[19px] font-extrabold leading-tight text-sky-600 dark:text-sky-100">NongWangJai</div>
-          <div className="truncate text-[12px] font-semibold leading-tight text-slate-500 dark:text-sky-300">Dealer Intelligence</div>
+          <div className="truncate text-[17px] font-extrabold leading-tight text-sky-600 dark:text-sky-100">NongWangJai</div>
+          <div className="truncate text-[11px] font-semibold leading-tight text-slate-500 dark:text-sky-300">Dealer Intelligence</div>
         </div>
       ) : null}
     </div>

@@ -182,10 +182,10 @@ function CustomerAccordionRow({
                     Site
                   </th>
                   <th className="w-[9%] border-r border-[#e5e9ec] px-3 py-2.5 text-right text-[13px] font-semibold text-slate-500">
-                    Ordered
+                    ปริมาณที่สั่ง
                   </th>
                   <th className="w-[9%] border-r border-[#e5e9ec] px-3 py-2.5 text-right text-[13px] font-semibold text-slate-500">
-                    Delivered
+                    ปริมาณส่งจริง
                   </th>
                   <th className="w-[10%] border-r border-[#e5e9ec] px-3 py-2.5 text-left text-[13px] font-semibold text-slate-500">
                     Pour Time ↓
@@ -282,15 +282,15 @@ function MobileCustomerCard({
           </div>
           <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
             <div>
-              <div className="text-[10px] font-semibold text-slate-400">Orders</div>
+              <div className="text-[10px] font-semibold text-slate-400">จำนวนออเดอร์</div>
               <div className="font-bold text-slate-800">{formatNumber(group.orderCount)}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold text-slate-400">Ordered</div>
+              <div className="text-[10px] font-semibold text-slate-400">ปริมาณที่สั่ง</div>
               <div className="font-bold text-slate-800">{compactNumber(group.totalOrdered)} <span className="text-[9px] text-slate-400">m³</span></div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold text-slate-400">Delivered</div>
+              <div className="text-[10px] font-semibold text-slate-400">ปริมาณส่งจริง</div>
               <div className={cn("font-bold", group.totalDelivered > 0 ? "text-slate-800" : "text-slate-400")}>
                 {compactNumber(group.totalDelivered)} <span className="text-[9px] text-slate-400">m³</span>
               </div>
@@ -328,11 +328,11 @@ function MobileCustomerCard({
                     <div className="font-medium text-slate-700">{dateText(getOrderDateText(order))}</div>
                   </div>
                   <div>
-                    <div className="text-slate-400">Ordered</div>
+                    <div className="text-slate-400">ปริมาณที่สั่ง</div>
                     <div className="font-bold text-slate-800">{formatNumber(order.quantity?.ordered ?? 0)} <span className="text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span></div>
                   </div>
                   <div>
-                    <div className="text-slate-400">Delivered</div>
+                    <div className="text-slate-400">ปริมาณส่งจริง</div>
                     <div className="font-bold text-slate-800">{formatNumber(order.quantity?.delivered ?? 0)} <span className="text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span></div>
                   </div>
                 </div>
@@ -411,8 +411,8 @@ export function OrdersPage({
         message="ผมอยู่เป็นตัวช่วยตรวจรายการ order: ค้นหาลูกค้า ไซต์ หรือสินค้า แล้วกางแถวเพื่อดูรายละเอียดงานเท"
         stats={[
           { label: "Scope", value: selectedDealer?.dealer_name ?? "ทุก Dealer" },
-          { label: "Orders", value: formatNumber(dealerOrders.length) },
-          { label: "Delivered", value: `${compactNumber(totalDelivered)} m³` }
+          { label: "ออเดอร์", value: formatNumber(dealerOrders.length) },
+          { label: "ส่งจริง", value: `${compactNumber(totalDelivered)} m³` }
         ]}
         title="เช็กรายการ Order แบบเร็ว"
       />
@@ -423,19 +423,19 @@ export function OrdersPage({
             {
               detail: selectedDealer?.dealer_name ?? "ลูกค้าทั้งหมดที่กรองอยู่",
               icon: <Users size={14} />,
-              label: "Customer Count",
+              label: "จำนวนลูกค้า",
               value: formatNumber(customerGroups.length)
             },
             {
-              detail: "จำนวน orders รวมจากทุกลูกค้า",
+              detail: "จำนวนออเดอร์รวมจากทุกลูกค้า",
               icon: <PackageCheck size={14} />,
-              label: "Order Count",
+              label: "จำนวนออเดอร์",
               value: formatNumber(dealerOrders.length)
             },
             {
               detail: "ปริมาณที่สั่งรวมจาก order ทั้งหมด",
               icon: <TrendingUp size={14} />,
-              label: "Ordered Volume",
+              label: "ปริมาณที่สั่ง",
               value: (
                 <>
                   {compactNumber(totalOrdered)}{" "}
@@ -446,7 +446,7 @@ export function OrdersPage({
             {
               detail: "ปริมาณส่งจริงรวมจาก order ทั้งหมด",
               icon: <PackageCheck size={14} />,
-              label: "Delivered Volume",
+              label: "ปริมาณส่งจริง",
               value: (
                 <>
                   {compactNumber(totalDelivered)}{" "}
@@ -465,7 +465,7 @@ export function OrdersPage({
             <div>
               <CardTitle className="text-base">Order List ของ Dealer</CardTitle>
               <p className="mt-0.5 text-xs font-medium text-slate-500">
-                รวมตามลูกค้า · เรียงตาม Pour ล่าสุดจากใหม่ไปเก่า · แตะเพื่อกางดู order ของลูกค้านั้น
+                รวมตามลูกค้า · เรียงตามเวลาเทล่าสุดจากใหม่ไปเก่า · แตะเพื่อกางดูออเดอร์ของลูกค้านั้น
               </p>
             </div>
             <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
@@ -481,7 +481,7 @@ export function OrdersPage({
               />
             </label>
             <div className="flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-slate-500">{formatNumber(customerGroups.length)} ลูกค้า · {formatNumber(dealerOrders.length)} orders</span>
+              <span className="font-semibold text-slate-500">{formatNumber(customerGroups.length)} ลูกค้า · {formatNumber(dealerOrders.length)} ออเดอร์</span>
               <div className="flex gap-1.5">
                 <button type="button" onClick={expandAll} className="rounded-md border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-600">กางทั้งหมด</button>
                 <button type="button" onClick={collapseAll} className="rounded-md border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-600">ย่อทั้งหมด</button>
@@ -525,7 +525,7 @@ export function OrdersPage({
             <div>
               <CardTitle className="text-lg">Order List ของ Dealer</CardTitle>
               <p className="mt-1 text-xs font-medium text-slate-500">
-                รวมตามลูกค้า · เรียงตาม Pour ล่าสุดจากใหม่ไปเก่า · คลิกแถวเพื่อกางดู order ของลูกค้านั้น
+                รวมตามลูกค้า · เรียงตามเวลาเทล่าสุดจากใหม่ไปเก่า · คลิกแถวเพื่อกางดูออเดอร์ของลูกค้านั้น
               </p>
             </div>
             <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
@@ -546,7 +546,7 @@ export function OrdersPage({
         {/* Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/40 px-5 py-2.5 text-[11px]">
           <span className="font-semibold text-slate-500">
-            <strong className="text-slate-900">{formatNumber(customerGroups.length)}</strong> ลูกค้า · <strong className="text-slate-900">{formatNumber(dealerOrders.length)}</strong> orders
+            <strong className="text-slate-900">{formatNumber(customerGroups.length)}</strong> ลูกค้า · <strong className="text-slate-900">{formatNumber(dealerOrders.length)}</strong> ออเดอร์
             {expandedCustomers.size > 0 && (
               <span className="ml-2 text-sky-700">· เปิด {expandedCustomers.size} ราย</span>
             )}
@@ -573,11 +573,11 @@ export function OrdersPage({
         {/* Column header */}
         <div className="grid grid-cols-[36px_minmax(0,2.4fr)_80px_110px_110px_140px] gap-3 border-b border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
           <span></span>
-          <span>Customer</span>
-          <span className="text-right">Orders</span>
-          <span className="text-right">Ordered</span>
-          <span className="text-right">Delivered</span>
-          <span>Pour ล่าสุด ↓</span>
+          <span>ลูกค้า</span>
+          <span className="text-right">จำนวนออเดอร์</span>
+          <span className="text-right">จำนวนที่สั่ง</span>
+          <span className="text-right">จำนวนที่ส่งจริง</span>
+          <span>เทล่าสุด ↓</span>
         </div>
 
         <CardContent className="p-0">
