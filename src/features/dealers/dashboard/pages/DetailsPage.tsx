@@ -39,6 +39,19 @@ function getOrderCreatedDateText(order: OrderItem) {
   return order.created_at ?? null;
 }
 
+function CompactDateTime({ value }: { value?: string | null }) {
+  const text = dateText(value);
+  const parts = text.split(" ");
+  if (parts.length < 3) return <span>{text}</span>;
+
+  return (
+    <span className="block text-[11px] leading-4">
+      <span className="block whitespace-nowrap">{parts.slice(0, 3).join(" ")}</span>
+      <span className="block whitespace-nowrap">{parts.slice(3).join(" ")}</span>
+    </span>
+  );
+}
+
 function formatPercent(value: number) {
   return `${new Intl.NumberFormat("th-TH", {
     maximumFractionDigits: 0
@@ -1031,24 +1044,24 @@ export function DetailsPage(props: DetailsPageProps) {
   const dealerFulfillmentRate = dealerOrderedTotal > 0 ? (dealerDeliveredTotal / dealerOrderedTotal) * 100 : 0;
 
   const customerColumns: DataColumn<(typeof orderCustomerRows)[number]>[] = [
-    { title: "Customer", key: "customer", sortAccessor: (record) => record.customerName, width: 300, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.customerName}</div><div className="text-xs font-medium text-slate-500">{record.customerCode}</div></div> },
-    { title: "Sites", key: "siteCount", dataIndex: "siteCount", align: "right", width: 110, render: formatNumber },
-    { title: "Order Count", key: "orderCount", dataIndex: "orderCount", align: "right", width: 130, render: formatNumber },
-    { title: "Ordered Volume", key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
-    { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
-    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText },
-    { title: "วันที่สร้างข้อมูลล่าสุด", key: "latestCreated", dataIndex: "latestCreated", width: 190, render: dateText },
-    { title: "วันที่แก้ไขข้อมูล", key: "latestUpdate", dataIndex: "latestUpdate", width: 190, render: dateText }
+    { title: "ลูกค้า", key: "customer", sortAccessor: (record) => record.customerName, width: 230, render: (_, record) => <div className="min-w-0"><div className="line-clamp-2 text-[13px] font-semibold leading-4 text-slate-950" title={record.customerName}>{record.customerName}</div><div className="truncate text-[11px] font-medium text-slate-500">{record.customerCode}</div></div> },
+    { title: "ไซต์", key: "siteCount", dataIndex: "siteCount", align: "right", width: 72, render: formatNumber },
+    { title: "ออเดอร์", key: "orderCount", dataIndex: "orderCount", align: "right", width: 92, render: formatNumber },
+    { title: "จำนวนที่สั่ง", key: "ordered", dataIndex: "ordered", align: "right", width: 112, render: formatNumber },
+    { title: "จำนวนส่งจริง", key: "delivered", dataIndex: "delivered", align: "right", width: 118, render: formatNumber },
+    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> },
+    { title: "สร้างข้อมูลล่าสุด", key: "latestCreated", dataIndex: "latestCreated", width: 122, render: (value) => <CompactDateTime value={String(value ?? "")} /> },
+    { title: "แก้ไขข้อมูล", key: "latestUpdate", dataIndex: "latestUpdate", width: 116, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
   ];
 
   const siteColumns: DataColumn<(typeof orderSiteRows)[number]>[] = [
-    { title: "Site", key: "site", sortAccessor: (record) => record.siteName, width: 300, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.siteCode}</div><div className="text-xs font-medium text-slate-500">{record.siteName}</div></div> },
-    { title: "Customer", key: "customerName", dataIndex: "customerName", width: 240 },
-    { title: "Ordered Volume", key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
-    { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
-    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText },
-    { title: "วันที่สร้างข้อมูลล่าสุด", key: "latestCreated", dataIndex: "latestCreated", width: 190, render: dateText },
-    { title: "วันที่แก้ไขข้อมูล", key: "latestUpdate", dataIndex: "latestUpdate", width: 190, render: dateText }
+    { title: "ไซต์", key: "site", sortAccessor: (record) => record.siteName, width: 230, render: (_, record) => <div className="min-w-0"><div className="truncate text-[13px] font-semibold text-slate-950">{record.siteCode}</div><div className="line-clamp-2 text-[11px] font-medium leading-4 text-slate-500" title={record.siteName}>{record.siteName}</div></div> },
+    { title: "ลูกค้า", key: "customerName", dataIndex: "customerName", width: 160, render: (value) => <span className="line-clamp-2 text-[13px] leading-5" title={String(value ?? "-")}>{String(value ?? "-")}</span> },
+    { title: "จำนวนที่สั่ง", key: "ordered", dataIndex: "ordered", align: "right", width: 112, render: formatNumber },
+    { title: "จำนวนส่งจริง", key: "delivered", dataIndex: "delivered", align: "right", width: 118, render: formatNumber },
+    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> },
+    { title: "สร้างข้อมูลล่าสุด", key: "latestCreated", dataIndex: "latestCreated", width: 122, render: (value) => <CompactDateTime value={String(value ?? "")} /> },
+    { title: "แก้ไขข้อมูล", key: "latestUpdate", dataIndex: "latestUpdate", width: 116, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
   ];
 
   const groupColumns: DataColumn<DealerGroup>[] = [
@@ -1273,7 +1286,7 @@ export function DetailsPage(props: DetailsPageProps) {
             content: (
               <Card className="dashboard-card overflow-hidden">
                 <CardContent className="p-0">
-                  <DataTable columns={customerColumns} data={orderCustomerRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={1420} pageSize={10} />
+                  <DataTable columns={customerColumns} data={orderCustomerRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={1000} pageSize={10} />
                 </CardContent>
               </Card>
             )
@@ -1284,7 +1297,7 @@ export function DetailsPage(props: DetailsPageProps) {
             content: (
               <Card className="dashboard-card overflow-hidden">
                 <CardContent className="p-0">
-                  <DataTable columns={siteColumns} data={orderSiteRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={1460} pageSize={10} />
+                  <DataTable columns={siteColumns} data={orderSiteRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={980} pageSize={10} />
                 </CardContent>
               </Card>
             )
