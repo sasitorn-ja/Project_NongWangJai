@@ -993,7 +993,7 @@ export function DetailsPage(props: DetailsPageProps) {
   ];
 
   const siteColumns: DataColumn<(typeof orderSiteRows)[number]>[] = [
-    { title: "Site", key: "site", sortAccessor: (record) => record.siteName, width: 300, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.siteName}</div><div className="text-xs font-medium text-slate-500">{record.siteCode}</div></div> },
+    { title: "Site", key: "site", sortAccessor: (record) => record.siteName, width: 300, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.siteCode}</div><div className="text-xs font-medium text-slate-500">{record.siteName}</div></div> },
     { title: "Customer", key: "customerName", dataIndex: "customerName", width: 240 },
     { title: "Ordered Volume", key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
     { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },

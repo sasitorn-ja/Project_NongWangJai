@@ -268,8 +268,8 @@ export function TopProductsPage({
       width: 190,
       render: (_, record) => (
         <div className="min-w-0">
-          <div className="truncate text-[13px] font-semibold leading-5 text-slate-900">{record.productName}</div>
-          <div className="truncate text-[11px] font-medium text-slate-500">{record.productCode}</div>
+          <div className="truncate text-[13px] font-semibold leading-5 text-slate-900">{record.productCode}</div>
+          <div className="truncate text-[11px] font-medium text-slate-500">{record.productName}</div>
         </div>
       )
     },
