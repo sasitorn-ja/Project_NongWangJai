@@ -14,14 +14,6 @@ import { DataTable } from "../table/DataTable";
 import { TopCustomersFilter } from "../filters/TopCustomersFilter";
 import { WangjaiLogo } from "../ui/WangjaiLogo";
 
-function getOrderUpdateDateText(order: OrderItem) {
-  return order.updated_at ?? null;
-}
-
-function getOrderCreatedDateText(order: OrderItem) {
-  return order.created_at ?? null;
-}
-
 function ProductInsightBanner() {
   return (
     <section className="relative overflow-hidden rounded-lg border border-sky-100 bg-gradient-to-r from-white via-sky-50/90 to-sky-100 px-4 py-3 shadow-[0_10px_28px_-18px_rgba(14,116,214,0.45)]">
@@ -41,7 +33,7 @@ function ProductInsightBanner() {
               น้องวางใจ
             </span>
             <h2 className="min-w-0 text-[15px] font-extrabold leading-6 text-sky-700 md:text-[16px]">
-              ดูสินค้าขายดีจาก Delivered Volume และจำนวน order
+              ดูสินค้าขายดีจากปริมาณส่งจริงและจำนวนออเดอร์
             </h2>
           </div>
           <p className="mt-1.5 max-w-[54rem] text-[13px] font-medium leading-5 text-slate-600">
@@ -49,9 +41,9 @@ function ProductInsightBanner() {
           </p>
           <div className="mt-2 hidden items-center gap-2 text-[11px] font-semibold text-slate-400 sm:flex">
             <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
-            Delivered Volume
+            ปริมาณส่งจริง
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Order Count
+            จำนวนออเดอร์
             <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
             Top N Ranking
           </div>
@@ -154,8 +146,6 @@ export function TopProductsPage({
         {
           key: string;
           latestPour: string | null;
-          latestCreated: string | null;
-          latestUpdate: string | null;
           orderCount: number;
           ordered: number;
           productCode: string;
@@ -168,8 +158,6 @@ export function TopProductsPage({
         acc.get(order.productKey) ?? {
           key: order.productKey,
           latestPour: null,
-          latestCreated: null,
-          latestUpdate: null,
           orderCount: 0,
           ordered: 0,
           productCode: order.productCode,
@@ -185,20 +173,6 @@ export function TopProductsPage({
       const currentPourDate = parseDateValue(current.latestPour);
       if (pourDate && (!currentPourDate || pourDate > currentPourDate)) {
         current.latestPour = order.pour_datetime ?? null;
-      }
-
-      const createdText = getOrderCreatedDateText(order);
-      const createdDate = parseDateValue(createdText);
-      const currentCreatedDate = parseDateValue(current.latestCreated);
-      if (createdDate && (!currentCreatedDate || createdDate > currentCreatedDate)) {
-        current.latestCreated = createdText;
-      }
-
-      const updateText = getOrderUpdateDateText(order);
-      const updateDate = parseDateValue(updateText);
-      const currentUpdateDate = parseDateValue(current.latestUpdate);
-      if (updateDate && (!currentUpdateDate || updateDate > currentUpdateDate)) {
-        current.latestUpdate = updateText;
       }
 
       acc.set(order.productKey, current);
@@ -300,57 +274,45 @@ export function TopProductsPage({
       )
     },
     {
-      title: "Order Count",
+      title: "จำนวนออเดอร์",
       key: "orderCount",
       dataIndex: "orderCount",
       align: "right",
-      width: 62,
-      render: formatNumber
+      width: 78,
+      render: (value) => (
+        <span>
+          {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">ครั้ง</span>
+        </span>
+      )
     },
     {
-      title: "Ordered Volume",
+      title: "ปริมาณที่สั่ง",
       key: "ordered",
       dataIndex: "ordered",
       align: "right",
-      width: 74,
-      render: formatNumber
+      width: 86,
+      render: (value) => (
+        <span>
+          {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">คิว</span>
+        </span>
+      )
     },
     {
-      title: "Delivered Volume",
+      title: "ปริมาณส่งจริง",
       key: "delivered",
       dataIndex: "delivered",
       align: "right",
-      width: 74,
-      render: formatNumber
+      width: 86,
+      render: (value) => (
+        <span>
+          {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">คิว</span>
+        </span>
+      )
     },
     {
       title: "เวลาเทล่าสุด",
       key: "latestPour",
       dataIndex: "latestPour",
-      width: 94,
-      render: (value) => {
-        if (!value) return "-";
-        const date = new Date(String(value));
-        if (Number.isNaN(date.getTime())) return String(value);
-        return new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short" }).format(date);
-      }
-    },
-    {
-      title: "วันที่สร้างข้อมูลล่าสุด",
-      key: "latestCreated",
-      dataIndex: "latestCreated",
-      width: 94,
-      render: (value) => {
-        if (!value) return "-";
-        const date = new Date(String(value));
-        if (Number.isNaN(date.getTime())) return String(value);
-        return new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short" }).format(date);
-      }
-    },
-    {
-      title: "วันที่แก้ไขข้อมูล",
-      key: "latestUpdate",
-      dataIndex: "latestUpdate",
       width: 94,
       render: (value) => {
         if (!value) return "-";
@@ -457,16 +419,16 @@ export function TopProductsPage({
             },
             {
               accent: "emerald",
-              detail: "จำนวนรายการ order ที่ใช้คำนวณสินค้าขายดี",
+              detail: "นับจำนวนออเดอร์เป็นครั้ง ไม่ใช่ปริมาณคิว",
               icon: <ClipboardList size={18} />,
-              label: "Order Count",
+              label: "จำนวนออเดอร์",
               value: formatNumber(totalOrders)
             },
             {
               accent: "sky",
               detail: "ปริมาณส่งจริงรวมของสินค้าที่ถูกกรอง",
               icon: <Truck size={18} />,
-              label: "Delivered Volume",
+              label: "ปริมาณส่งจริง",
               value: (
                 <>
                   {compactNumber(totalVolume)}{" "}
@@ -506,10 +468,10 @@ export function TopProductsPage({
         <Card className="dashboard-card overflow-hidden">
           <CardHeader className="border-b border-[#d9e3e6]">
             <CardTitle className="text-lg">Product Ranking</CardTitle>
-            <p className="text-xs font-medium text-slate-500">สรุปสินค้าตาม Order Count และ Delivered Volume</p>
+            <p className="text-xs font-medium text-slate-500">จำนวนออเดอร์คือจำนวนครั้ง ส่วนปริมาณที่สั่ง/ส่งจริงคือคิวรวม</p>
           </CardHeader>
           <CardContent className="p-0">
-            <DataTable columns={productColumns} data={productRows} loading={ordersState === "loading"} rowKey="key" minWidth={1210} pageSize={10} />
+            <DataTable columns={productColumns} data={productRows} loading={ordersState === "loading"} rowKey="key" minWidth={940} pageSize={10} />
           </CardContent>
         </Card>
       </section>

@@ -907,8 +907,6 @@ export function DetailsPage(props: DetailsPageProps) {
           delivered: number;
           key: string;
           latestPour: string | null;
-          latestCreated: string | null;
-          latestUpdate: string | null;
           ordered: number;
           orderCount: number;
           siteCount: number;
@@ -926,8 +924,6 @@ export function DetailsPage(props: DetailsPageProps) {
           delivered: 0,
           key,
           latestPour: null,
-          latestCreated: null,
-          latestUpdate: null,
           ordered: 0,
           orderCount: 0,
           siteCount: 0,
@@ -943,20 +939,6 @@ export function DetailsPage(props: DetailsPageProps) {
       const currentPourDate = parseDateValue(current.latestPour);
       if (pourDate && (!currentPourDate || pourDate > currentPourDate)) {
         current.latestPour = row.pour_datetime ?? null;
-      }
-
-      const createdText = getOrderCreatedDateText(row);
-      const createdDate = parseDateValue(createdText);
-      const currentCreatedDate = parseDateValue(current.latestCreated);
-      if (createdDate && (!currentCreatedDate || createdDate > currentCreatedDate)) {
-        current.latestCreated = createdText;
-      }
-
-      const updateText = getOrderUpdateDateText(row);
-      const updateDate = parseDateValue(updateText);
-      const currentUpdateDate = parseDateValue(current.latestUpdate);
-      if (updateDate && (!currentUpdateDate || updateDate > currentUpdateDate)) {
-        current.latestUpdate = updateText;
       }
 
       current.siteCount = current.uniqueSites.size;
@@ -976,8 +958,6 @@ export function DetailsPage(props: DetailsPageProps) {
           delivered: number;
           key: string;
           latestPour: string | null;
-          latestCreated: string | null;
-          latestUpdate: string | null;
           ordered: number;
           siteCode: string;
           siteName: string;
@@ -993,8 +973,6 @@ export function DetailsPage(props: DetailsPageProps) {
           delivered: 0,
           key,
           latestPour: null,
-          latestCreated: null,
-          latestUpdate: null,
           ordered: 0,
           siteCode,
           siteName
@@ -1007,20 +985,6 @@ export function DetailsPage(props: DetailsPageProps) {
       const currentPourDate = parseDateValue(current.latestPour);
       if (pourDate && (!currentPourDate || pourDate > currentPourDate)) {
         current.latestPour = row.pour_datetime ?? null;
-      }
-
-      const createdText = getOrderCreatedDateText(row);
-      const createdDate = parseDateValue(createdText);
-      const currentCreatedDate = parseDateValue(current.latestCreated);
-      if (createdDate && (!currentCreatedDate || createdDate > currentCreatedDate)) {
-        current.latestCreated = createdText;
-      }
-
-      const updateText = getOrderUpdateDateText(row);
-      const updateDate = parseDateValue(updateText);
-      const currentUpdateDate = parseDateValue(current.latestUpdate);
-      if (updateDate && (!currentUpdateDate || updateDate > currentUpdateDate)) {
-        current.latestUpdate = updateText;
       }
 
       acc.set(key, current);
@@ -1049,9 +1013,7 @@ export function DetailsPage(props: DetailsPageProps) {
     { title: "ออเดอร์", key: "orderCount", dataIndex: "orderCount", align: "right", width: 92, render: formatNumber },
     { title: "จำนวนที่สั่ง", key: "ordered", dataIndex: "ordered", align: "right", width: 112, render: formatNumber },
     { title: "จำนวนส่งจริง", key: "delivered", dataIndex: "delivered", align: "right", width: 118, render: formatNumber },
-    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> },
-    { title: "สร้างข้อมูลล่าสุด", key: "latestCreated", dataIndex: "latestCreated", width: 122, render: (value) => <CompactDateTime value={String(value ?? "")} /> },
-    { title: "แก้ไขข้อมูล", key: "latestUpdate", dataIndex: "latestUpdate", width: 116, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
+    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
   ];
 
   const siteColumns: DataColumn<(typeof orderSiteRows)[number]>[] = [
@@ -1059,9 +1021,7 @@ export function DetailsPage(props: DetailsPageProps) {
     { title: "ลูกค้า", key: "customerName", dataIndex: "customerName", width: 160, render: (value) => <span className="line-clamp-2 text-[13px] leading-5" title={String(value ?? "-")}>{String(value ?? "-")}</span> },
     { title: "จำนวนที่สั่ง", key: "ordered", dataIndex: "ordered", align: "right", width: 112, render: formatNumber },
     { title: "จำนวนส่งจริง", key: "delivered", dataIndex: "delivered", align: "right", width: 118, render: formatNumber },
-    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> },
-    { title: "สร้างข้อมูลล่าสุด", key: "latestCreated", dataIndex: "latestCreated", width: 122, render: (value) => <CompactDateTime value={String(value ?? "")} /> },
-    { title: "แก้ไขข้อมูล", key: "latestUpdate", dataIndex: "latestUpdate", width: 116, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
+    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
   ];
 
   const groupColumns: DataColumn<DealerGroup>[] = [
@@ -1286,7 +1246,7 @@ export function DetailsPage(props: DetailsPageProps) {
             content: (
               <Card className="dashboard-card overflow-hidden">
                 <CardContent className="p-0">
-                  <DataTable columns={customerColumns} data={orderCustomerRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={1000} pageSize={10} />
+                  <DataTable columns={customerColumns} data={orderCustomerRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={860} pageSize={10} />
                 </CardContent>
               </Card>
             )
@@ -1297,7 +1257,7 @@ export function DetailsPage(props: DetailsPageProps) {
             content: (
               <Card className="dashboard-card overflow-hidden">
                 <CardContent className="p-0">
-                  <DataTable columns={siteColumns} data={orderSiteRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={980} pageSize={10} />
+                  <DataTable columns={siteColumns} data={orderSiteRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={858} pageSize={10} />
                 </CardContent>
               </Card>
             )
