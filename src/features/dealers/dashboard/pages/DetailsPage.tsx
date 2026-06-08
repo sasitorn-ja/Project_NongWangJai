@@ -339,6 +339,7 @@ function RecentActivityCard({ orders, unit }: { orders: OrderItem[]; unit: strin
       .map((row) => ({
         row,
         date: parseDateValue(row.pour_datetime) ?? parseDateValue(getOrderUpdateDateText(row)),
+        dateTextValue: row.pour_datetime ?? getOrderUpdateDateText(row),
         dateKind: row.pour_datetime ? "เวลาเท" : "อัปเดตรายการ"
       }))
       .filter((item) => item.date)
@@ -357,7 +358,7 @@ function RecentActivityCard({ orders, unit }: { orders: OrderItem[]; unit: strin
 
   return (
     <div className="space-y-1">
-      {recent.map(({ row, date, dateKind }, i) => {
+      {recent.map(({ row, dateTextValue, dateKind }, i) => {
         const statusKey = getOrderStatusKey(row.status?.order);
         const meta = ORDER_STATUS_META[statusKey];
         const customer = row.customer?.name?.trim() || "ไม่ระบุลูกค้า";
@@ -375,7 +376,7 @@ function RecentActivityCard({ orders, unit }: { orders: OrderItem[]; unit: strin
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate text-sm font-semibold text-slate-800 dark:text-slate-200" title={customer}>{customer}</span>
                 <span className="shrink-0 text-[11px] font-semibold text-slate-400">
-                  {dateKind}: {dateText(date?.toISOString())}
+                  {dateKind}: {dateText(dateTextValue)}
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2 text-[11px] font-medium text-slate-400">

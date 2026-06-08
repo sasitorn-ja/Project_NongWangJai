@@ -2,8 +2,8 @@ export type DatePreset = "all" | "7d" | "30d" | "90d" | "custom";
 
 export function dateText(value?: string | null) {
   if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+  const date = parseDateValue(value);
+  if (!date) return value;
   return new Intl.DateTimeFormat("th-TH", {
     dateStyle: "medium",
     timeStyle: "short"
@@ -12,7 +12,24 @@ export function dateText(value?: string | null) {
 
 export function parseDateValue(value?: string | null) {
   if (!value) return null;
-  const date = new Date(value);
+
+  // API timestamps are business-local times. Preserve the clock value instead
+  // of letting Date convert a trailing Z/offset to the browser timezone.
+  const parts = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d+))?)?)?/
+  );
+  const date = parts
+    ? new Date(
+        Number(parts[1]),
+        Number(parts[2]) - 1,
+        Number(parts[3]),
+        Number(parts[4] ?? 0),
+        Number(parts[5] ?? 0),
+        Number(parts[6] ?? 0),
+        Number((parts[7] ?? "0").slice(0, 3).padEnd(3, "0"))
+      )
+    : new Date(value);
+
   return Number.isNaN(date.getTime()) ? null : date;
 }
 

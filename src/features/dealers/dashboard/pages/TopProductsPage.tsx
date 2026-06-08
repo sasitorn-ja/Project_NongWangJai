@@ -6,7 +6,7 @@ import productImage from "@/assets/top-products-cpac-truck-transparent.png";
 import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
 import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
-import { getMonthKey, getMonthLabel, parseDateValue } from "../lib/dates";
+import { dateText, getMonthKey, getMonthLabel, parseDateValue } from "../lib/dates";
 import { FIXED_DIVISIONS } from "../lib/regions";
 import type { DataColumn } from "../table/types";
 import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
@@ -314,12 +314,7 @@ export function TopProductsPage({
       key: "latestPour",
       dataIndex: "latestPour",
       width: 94,
-      render: (value) => {
-        if (!value) return "-";
-        const date = new Date(String(value));
-        if (Number.isNaN(date.getTime())) return String(value);
-        return new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeStyle: "short" }).format(date);
-      }
+      render: (value) => dateText(String(value ?? ""))
     }
   ];
 
