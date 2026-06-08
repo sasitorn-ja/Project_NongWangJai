@@ -216,10 +216,10 @@ function CustomerAccordionRow({
                     เวลาเท
                   </th>
                   <th className="w-[11%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
-                    สร้างข้อมูล
+                    สร้างออเดอร์
                   </th>
                   <th className="w-[11%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
-                    แก้ไขข้อมูล ↓
+                    อัปเดตรายการ ↓
                   </th>
                   <th className="w-[6%] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     สถานะ
@@ -365,11 +365,11 @@ function MobileCustomerCard({
                     <div className="font-medium text-slate-700">{dateText(getPourDateText(order))}</div>
                   </div>
                   <div>
-                    <div className="text-slate-400">วันที่สร้างข้อมูล</div>
+                    <div className="text-slate-400">วันที่สร้างออเดอร์</div>
                     <div className="font-medium text-slate-700">{dateText(getOrderCreatedDateText(order))}</div>
                   </div>
                   <div>
-                    <div className="text-slate-400">วันที่แก้ไขข้อมูล</div>
+                    <div className="text-slate-400">วันที่อัปเดตรายการ</div>
                     <div className="font-medium text-slate-700">{dateText(getOrderUpdateDateText(order))}</div>
                   </div>
                   <div>

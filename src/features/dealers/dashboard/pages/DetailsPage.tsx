@@ -173,7 +173,7 @@ function DealerProfileHero({
                   {status.label}
                 </span>
               </span>
-              <span>ใช้งานล่าสุด <strong className="ml-2 font-semibold text-slate-800 dark:text-slate-200">{dateText(dealer.last_active_at ?? dealer.updated_at)}</strong></span>
+              <span>ใช้งานล่าสุด <strong className="ml-2 font-semibold text-slate-800 dark:text-slate-200">{dateText(dealer.last_active_at)}</strong></span>
             </div>
           </div>
         </div>
@@ -339,7 +339,7 @@ function RecentActivityCard({ orders, unit }: { orders: OrderItem[]; unit: strin
       .map((row) => ({
         row,
         date: parseDateValue(row.pour_datetime) ?? parseDateValue(getOrderUpdateDateText(row)),
-        dateKind: row.pour_datetime ? "เวลาเท" : "แก้ไขข้อมูล"
+        dateKind: row.pour_datetime ? "เวลาเท" : "อัปเดตรายการ"
       }))
       .filter((item) => item.date)
       .sort((a, b) => (b.date as Date).getTime() - (a.date as Date).getTime())
@@ -1030,7 +1030,7 @@ export function DetailsPage(props: DetailsPageProps) {
     { title: "จอง", dataIndex: "booked_volume", key: "booked_volume", align: "right", width: 150, render: (value, record) => `${formatNumber(value)} ${record.unit}` },
     { title: "เช็คราคา", dataIndex: "price_check_count", key: "price_check_count", align: "right", width: 130, render: formatNumber },
     { title: "จองคิว", dataIndex: "booking_count", key: "booking_count", align: "right", width: 130, render: formatNumber },
-    { title: "วันที่สร้าง", dataIndex: "created_at", key: "created_at", width: 190, render: dateText },
+    { title: "วันที่สร้างกลุ่ม", dataIndex: "created_at", key: "created_at", width: 190, render: dateText },
     statusColumn<DealerGroup>()
   ];
 
@@ -1192,7 +1192,7 @@ export function DetailsPage(props: DetailsPageProps) {
                   <Activity size={16} />
                   กิจกรรมล่าสุด
                 </CardTitle>
-                <p className="text-[11px] font-medium text-slate-500">เรียงจากเวลาเทก่อน ถ้าไม่มีจะแสดงวันที่แก้ไขข้อมูล</p>
+                <p className="text-[11px] font-medium text-slate-500">เรียงจากเวลาเทก่อน ถ้าไม่มีจะแสดงวันที่อัปเดตรายการ</p>
               </CardHeader>
               <CardContent>
                 <RecentActivityCard orders={dealerOrders} unit={areaUnit} />

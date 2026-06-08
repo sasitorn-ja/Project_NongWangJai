@@ -81,7 +81,7 @@ function buildBuckets(
   }
 
   const rows = dealers
-    .map((dealer) => ({ dealer, date: parseDateValue(dealer.last_active_at ?? dealer.updated_at) }))
+    .map((dealer) => ({ dealer, date: parseDateValue(dealer.last_active_at) }))
     .filter((r): r is { dealer: Dealer; date: Date } => Boolean(r.date));
 
   if (!rows.length) return [];

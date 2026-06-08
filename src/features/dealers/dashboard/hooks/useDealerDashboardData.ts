@@ -142,7 +142,7 @@ export function useDealerDashboardData({
         (status === "idle" && getDealerStatusKey(dealer.status) === "idle") ||
         (status === "new" && getDealerStatusKey(dealer.status) === "new");
       const haystack = `${dealer.dealer_code} ${dealer.dealer_name} ${dealer.province} ${dealer.region}`.toLowerCase();
-      const matchDate = isWithinDateRange(dealer.last_active_at ?? dealer.updated_at ?? dealer.created_at, dateFrom, dateTo);
+      const matchDate = isWithinDateRange(dealer.last_active_at, dateFrom, dateTo);
       return matchRegion && matchStatus && matchDate && (!q || haystack.includes(q));
     });
   }, [dateFrom, dateTo, dealers, region, search, status]);
@@ -155,7 +155,7 @@ export function useDealerDashboardData({
   const activeRate = filteredDealers.length ? Math.round((activeDealers / filteredDealers.length) * 100) : 0;
 
   const filteredGroups = useMemo(
-    () => groups.filter((group) => isWithinDateRange(group.created_at ?? group.updated_at, dateFrom, dateTo)),
+    () => groups.filter((group) => isWithinDateRange(group.created_at, dateFrom, dateTo)),
     [dateFrom, dateTo, groups]
   );
 
@@ -170,7 +170,7 @@ export function useDealerDashboardData({
   );
 
   const filteredSites = useMemo(
-    () => sites.filter((site) => isWithinDateRange(site.last_pour_datetime ?? site.updated_at ?? site.created_at, dateFrom, dateTo)),
+    () => sites.filter((site) => isWithinDateRange(site.last_pour_datetime, dateFrom, dateTo)),
     [dateFrom, dateTo, sites]
   );
 

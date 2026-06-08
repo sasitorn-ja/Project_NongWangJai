@@ -237,7 +237,7 @@ export function DashboardPage(props: DashboardPageProps) {
   const chartDates = useMemo(
     () =>
       props.filteredDealers
-        .map((dealer) => parseDateValue(dealer.last_active_at ?? dealer.updated_at))
+        .map((dealer) => parseDateValue(dealer.last_active_at))
         .filter((date): date is Date => Boolean(date))
         .sort((a, b) => a.getTime() - b.getTime()),
     [props.filteredDealers]
