@@ -32,11 +32,8 @@ function getOrderDateValue(order: OrderItem) {
   return parseDateValue(order.pour_datetime ?? order.updated_at ?? order.created_at);
 }
 
-function getOrderDateText(order: OrderItem) {
-  return order.pour_datetime ?? order.updated_at ?? order.created_at ?? null;
-}
-
 function getPourDateText(order: OrderItem) {
+  if (getOrderStatusKey(order.status?.order) === "cancelled") return null;
   return order.pour_datetime ?? null;
 }
 
@@ -107,10 +104,10 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
     const statusKey = getOrderStatusKey(order.status?.order);
     if (statusKey === "confirmed" || statusKey === "pending") group.openOrderCount += 1;
 
-    const candidate = getOrderDateValue(order);
+    const candidate = parseDateValue(getPourDateText(order));
     const current = parseDateValue(group.latestPour);
     if (candidate && (!current || candidate > current)) {
-      group.latestPour = getOrderDateText(order);
+      group.latestPour = getPourDateText(order);
     }
   });
 
