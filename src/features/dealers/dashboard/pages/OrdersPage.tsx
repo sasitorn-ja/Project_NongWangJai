@@ -28,6 +28,7 @@ type CustomerGroup = {
   orders: OrderItem[];
   totalDelivered: number;
   totalOrdered: number;
+  unit: string;
   uniqueSiteCount: number;
 };
 
@@ -102,6 +103,7 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
         orders: [],
         totalDelivered: 0,
         totalOrdered: 0,
+        unit: order.quantity?.unit || "คิว",
         uniqueSiteCount: 0
       };
       map.set(key, group);
@@ -194,10 +196,10 @@ function CustomerAccordionRow({
         </div>
         <div className="text-right font-bold text-slate-900">{formatNumber(group.orderCount)}</div>
         <div className="text-right font-bold text-slate-900">
-          {compactNumber(group.totalOrdered)} <span className="text-[10px] font-semibold text-slate-400">m³</span>
+          {compactNumber(group.totalOrdered)} <span className="text-[10px] font-semibold text-slate-400">{group.unit}</span>
         </div>
         <div className={cn("text-right font-bold", group.totalDelivered > 0 ? "text-slate-900" : "text-slate-400")}>
-          {compactNumber(group.totalDelivered)} <span className="text-[10px] font-semibold text-slate-400">m³</span>
+          {compactNumber(group.totalDelivered)} <span className="text-[10px] font-semibold text-slate-400">{group.unit}</span>
         </div>
         <div className="truncate text-xs font-medium text-slate-600">{dateText(group.latestPour)}</div>
       </button>
@@ -342,12 +344,12 @@ function MobileCustomerCard({
             </div>
             <div>
               <div className="text-[10px] font-semibold text-slate-400">ปริมาณที่สั่ง</div>
-              <div className="font-bold text-slate-800">{compactNumber(group.totalOrdered)} <span className="text-[9px] text-slate-400">m³</span></div>
+              <div className="font-bold text-slate-800">{compactNumber(group.totalOrdered)} <span className="text-[9px] text-slate-400">{group.unit}</span></div>
             </div>
             <div>
               <div className="text-[10px] font-semibold text-slate-400">ปริมาณส่งจริง</div>
               <div className={cn("font-bold", group.totalDelivered > 0 ? "text-slate-800" : "text-slate-400")}>
-                {compactNumber(group.totalDelivered)} <span className="text-[9px] text-slate-400">m³</span>
+                {compactNumber(group.totalDelivered)} <span className="text-[9px] text-slate-400">{group.unit}</span>
               </div>
             </div>
           </div>
@@ -445,6 +447,7 @@ export function OrdersPage({
   const totalOrdered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0);
   const deliveredOrders = dealerOrders.filter((row) => (row.quantity?.delivered ?? 0) > 0);
   const totalDelivered = deliveredOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
+  const orderUnit = dealerOrders.find((row) => row.quantity?.unit)?.quantity?.unit ?? "คิว";
   const orderListTitle = selectedDealer ? `Order List ของ ${selectedDealer.dealer_name}` : "Order List แยกตาม Dealer";
 
   const toggleCustomer = (key: string) => {
@@ -481,7 +484,7 @@ export function OrdersPage({
         stats={[
           { label: "Scope", value: selectedDealer?.dealer_name ?? "ทุก Dealer" },
           { label: "ออเดอร์", value: formatNumber(dealerOrders.length) },
-          { label: "ส่งจริง", value: `${compactNumber(totalDelivered)} m³` }
+          { label: "ส่งจริง", value: `${compactNumber(totalDelivered)} ${orderUnit}` }
         ]}
         title="เช็กรายการ Order แบบเร็ว"
       />
@@ -508,7 +511,7 @@ export function OrdersPage({
               value: (
                 <>
                   {compactNumber(totalOrdered)}{" "}
-                  <span className="text-xs font-semibold text-slate-400">m³</span>
+                  <span className="text-xs font-semibold text-slate-400">{orderUnit}</span>
                 </>
               )
             },
@@ -519,7 +522,7 @@ export function OrdersPage({
               value: (
                 <>
                   {compactNumber(totalDelivered)}{" "}
-                  <span className="text-xs font-semibold text-slate-400">m³</span>
+                  <span className="text-xs font-semibold text-slate-400">{orderUnit}</span>
                 </>
               )
             }

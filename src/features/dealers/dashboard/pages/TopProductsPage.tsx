@@ -138,6 +138,7 @@ export function TopProductsPage({
     () => ordersBeforeProduct.filter((order) => productFilter === "all" || order.productKey === productFilter),
     [ordersBeforeProduct, productFilter]
   );
+  const volumeUnit = filteredOrders.find((order) => order.quantity?.unit)?.quantity?.unit ?? "คิว";
 
   const productRows = useMemo(() => {
     const rows = filteredOrders.reduce<
@@ -427,7 +428,7 @@ export function TopProductsPage({
               value: (
                 <>
                   {compactNumber(totalVolume)}{" "}
-                  <span className="text-xs font-semibold text-slate-400">m3</span>
+                  <span className="text-xs font-semibold text-slate-400">{volumeUnit}</span>
                 </>
               )
             },

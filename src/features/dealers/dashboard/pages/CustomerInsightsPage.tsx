@@ -145,6 +145,7 @@ export function CustomerInsightsPage({
 
   const totalDelivered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
   const totalOrdered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0);
+  const volumeUnit = dealerOrders.find((order) => order.quantity?.unit)?.quantity?.unit ?? "คิว";
   const totalCustomers = customerRows.length;
   const totalSites = siteRows.length;
   const topCustomers = customerRows.slice(0, topN);
@@ -206,7 +207,7 @@ export function CustomerInsightsPage({
           { label: "Scope", value: currentDealer?.dealer_name ?? "ทุก Dealer" },
           { label: "Customers", value: formatNumber(totalCustomers) },
           { label: "Sites", value: formatNumber(totalSites) },
-          { label: "Delivered", value: `${compactNumber(totalDelivered)} m3` }
+          { label: "Delivered", value: `${compactNumber(totalDelivered)} ${volumeUnit}` }
         ]}
         title="มุมมองลูกค้าและไซต์สำคัญ"
       />

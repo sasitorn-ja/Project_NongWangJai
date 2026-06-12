@@ -85,6 +85,7 @@ export function TopCustomersPage({
     () => ordersBeforeCustomer.filter((order) => customerFilter === "all" || order.customerName === customerFilter),
     [customerFilter, ordersBeforeCustomer]
   );
+  const volumeUnit = filteredOrders.find((order) => order.quantity?.unit)?.quantity?.unit ?? "คิว";
 
   const customerRows = useMemo(() => {
     const rows = filteredOrders.reduce<
@@ -228,7 +229,7 @@ export function TopCustomersPage({
         <div className="space-y-1">
           {record.topCustomers.map((customer, customerIndex) => (
             <div key={`${record.monthKey}-${customer.customerName}-${customerIndex}`} className="line-clamp-2 text-sm text-slate-800">
-              {customer.customerName} #{formatNumber(customer.sites.size)} site, {formatNumber(customer.delivered)} m3
+              {customer.customerName} #{formatNumber(customer.sites.size)} site, {formatNumber(customer.delivered)} {volumeUnit}
             </div>
           ))}
         </div>
@@ -305,7 +306,7 @@ export function TopCustomersPage({
         message="ผมจัดอันดับ Dealer จาก Delivered Volume ตามตัวกรองที่เลือก ใช้ TopN เพื่อดูผู้เล่นหลักของแต่ละเดือน"
         stats={[
           { label: "Top Dealer", value: topDealer?.customerName ?? "-" },
-          { label: "Delivered", value: `${compactNumber(totalVolume)} m3` },
+          { label: "Delivered", value: `${compactNumber(totalVolume)} ${volumeUnit}` },
           { label: "TopN", value: formatNumber(topN) }
         ]}
         title="อันดับ Dealer ที่ควรโฟกัส"
@@ -333,7 +334,7 @@ export function TopCustomersPage({
               value: (
                 <>
                   {compactNumber(totalVolume)}{" "}
-                  <span className="text-xs font-semibold text-slate-400">m3</span>
+                  <span className="text-xs font-semibold text-slate-400">{volumeUnit}</span>
                 </>
               )
             },

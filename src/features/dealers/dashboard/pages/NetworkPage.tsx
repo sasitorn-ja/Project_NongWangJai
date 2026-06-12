@@ -3,9 +3,11 @@ import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
-import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
+import type { ApiState, Dealer, DealerUsage, OrderItem } from "@/features/dealers/types";
 import { getRegionAccent, getRegionLabel } from "../lib/regions";
 import { WangjaiLogo } from "../ui/WangjaiLogo";
+
+type NetworkDealer = Dealer & { priceCheckCount: number };
 
 function DealerNetworkCard({
   dealer,
@@ -14,7 +16,7 @@ function DealerNetworkCard({
   onSelect,
   selected
 }: {
-  dealer: Dealer;
+  dealer: NetworkDealer;
     accent: "sky" | "emerald" | "amber" | "violet" | "cyan" | "teal" | "slate";
   dotClass: string;
   onSelect: (dealerId: number) => void;
@@ -58,8 +60,8 @@ function DealerNetworkCard({
           <div className="mt-0.5 truncate font-semibold text-slate-800">{dealer.province || "-"}</div>
         </div>
         <div>
-          <div className="font-medium text-slate-400">Unit</div>
-          <div className="mt-0.5 font-semibold text-slate-800">{dealer.unit || "m3"}</div>
+          <div className="font-medium text-slate-400">เช็คราคารวม</div>
+          <div className="mt-0.5 font-semibold text-slate-800">{formatNumber(dealer.priceCheckCount)} ครั้ง</div>
         </div>
       </div>
 
@@ -79,10 +81,11 @@ function RegionNetworkColumn({
   selectedDealerId: number | null;
   region: {
     region: string;
-    dealers: Dealer[];
+    dealers: NetworkDealer[];
     dealerCount: number;
     totalGroups: number;
     totalVolume: number;
+    unit: string;
   };
 }) {
   const accent = getRegionAccent(region.region);
@@ -117,7 +120,7 @@ function RegionNetworkColumn({
         <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-medium text-slate-500">
           <span>{formatNumber(region.dealerCount)} dealers</span>
           <span>{formatNumber(region.totalGroups)} groups</span>
-          <span>{compactNumber(region.totalVolume)} m3</span>
+          <span>{compactNumber(region.totalVolume)} {region.unit}</span>
         </div>
       </div>
 
@@ -151,72 +154,47 @@ export function NetworkPage({
   apiState,
   dealers,
   orders,
+  usageRows,
   onSelectDealer,
   selectedDealerId
 }: {
   apiState: ApiState;
   dealers: Dealer[];
   orders: OrderItem[];
+  usageRows: DealerUsage[];
   onSelectDealer: (dealerId: number) => void;
   selectedDealerId: number | null;
 }) {
+  const priceChecksByDealer = useMemo(
+    () => new Map(usageRows.map((row) => [row.dealer_id, row.price_concrete_count])),
+    [usageRows]
+  );
+
   const deliveredByDealer = useMemo(() => {
     const totals = new Map<number, { unit: string; volume: number }>();
     orders.forEach((order) => {
       const delivered = order.quantity?.delivered ?? 0;
-      if (delivered <= 0) return;
       const current = totals.get(order.dealer_id) ?? {
-        unit: order.quantity?.unit || "m3",
+        unit: order.quantity?.unit || "คิว",
         volume: 0
       };
-      current.volume += delivered;
+      current.volume += Math.max(delivered, 0);
       totals.set(order.dealer_id, current);
     });
     return totals;
   }, [orders]);
 
   const uniqueDealers = useMemo(() => {
-    const byIdentity = new Map<string, Dealer>();
-
-    dealers.forEach((dealer) => {
+    return dealers.map((dealer) => {
       const delivered = deliveredByDealer.get(dealer.dealer_id);
-      const dealerWithDelivered = {
+      return {
         ...dealer,
-        unit: delivered?.unit || dealer.unit,
+        priceCheckCount: priceChecksByDealer.get(dealer.dealer_id) ?? 0,
+        unit: delivered?.unit || "คิว",
         volume: delivered?.volume ?? 0
       };
-      const identity =
-        dealer.dealer_code?.trim() ||
-        `${dealer.dealer_name?.trim() || "unknown"}::${dealer.region?.trim() || "-"}::${dealer.province?.trim() || "-"}`;
-      const current = byIdentity.get(identity);
-      if (!current) {
-        byIdentity.set(identity, dealerWithDelivered);
-        return;
-      }
-
-      byIdentity.set(identity, {
-        ...current,
-        ...dealerWithDelivered,
-        dealer_id: current.dealer_id || dealer.dealer_id,
-        dealer_code: current.dealer_code || dealer.dealer_code,
-        dealer_name: current.dealer_name || dealer.dealer_name,
-        region_id: current.region_id || dealer.region_id,
-        region: current.region || dealer.region,
-        province_id: current.province_id || dealer.province_id,
-        province: current.province || dealer.province,
-        group_count: current.group_count + dealer.group_count,
-        volume: current.volume + dealerWithDelivered.volume,
-        unit: current.unit || dealerWithDelivered.unit,
-        last_active_days: current.last_active_days ?? dealer.last_active_days,
-        last_active_at: current.last_active_at ?? dealer.last_active_at,
-        created_at: current.created_at ?? dealer.created_at,
-        updated_at: current.updated_at ?? dealer.updated_at,
-        status: current.status ?? dealer.status
-      });
     });
-
-    return Array.from(byIdentity.values());
-  }, [dealers, deliveredByDealer]);
+  }, [dealers, deliveredByDealer, priceChecksByDealer]);
 
   const regionColumns = useMemo(() => {
     const grouped = uniqueDealers.reduce<
@@ -224,10 +202,11 @@ export function NetworkPage({
         string,
         {
           region: string;
-          dealers: Dealer[];
+          dealers: NetworkDealer[];
           dealerCount: number;
           totalGroups: number;
           totalVolume: number;
+          unit: string;
         }
       >
     >((acc, dealer) => {
@@ -237,13 +216,15 @@ export function NetworkPage({
           dealers: [],
           dealerCount: 0,
           totalGroups: 0,
-          totalVolume: 0
+          totalVolume: 0,
+          unit: dealer.unit || "คิว"
         };
 
       current.dealers.push(dealer);
       current.dealerCount += 1;
       current.totalGroups += dealer.group_count;
       current.totalVolume += dealer.volume;
+      current.unit = current.unit || dealer.unit || "คิว";
       acc.set(dealer.region, current);
       return acc;
     }, new Map());
@@ -277,7 +258,7 @@ export function NetworkPage({
                   <div className="mt-0.5 text-[12px] font-semibold text-slate-500">กลุ่ม</div>
                 </div>
                 <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
-                  <div className="text-[24px] font-bold leading-none text-sky-600">{compactNumber(uniqueDealers.reduce((sum, dealer) => sum + dealer.volume, 0))}</div>
+                  <div className="text-[24px] font-bold leading-none text-sky-600">{compactNumber(uniqueDealers.reduce((sum, dealer) => sum + dealer.volume, 0))} <span className="text-[12px]">{uniqueDealers.find((dealer) => dealer.volume > 0)?.unit ?? "คิว"}</span></div>
                   <div className="mt-0.5 text-[12px] font-semibold text-slate-500">ยอดรวมที่มีส่งจริง</div>
                 </div>
               </div>

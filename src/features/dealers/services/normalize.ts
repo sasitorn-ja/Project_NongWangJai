@@ -57,7 +57,7 @@ export function normalizeUsage(row: DealerUsage): DealerUsage {
 export function normalizeCustomer(row: CustomerUsage): CustomerUsage {
   return {
     ...row,
-    dealer_id: toNumber(row.dealer_id),
+    dealer_id: row.dealer_id == null ? undefined : toNumber(row.dealer_id),
     customer_id: toNumber(row.customer_id),
     price_concrete_count: toNumber(row.price_concrete_count),
     booking_create_count: toNumber(row.booking_create_count)
@@ -68,7 +68,7 @@ export function normalizeSite(row: DealerSite): DealerSite {
   return {
     ...row,
     id: row.id == null ? undefined : toNumber(row.id),
-    dealer_id: toNumber(row.dealer_id),
+    dealer_id: row.dealer_id == null ? undefined : toNumber(row.dealer_id),
     site_id: toNumber(row.site_id || row.id),
     province_id: row.province_id == null ? undefined : toNumber(row.province_id),
     region_id: row.region_id == null ? undefined : toNumber(row.region_id),

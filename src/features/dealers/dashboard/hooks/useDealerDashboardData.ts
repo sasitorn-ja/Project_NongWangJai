@@ -79,10 +79,9 @@ export function useDealerDashboardData({
     setGroupsState("loading");
     setCustomersState("loading");
     setSitesState("loading");
-    const dealerCodeKey = dealer.dealer_code || dealer.dealer_id;
     const [groupResult, customerResult, siteResult] = await Promise.all([
       fetchDealerGroups(dealer.dealer_id),
-      fetchCustomerUsage(dealerCodeKey),
+      fetchCustomerUsage(dealer.dealer_id),
       fetchDealerSites(dealer.dealer_id)
     ]);
     setGroups(groupResult.rows);

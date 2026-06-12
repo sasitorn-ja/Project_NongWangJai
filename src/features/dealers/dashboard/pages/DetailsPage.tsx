@@ -437,7 +437,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
     <div className="space-y-4">
       <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-center">
         <div className="rounded-lg border border-[#e5e7eb] bg-[#fbfcfd] px-3 py-2.5">
-          <div className="text-xs font-semibold text-slate-500">ส่งจริง / ยอดสั่ง</div>
+          <div className="text-xs font-semibold text-slate-500">ส่งจริงใน Orders / สั่งใน Orders</div>
           <div className="mt-1 text-lg font-bold text-slate-950">
             {compactNumber(totalDelivered)} / {compactNumber(totalOrdered)} {unit}
           </div>
@@ -459,7 +459,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                     backgroundColor: rowColor(row),
                     width: `${Math.max((value / segmentTotal) * 100, value > 0 ? 3 : 0)}%`
                   }}
-                  title={`${row.label}: ส่งจริง ${formatNumber(row.delivered)} / ยอดสั่ง ${formatNumber(row.ordered)}`}
+                  title={`${row.label}: ส่งจริงใน Orders ${formatNumber(row.delivered)} / สั่งใน Orders ${formatNumber(row.ordered)}`}
                 />
               );
             })}
@@ -525,7 +525,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
               </div>
               <div className="mt-3 grid gap-1.5">
                 <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                  <span>ส่งจริง</span>
+                  <span>ส่งจริงใน Orders</span>
                   <span>{formatNumber(row.delivered)} {unit}</span>
                 </div>
                 <div className="h-2.5 rounded-full bg-slate-100">
@@ -540,7 +540,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                 {hasOrdered ? (
                   <>
                     <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                      <span>ยอดสั่ง</span>
+                      <span>สั่งใน Orders</span>
                       <span>{formatNumber(row.ordered)} {unit}</span>
                     </div>
                     <div className="h-2.5 rounded-full bg-slate-100">
@@ -562,8 +562,8 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                   <div className="grid grid-cols-[1fr_60px_70px_70px] gap-2 px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                     <span>จังหวัด</span>
                     <span className="text-right">Sites</span>
-                    <span className="text-right">ส่งจริง</span>
-                    <span className="text-right">ยอดสั่ง</span>
+                    <span className="text-right">ส่งจริงใน Orders</span>
+                    <span className="text-right">สั่งใน Orders</span>
                   </div>
                   <div className="max-h-60 overflow-y-auto">
                     {row.children.map((child) => (
@@ -832,7 +832,7 @@ export function DetailsPage(props: DetailsPageProps) {
 
     props.sites.forEach((site) => {
       const label = site.province_name?.trim() || "ไม่ระบุจังหวัด";
-      const key = site.province_bluned_id || site.province_id?.toString() || label;
+      const key = site.province_bluenet_id || site.province_id?.toString() || label;
       const current = provinceMap.get(key) ?? {
         count: 0,
         delivered: 0,
@@ -855,8 +855,11 @@ export function DetailsPage(props: DetailsPageProps) {
 
   const dealerAreaRows = useMemo<AreaRow[]>(() => {
     const areaMap = new Map<string, AreaRow & { provinces: Set<string> }>();
+    const dealerById = new Map(props.filteredDealers.map((dealer) => [dealer.dealer_id, dealer]));
 
-    props.filteredDealers.forEach((dealer) => {
+    props.orders.forEach((order) => {
+      const dealer = dealerById.get(order.dealer_id);
+      if (!dealer) return;
       const label = dealer.region || "ไม่ระบุภูมิภาค";
       const current = areaMap.get(label) ?? {
         count: 0,
@@ -866,14 +869,18 @@ export function DetailsPage(props: DetailsPageProps) {
         label,
         ordered: 0,
         provinces: new Set<string>(),
-        unit: dealer.unit || "m3"
+        unit: order.quantity?.unit || "คิว"
       };
 
-      current.count += 1;
-      current.delivered += dealer.volume;
+      current.delivered += order.quantity?.delivered ?? 0;
+      current.ordered += order.quantity?.ordered ?? 0;
       if (dealer.province) current.provinces.add(dealer.province);
-      current.detail = `${formatNumber(current.count)} Dealer | ${formatNumber(current.provinces.size)} จังหวัด`;
       areaMap.set(label, current);
+    });
+
+    areaMap.forEach((row) => {
+      row.count = props.filteredDealers.filter((dealer) => dealer.region === row.label).length;
+      row.detail = `${formatNumber(row.count)} Dealer | ${formatNumber(row.provinces.size)} จังหวัด`;
     });
 
     return [...areaMap.values()]
@@ -887,7 +894,7 @@ export function DetailsPage(props: DetailsPageProps) {
         unit: row.unit
       }))
       .sort((a, b) => b.delivered - a.delivered || a.label.localeCompare(b.label, "th"));
-  }, [props.filteredDealers]);
+  }, [props.filteredDealers, props.orders]);
 
   const dealerOrders = useMemo(
     () => props.orders.filter((row) => props.selectedDealerId == null || row.dealer_id === props.selectedDealerId),
@@ -958,6 +965,7 @@ export function DetailsPage(props: DetailsPageProps) {
           ordered: number;
           siteCode: string;
           siteName: string;
+          source: string;
         }
       >
     >((acc, row) => {
@@ -972,7 +980,8 @@ export function DetailsPage(props: DetailsPageProps) {
           latestPour: null,
           ordered: 0,
           siteCode,
-          siteName
+          siteName,
+          source: "Order API"
         };
 
       current.ordered += row.quantity?.ordered ?? 0;
@@ -993,27 +1002,46 @@ export function DetailsPage(props: DetailsPageProps) {
 
   const isAllDealers = props.selectedDealerId == null;
   const dealerSiteRows = useMemo(
-    () =>
-      props.sites
-        .map((site) => ({
+    () => {
+      const rows = new Map(
+        orderSiteRows.map((site) => [`${site.siteCode}::${site.siteName}`, site])
+      );
+
+      props.sites.forEach((site) => {
+        const siteCode = site.site_code || site.site_id.toString();
+        const siteName = site.site_name?.trim() || "ไม่ระบุไซต์";
+        rows.set(`${siteCode}::${siteName}`, {
           customerName: site.customer?.name?.trim() || "ไม่ระบุลูกค้า",
           delivered: site.total_delivered,
           key: `${site.site_id}::${site.site_code}`,
           latestPour: site.last_pour_datetime,
           ordered: site.total_ordered,
-          siteCode: site.site_code || site.site_id.toString(),
-          siteName: site.site_name?.trim() || "ไม่ระบุไซต์"
-        }))
-        .sort((a, b) => b.delivered - a.delivered || b.ordered - a.ordered),
-    [props.sites]
+          siteCode,
+          siteName,
+          source: "Sites API"
+        });
+      });
+
+      return [...rows.values()].sort((a, b) => b.delivered - a.delivered || b.ordered - a.ordered);
+    },
+    [orderSiteRows, props.sites]
   );
   const siteRows = isAllDealers ? orderSiteRows : dealerSiteRows;
   const areaRows = isAllDealers ? dealerAreaRows : siteProvinceRows;
-  const areaUnit = props.selectedDealer?.unit ?? areaRows.find((row) => row.unit)?.unit ?? props.filteredDealers.find((dealer) => dealer.unit)?.unit ?? "m3";
+  const orderUnit = dealerOrders.find((order) => order.quantity?.unit)?.quantity?.unit ?? "คิว";
+  const siteUnit = props.sites.find((site) => site.unit)?.unit ?? props.selectedDealer?.unit ?? "m3";
+  const areaUnit = isAllDealers ? orderUnit : siteUnit;
   const totalAreaDelivered = areaRows.reduce((sum, row) => sum + row.delivered, 0);
   const totalGroups = isAllDealers ? props.filteredDealers.reduce((sum, dealer) => sum + dealer.group_count, 0) : props.groups.length;
-  const topDealerVolume = useMemo(() => [...props.filteredDealers].sort((a, b) => b.volume - a.volume).slice(0, 8), [props.filteredDealers]);
-  const maxDealerVolume = Math.max(...topDealerVolume.map((dealer) => dealer.volume), 1);
+  const topDealerVolume = useMemo(() => {
+    const totals = new Map<number, number>();
+    props.orders.forEach((order) => totals.set(order.dealer_id, (totals.get(order.dealer_id) ?? 0) + (order.quantity?.delivered ?? 0)));
+    return props.filteredDealers
+      .map((dealer) => ({ dealer, delivered: totals.get(dealer.dealer_id) ?? 0 }))
+      .sort((a, b) => b.delivered - a.delivered)
+      .slice(0, 8);
+  }, [props.filteredDealers, props.orders]);
+  const maxDealerVolume = Math.max(...topDealerVolume.map((row) => row.delivered), 1);
 
   // Single-dealer order totals (used for the profile hero + KPI grid)
   const dealerOrderedTotal = useMemo(() => dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0), [dealerOrders]);
@@ -1034,7 +1062,8 @@ export function DetailsPage(props: DetailsPageProps) {
     { title: "ลูกค้า", key: "customerName", dataIndex: "customerName", width: 160, render: (value) => <span className="line-clamp-2 text-[13px] leading-5" title={String(value ?? "-")}>{String(value ?? "-")}</span> },
     { title: "จำนวนที่สั่ง", key: "ordered", dataIndex: "ordered", align: "right", width: 112, render: formatNumber },
     { title: "จำนวนส่งจริง", key: "delivered", dataIndex: "delivered", align: "right", width: 118, render: formatNumber },
-    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
+    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> },
+    { title: "แหล่งข้อมูล", key: "source", dataIndex: "source", width: 105, render: (value) => <span className="whitespace-nowrap text-[11px] font-semibold text-sky-700">{String(value)}</span> }
   ];
 
   const groupColumns: DataColumn<DealerGroup>[] = [
@@ -1062,10 +1091,10 @@ export function DetailsPage(props: DetailsPageProps) {
           <WangjaiAdvisor
             accent="sky"
             compact
-            message="เริ่มจากภาพรวมทุก Dealer ก่อน แล้วเลือก Dealer เพื่อเจาะลึกพื้นที่ขาย กลุ่ม ลูกค้า และไซต์ที่มีผลต่อยอดส่งจริง"
+            message="เริ่มจากภาพรวมทุก Dealer ก่อน แล้วเลือก Dealer เพื่อเจาะลึกพื้นที่ขาย กลุ่ม ลูกค้า และไซต์ โดยยอดสั่ง/ส่งจริงในมุมนี้มาจาก Order API"
             stats={[
               { label: "Scope", value: "ทุก Dealer" },
-              { label: "Delivered", value: `${compactNumber(totalAreaDelivered)} ${areaUnit}` },
+              { label: "ส่งจริง Orders", value: `${compactNumber(totalAreaDelivered)} ${areaUnit}` },
               { label: "Groups", value: formatNumber(totalGroups) }
             ]}
             title="เลือกมุมวิเคราะห์จากภาพรวม"
@@ -1084,9 +1113,9 @@ export function DetailsPage(props: DetailsPageProps) {
               <CardHeader className="border-b border-[#d9e3e6]">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <MapPin size={18} />
-                  ปริมาณการขายแยกตามพื้นที่
+                  สั่ง/ส่งจริงจาก Orders แยกตามพื้นที่
                 </CardTitle>
-                <p className="text-xs font-medium text-slate-500">ค่าเริ่มต้นคือทุก Dealer และรวมตามภูมิภาค</p>
+                <p className="text-xs font-medium text-slate-500">รวม quantity.ordered และ quantity.delivered จาก Order API ตามภูมิภาคของ Dealer</p>
               </CardHeader>
               <CardContent>
                 <SalesAreaChart loading={false} rows={areaRows} unit={areaUnit} />
@@ -1095,16 +1124,16 @@ export function DetailsPage(props: DetailsPageProps) {
 
             <Card className="dashboard-card">
               <CardHeader className="border-b border-[#d9e3e6]">
-                <CardTitle className="text-lg">Dealer ส่งจริงสูงสุด</CardTitle>
-                <p className="text-xs font-medium text-slate-500">เรียงตามยอดส่งจริงในตัวกรองปัจจุบัน</p>
+                <CardTitle className="text-lg">Dealer ส่งจริงสูงสุดจาก Orders</CardTitle>
+                <p className="text-xs font-medium text-slate-500">เรียงตาม quantity.delivered จาก Order API ในตัวกรองปัจจุบัน</p>
               </CardHeader>
               <CardContent>
                 <ProgressList
-                  rows={topDealerVolume.map((dealer) => ({
+                  rows={topDealerVolume.map(({ dealer, delivered }) => ({
                     label: dealer.dealer_name,
                     total: maxDealerVolume,
-                    unit: dealer.unit || areaUnit,
-                    value: dealer.volume
+                    unit: orderUnit,
+                    value: delivered
                   }))}
                 />
               </CardContent>
@@ -1118,7 +1147,7 @@ export function DetailsPage(props: DetailsPageProps) {
                   <BarChart3 size={18} />
                   ลูกค้าที่มียอดสูงสุด
                 </CardTitle>
-                <p className="text-xs font-medium text-slate-500">เทียบยอดส่งจริงกับยอดสั่งของลูกค้าแต่ละราย</p>
+                <p className="text-xs font-medium text-slate-500">เทียบ quantity.delivered กับ quantity.ordered จาก Order API ของลูกค้าแต่ละราย</p>
               </CardHeader>
               <CardContent>
                 <DualBarChart
@@ -1127,8 +1156,8 @@ export function DetailsPage(props: DetailsPageProps) {
                     primary: customer.delivered,
                     secondary: customer.ordered
                   }))}
-                  primaryLabel="ส่งจริง"
-                  secondaryLabel="ยอดสั่ง"
+                  primaryLabel="ส่งจริงใน Orders"
+                  secondaryLabel="สั่งใน Orders"
                 />
                 {orderCustomerRows.length > 5 ? (
                   <p className="mt-3 border-t border-slate-100 pt-2 text-center text-[11px] font-semibold text-slate-400 dark:border-slate-800">
@@ -1140,8 +1169,8 @@ export function DetailsPage(props: DetailsPageProps) {
 
             <Card className="dashboard-card">
               <CardHeader className="border-b border-[#d9e3e6]">
-                <CardTitle className="text-lg">ไซต์ที่ส่งจริงสูงสุด</CardTitle>
-                <p className="text-xs font-medium text-slate-500">ไซต์ที่มียอดส่งจริงสูงสุดจากรายการ order ที่กรองอยู่</p>
+                <CardTitle className="text-lg">ไซต์ที่ส่งจริงสูงสุดจาก Orders</CardTitle>
+                <p className="text-xs font-medium text-slate-500">เรียงตาม quantity.delivered จาก Order API หรือ Sites API ตามแหล่งข้อมูลของแถวนั้น</p>
               </CardHeader>
               <CardContent>
                 <ProgressList
@@ -1170,7 +1199,7 @@ export function DetailsPage(props: DetailsPageProps) {
               orderCount={dealerOrders.length}
               ordered={dealerOrderedTotal}
               fulfillmentRate={dealerFulfillmentRate}
-              unit={areaUnit}
+              unit={orderUnit}
             />
           ) : null}
 
@@ -1208,7 +1237,7 @@ export function DetailsPage(props: DetailsPageProps) {
                 <p className="text-[11px] font-medium text-slate-500">เรียงจากเวลาเทก่อน ถ้าไม่มีจะแสดงวันที่อัปเดตรายการ</p>
               </CardHeader>
               <CardContent>
-                <RecentActivityCard orders={dealerOrders} unit={areaUnit} />
+                <RecentActivityCard orders={dealerOrders} unit={orderUnit} />
               </CardContent>
             </Card>
 
@@ -1243,7 +1272,7 @@ export function DetailsPage(props: DetailsPageProps) {
                 </div>
               </CardHeader>
               <CardContent>
-                <TopCustomersList rows={orderCustomerRows} unit={areaUnit} />
+                <TopCustomersList rows={orderCustomerRows} unit={orderUnit} />
               </CardContent>
             </Card>
           </section>
@@ -1270,7 +1299,7 @@ export function DetailsPage(props: DetailsPageProps) {
             content: (
               <Card className="dashboard-card overflow-hidden">
                 <CardContent className="p-0">
-                  <DataTable columns={siteColumns} data={siteRows} loading={isAllDealers ? props.ordersState === "loading" : props.sitesState === "loading"} rowKey="key" minWidth={858} pageSize={10} />
+                  <DataTable columns={siteColumns} data={siteRows} loading={isAllDealers ? props.ordersState === "loading" : props.sitesState === "loading"} rowKey="key" minWidth={963} pageSize={10} />
                 </CardContent>
               </Card>
             )

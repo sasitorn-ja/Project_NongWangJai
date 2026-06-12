@@ -73,6 +73,7 @@ function DealerDashboardApp() {
           apiState={data.apiState}
           dealers={data.filteredDealers}
           orders={data.ordersInDateRange}
+          usageRows={data.filteredUsageRows}
           onSelectDealer={(dealerId) => {
             data.setSelectedDealerId(dealerId);
             setPage("details");
@@ -101,7 +102,7 @@ function DealerDashboardApp() {
           filteredDealers={data.filteredDealers}
           groups={data.filteredGroups}
           groupsState={data.groupsState}
-          orders={data.filteredOrders}
+          orders={data.ordersInDateRange}
           ordersState={data.ordersState}
           selectedDealer={data.selectedDealer}
           selectedDealerId={data.selectedDealerId}
@@ -113,17 +114,17 @@ function DealerDashboardApp() {
       )}
 
       {page === "topCustomers" && (
-        <TopCustomersPage dealers={data.dealers} orders={data.filteredOrders} ordersState={data.ordersState} />
+        <TopCustomersPage dealers={data.dealers} orders={data.ordersInDateRange} ordersState={data.ordersState} />
       )}
 
       {page === "topProducts" && (
-        <TopProductsPage dealers={data.dealers} orders={data.filteredOrders} ordersState={data.ordersState} />
+        <TopProductsPage dealers={data.dealers} orders={data.ordersInDateRange} ordersState={data.ordersState} />
       )}
 
       {page === "customerInsights" && (
         <CustomerInsightsPage
           dealers={data.dealers}
-          orders={data.filteredOrders}
+          orders={data.ordersInDateRange}
           ordersState={data.ordersState}
           selectedDealer={data.selectedDealer}
           selectedDealerId={data.selectedDealerId}

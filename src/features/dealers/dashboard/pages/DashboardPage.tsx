@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Layers3, MapPin, PackageCheck, TrendingDown, TrendingUp, Users } from "lucide-react";
+import { Layers3, MapPin, PackageCheck, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
@@ -8,7 +8,6 @@ import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
 import type { PageKey } from "../config/pageMeta";
 import { parseDateValue } from "../lib/dates";
 import { groupByRegion } from "../lib/regions";
-import { getDealerStatusKey } from "../lib/status";
 import type { DataColumn } from "../table/types";
 import { ToggleGroup } from "../ui/ToggleGroup";
 import { FilterBar } from "../filters/FilterBar";
@@ -63,7 +62,6 @@ function KpiStrip({
     textColor: string;
     valueColor: string;
     cardStyle?: React.CSSProperties;
-    delta: number | null;
     icon: React.ReactNode;
     iconStyle?: React.CSSProperties;
     label: string;
@@ -74,7 +72,6 @@ function KpiStrip({
       bgIcon: "bg-sky-50 dark:bg-sky-950/30",
       textColor: "text-sky-600 dark:text-sky-400",
       valueColor: "text-sky-600 dark:text-sky-300",
-      delta: 12.4,
       icon: <PackageCheck size={22} />,
       label: "Total Delivered Volume",
       value: (
@@ -88,9 +85,8 @@ function KpiStrip({
       bgIcon: "bg-emerald-50 dark:bg-emerald-950/30",
       textColor: "text-emerald-600 dark:text-emerald-400",
       valueColor: "text-emerald-600 dark:text-emerald-300",
-      delta: 8.6,
       icon: <Users size={22} />,
-      label: "Active Dealers",
+      label: "Active Dealer Rate",
       value: (
         <>
           {activeRate}
@@ -102,7 +98,6 @@ function KpiStrip({
       bgIcon: "bg-violet-50 dark:bg-violet-950/30",
       textColor: "text-violet-600 dark:text-violet-400",
       valueColor: "text-violet-600 dark:text-violet-300",
-      delta: 5.2,
       icon: <Layers3 size={22} />,
       label: "Total Groups",
       value: formatNumber(totalGroups)
@@ -111,7 +106,6 @@ function KpiStrip({
       bgIcon: "bg-amber-50 dark:bg-amber-950/30",
       textColor: "text-amber-500 dark:text-amber-400",
       valueColor: "text-amber-500 dark:text-amber-300",
-      delta: null,
       icon: <MapPin size={22} />,
       label: "Top Region",
       cardStyle: topRegionColor ? { borderColor: `${topRegionColor}66` } : undefined,
@@ -134,15 +128,7 @@ function KpiStrip({
             <p style={item.valueStyle} className={cn("mt-1.5 truncate text-[24px] font-extrabold leading-none", item.valueColor)}>
               {item.value}
             </p>
-            <p className="mt-2 flex items-center gap-1 truncate text-[10px] font-medium text-slate-400">
-              เปรียบเทียบช่วงก่อนหน้า
-              {item.delta !== null && (
-                <span className={cn("inline-flex items-center gap-0.5 font-bold", item.delta >= 0 ? "text-emerald-500" : "text-rose-500")}>
-                  {item.delta >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                  {Math.abs(item.delta)}%
-                </span>
-              )}
-            </p>
+            <p className="mt-2 truncate text-[10px] font-medium text-slate-400">ข้อมูลจาก API ตามตัวกรองปัจจุบัน</p>
           </div>
           <div style={item.iconStyle} className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", item.bgIcon, item.textColor)}>
             {item.icon}
@@ -170,23 +156,6 @@ function dateFromInput(value: string) {
   return new Date(year, month - 1, day);
 }
 
-// ── Derived demo metrics (placeholders) ──────────────────────────────────────
-// NOTE: the dealer API only returns delivered `volume`. Booked volume, delivery
-// rate and trend below are derived deterministically from dealer_id so the table
-// matches the mockup layout. Wire these to real data when available.
-function deliveryRate(dealer: Dealer) {
-  // stable 0.84–0.97 per dealer
-  return 0.84 + ((dealer.dealer_id * 37) % 14) / 100;
-}
-function bookedVolume(dealer: Dealer) {
-  return Math.round(dealer.volume / deliveryRate(dealer));
-}
-function trendValue(dealer: Dealer) {
-  const isIdle = getDealerStatusKey(dealer.status) === "idle";
-  const mag = ((dealer.dealer_id * 53) % 20) + 1;
-  return isIdle ? -((dealer.dealer_id * 17) % 6) - 1 : mag;
-}
-
 function DeliveryRateCell({ rate }: { rate: number }) {
   const pct = Math.round(rate * 100);
   return (
@@ -196,16 +165,6 @@ function DeliveryRateCell({ rate }: { rate: number }) {
       </div>
       <span className="w-9 shrink-0 text-right text-[12px] font-semibold text-slate-600 dark:text-slate-300">{pct}%</span>
     </div>
-  );
-}
-
-function TrendCell({ value }: { value: number }) {
-  const up = value >= 0;
-  return (
-    <span className={cn("inline-flex items-center justify-end gap-0.5 text-[13px] font-bold", up ? "text-emerald-500" : "text-rose-500")}>
-      {up ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
-      {Math.abs(value)}%
-    </span>
   );
 }
 
@@ -269,6 +228,16 @@ export function DashboardPage(props: DashboardPageProps) {
         : undefined;
 
   const topDeliveredRegion = [...regionTotalVolumes.entries()].sort((a, b) => b[1] - a[1])[0];
+  const orderTotalsByDealer = useMemo(() => {
+    const map = new Map<number, { delivered: number; ordered: number; unit: string }>();
+    props.filteredOrders.forEach((order) => {
+      const current = map.get(order.dealer_id) ?? { delivered: 0, ordered: 0, unit: order.quantity?.unit || "คิว" };
+      current.ordered += order.quantity?.ordered ?? 0;
+      current.delivered += order.quantity?.delivered ?? 0;
+      map.set(order.dealer_id, current);
+    });
+    return map;
+  }, [props.filteredOrders]);
 
   // Active dealer counts (active = status truthy)
   const isActive = (s: Dealer["status"]) =>
@@ -290,45 +259,45 @@ export function DashboardPage(props: DashboardPageProps) {
       render: formatNumber
     },
     {
-      title: "ยอดขาย (Booked)",
+      title: "Volume จาก Dealer API",
       dataIndex: "volume",
-      key: "booked",
+      key: "volume",
       align: "right",
       width: 140,
       render: (_, record) => (
         <span className="font-semibold text-slate-600 dark:text-slate-300">
-          {formatNumber(bookedVolume(record))} <span className="text-[11px] font-medium text-slate-400">{record.unit}</span>
-        </span>
-      )
-    },
-    {
-      title: "ยอดส่งจริง (Delivered)",
-      dataIndex: "volume",
-      key: "volume",
-      align: "right",
-      width: 150,
-      render: (_, record) => (
-        <span className="font-bold text-slate-950 dark:text-slate-100">
           {formatNumber(record.volume)} <span className="text-[11px] font-medium text-slate-400">{record.unit}</span>
         </span>
       )
     },
     {
-      title: "อัตราส่งมอบ",
-      dataIndex: "volume",
-      key: "delivery_rate",
-      width: 170,
-      render: (_, record) => <DeliveryRateCell rate={deliveryRate(record)} />
-    },
-    statusColumn<Dealer>(),
-    {
-      title: "แนวโน้ม",
-      dataIndex: "volume",
-      key: "trend",
+      title: "สั่งใน Orders",
+      key: "ordered",
       align: "right",
-      width: 110,
-      render: (_, record) => <TrendCell value={trendValue(record)} />
-    }
+      width: 130,
+      render: (_, record) => (
+        <span className="font-semibold text-slate-700 dark:text-slate-200">
+          {formatNumber(orderTotalsByDealer.get(record.dealer_id)?.ordered ?? 0)} <span className="text-[11px] font-medium text-slate-400">{orderTotalsByDealer.get(record.dealer_id)?.unit ?? "คิว"}</span>
+        </span>
+      )
+    },
+    {
+      title: "ส่งจริงใน Orders",
+      key: "delivered",
+      align: "right",
+      width: 140,
+      render: (_, record) => <span className="font-bold text-slate-950">{formatNumber(orderTotalsByDealer.get(record.dealer_id)?.delivered ?? 0)} <span className="text-[11px] font-medium text-slate-400">{orderTotalsByDealer.get(record.dealer_id)?.unit ?? "คิว"}</span></span>
+    },
+    {
+      title: "อัตราส่งจริงใน Orders",
+      key: "delivery_rate",
+      width: 180,
+      render: (_, record) => {
+        const totals = orderTotalsByDealer.get(record.dealer_id);
+        return <DeliveryRateCell rate={totals?.ordered ? totals.delivered / totals.ordered : 0} />;
+      }
+    },
+    statusColumn<Dealer>()
   ];
 
   return (
@@ -487,7 +456,7 @@ export function DashboardPage(props: DashboardPageProps) {
               <div>
                 <CardTitle className="text-base">ภาพรวม Dealer ทั้งหมด</CardTitle>
                 <p className="mt-0.5 max-w-xl text-xs font-medium leading-5 text-slate-500">
-                  ดูปริมาณคอนกรีตส่งจริงรวม จำนวนกลุ่ม วันที่ใช้งานล่าสุด และสถานะ dealer
+                  แยกค่าจาก Dealer API และ Order API ชัดเจน โดยไม่มีตัวเลขประมาณการ
                 </p>
               </div>
               <FilterBar
