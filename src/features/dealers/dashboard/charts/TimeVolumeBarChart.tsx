@@ -401,17 +401,6 @@ export function TimeVolumeBarChart({
     return undefined;
   }, [activeKey, buckets, defaultBucket]);
 
-  if (selectedRegionSet.size === 0) {
-    return (
-      <div className="flex h-[220px] flex-col items-center justify-center gap-1 text-center">
-        <div className="text-sm font-semibold text-amber-600">ยังไม่ได้เลือกภูมิภาค</div>
-        <div className="text-xs font-medium text-slate-400">กดปุ่ม "ทั้งหมด" ในตัวกรองด้านบนเพื่อดูข้อมูล</div>
-      </div>
-    );
-  }
-
-  if (!buckets.length) return <EmptyState />;
-
   const donutSegments = rankedRegions.map((r) => ({ color: r.color, label: r.name, value: r.value }));
 
   const dealerFilterRegions = rankedRegions.map((r) => r.name);
@@ -528,8 +517,21 @@ export function TimeVolumeBarChart({
         </div>
       )}
 
+      {!buckets.length && (
+        <div className="rounded-xl border border-dashed border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          {selectedRegionSet.size === 0 ? (
+            <div className="flex h-[180px] flex-col items-center justify-center gap-1 text-center">
+              <div className="text-sm font-semibold text-amber-600">ยังไม่ได้เลือกภูมิภาค</div>
+              <div className="text-xs font-medium text-slate-400">เลือกภูมิภาคหรือกด “ทั้งหมด” จากแถบด้านบนเพื่อดูข้อมูล</div>
+            </div>
+          ) : (
+            <EmptyState />
+          )}
+        </div>
+      )}
+
       {/* Bento Grid Layout — 3 equal columns */}
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+      {buckets.length > 0 && <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
         {/* Card 1 — Ranked regions */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 flex flex-col justify-between min-h-[300px]">
           <div>
@@ -733,7 +735,7 @@ export function TimeVolumeBarChart({
             </div>
           )}
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

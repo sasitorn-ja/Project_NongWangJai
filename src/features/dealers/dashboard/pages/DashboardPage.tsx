@@ -43,6 +43,7 @@ type DashboardPageProps = {
 function KpiStrip({
   activeRate,
   topRegion,
+  topRegionColor,
   totalGroups,
   totalVolume,
   unit
@@ -51,6 +52,7 @@ function KpiStrip({
   activeDealersCount: number;
   totalDealersCount: number;
   topRegion: string | null;
+  topRegionColor?: string;
   topRegionShare: number;
   totalGroups: number;
   totalVolume: number;
@@ -60,10 +62,13 @@ function KpiStrip({
 	    bgIcon: string;
     textColor: string;
     valueColor: string;
+    cardStyle?: React.CSSProperties;
     delta: number | null;
     icon: React.ReactNode;
+    iconStyle?: React.CSSProperties;
     label: string;
     value: React.ReactNode;
+    valueStyle?: React.CSSProperties;
   }[] = [
     {
       bgIcon: "bg-sky-50 dark:bg-sky-950/30",
@@ -109,6 +114,9 @@ function KpiStrip({
       delta: null,
       icon: <MapPin size={22} />,
       label: "Top Region",
+      cardStyle: topRegionColor ? { borderColor: `${topRegionColor}66` } : undefined,
+      iconStyle: topRegionColor ? { backgroundColor: `${topRegionColor}18`, color: topRegionColor } : undefined,
+      valueStyle: topRegionColor ? { color: topRegionColor } : undefined,
       value: (
         <span className="text-[22px] font-extrabold leading-tight">
           {topRegion ?? "—"}
@@ -120,10 +128,10 @@ function KpiStrip({
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {items.map((item) => (
-        <div key={item.label} className="metric-card flex min-h-[88px] items-start justify-between gap-2 rounded-xl border border-[#e6edf4] bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
+        <div key={item.label} style={item.cardStyle} className="metric-card flex min-h-[88px] items-start justify-between gap-2 rounded-xl border border-[#e6edf4] bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
           <div className="min-w-0 flex-1">
             <p className="text-[12px] font-medium text-slate-500">{item.label}</p>
-            <p className={cn("mt-1.5 truncate text-[24px] font-extrabold leading-none", item.valueColor)}>
+            <p style={item.valueStyle} className={cn("mt-1.5 truncate text-[24px] font-extrabold leading-none", item.valueColor)}>
               {item.value}
             </p>
             <p className="mt-2 flex items-center gap-1 truncate text-[10px] font-medium text-slate-400">
@@ -136,7 +144,7 @@ function KpiStrip({
               )}
             </p>
           </div>
-          <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", item.bgIcon, item.textColor)}>
+          <div style={item.iconStyle} className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", item.bgIcon, item.textColor)}>
             {item.icon}
           </div>
         </div>
@@ -336,6 +344,7 @@ export function DashboardPage(props: DashboardPageProps) {
         activeDealersCount={activeDealersCount}
         activeRate={props.activeRate}
         topRegion={topDeliveredRegion?.[0] ?? null}
+        topRegionColor={topDeliveredRegion?.[0] ? getRegionColor(topDeliveredRegion[0], allRegions) : undefined}
         topRegionShare={deliveredOrderTotal > 0 ? ((topDeliveredRegion?.[1] ?? 0) / deliveredOrderTotal) * 100 : 0}
         totalDealersCount={props.filteredDealers.length}
         totalGroups={props.totalGroups}
