@@ -437,7 +437,8 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
     <div className="space-y-4">
       <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-center">
         <div className="rounded-lg border border-[#e5e7eb] bg-[#fbfcfd] px-3 py-2.5">
-          <div className="text-xs font-semibold text-slate-500">ส่งจริงใน Orders / สั่งใน Orders</div>
+          <div className="text-xs font-semibold text-slate-500">ส่งจริง / สั่งทั้งหมด</div>
+          <div className="mt-0.5 text-[11px] font-medium text-slate-400">อ้างอิงจากรายการ Order</div>
           <div className="mt-1 text-lg font-bold text-slate-950">
             {compactNumber(totalDelivered)} / {compactNumber(totalOrdered)} {unit}
           </div>
@@ -459,7 +460,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                     backgroundColor: rowColor(row),
                     width: `${Math.max((value / segmentTotal) * 100, value > 0 ? 3 : 0)}%`
                   }}
-                  title={`${row.label}: ส่งจริงใน Orders ${formatNumber(row.delivered)} / สั่งใน Orders ${formatNumber(row.ordered)}`}
+                  title={`${row.label}: ส่งจริง ${formatNumber(row.delivered)} / สั่งทั้งหมด ${formatNumber(row.ordered)}`}
                 />
               );
             })}
@@ -525,7 +526,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
               </div>
               <div className="mt-3 grid gap-1.5">
                 <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                  <span>ส่งจริงใน Orders</span>
+                  <span>ส่งจริง</span>
                   <span>{formatNumber(row.delivered)} {unit}</span>
                 </div>
                 <div className="h-2.5 rounded-full bg-slate-100">
@@ -540,7 +541,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                 {hasOrdered ? (
                   <>
                     <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-                      <span>สั่งใน Orders</span>
+                      <span>สั่งทั้งหมด</span>
                       <span>{formatNumber(row.ordered)} {unit}</span>
                     </div>
                     <div className="h-2.5 rounded-full bg-slate-100">
@@ -562,8 +563,8 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                   <div className="grid grid-cols-[1fr_60px_70px_70px] gap-2 px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
                     <span>จังหวัด</span>
                     <span className="text-right">Sites</span>
-                    <span className="text-right">ส่งจริงใน Orders</span>
-                    <span className="text-right">สั่งใน Orders</span>
+                    <span className="text-right">ส่งจริง</span>
+                    <span className="text-right">สั่งทั้งหมด</span>
                   </div>
                   <div className="max-h-60 overflow-y-auto">
                     {row.children.map((child) => (
@@ -1091,10 +1092,10 @@ export function DetailsPage(props: DetailsPageProps) {
           <WangjaiAdvisor
             accent="sky"
             compact
-            message="เริ่มจากภาพรวมทุก Dealer ก่อน แล้วเลือก Dealer เพื่อเจาะลึกพื้นที่ขาย กลุ่ม ลูกค้า และไซต์ โดยยอดสั่ง/ส่งจริงในมุมนี้มาจาก Order API"
+            message="เริ่มจากภาพรวมทุก Dealer ก่อน แล้วเลือก Dealer เพื่อเจาะลึกพื้นที่ขาย กลุ่ม ลูกค้า และไซต์ โดยยอดสั่งและส่งจริงในมุมนี้อ้างอิงจากรายการ Order"
             stats={[
               { label: "Scope", value: "ทุก Dealer" },
-              { label: "ส่งจริง Orders", value: `${compactNumber(totalAreaDelivered)} ${areaUnit}` },
+              { label: "ส่งจริง", value: `${compactNumber(totalAreaDelivered)} ${areaUnit}` },
               { label: "Groups", value: formatNumber(totalGroups) }
             ]}
             title="เลือกมุมวิเคราะห์จากภาพรวม"
@@ -1115,7 +1116,7 @@ export function DetailsPage(props: DetailsPageProps) {
                   <MapPin size={18} />
                   สั่ง/ส่งจริงจาก Orders แยกตามพื้นที่
                 </CardTitle>
-                <p className="text-xs font-medium text-slate-500">รวม quantity.ordered และ quantity.delivered จาก Order API ตามภูมิภาคของ Dealer</p>
+                <p className="text-xs font-medium text-slate-500">รวมยอดสั่งและส่งจริงจากรายการ Order ตามภูมิภาคของ Dealer</p>
               </CardHeader>
               <CardContent>
                 <SalesAreaChart loading={false} rows={areaRows} unit={areaUnit} />
@@ -1125,7 +1126,7 @@ export function DetailsPage(props: DetailsPageProps) {
             <Card className="dashboard-card">
               <CardHeader className="border-b border-[#d9e3e6]">
                 <CardTitle className="text-lg">Dealer ส่งจริงสูงสุดจาก Orders</CardTitle>
-                <p className="text-xs font-medium text-slate-500">เรียงตาม quantity.delivered จาก Order API ในตัวกรองปัจจุบัน</p>
+                <p className="text-xs font-medium text-slate-500">เรียงตามยอดส่งจริงจากรายการ Order ในตัวกรองปัจจุบัน</p>
               </CardHeader>
               <CardContent>
                 <ProgressList
@@ -1147,7 +1148,7 @@ export function DetailsPage(props: DetailsPageProps) {
                   <BarChart3 size={18} />
                   ลูกค้าที่มียอดสูงสุด
                 </CardTitle>
-                <p className="text-xs font-medium text-slate-500">เทียบ quantity.delivered กับ quantity.ordered จาก Order API ของลูกค้าแต่ละราย</p>
+                <p className="text-xs font-medium text-slate-500">เทียบยอดส่งจริงกับยอดสั่งทั้งหมดของลูกค้าแต่ละราย</p>
               </CardHeader>
               <CardContent>
                 <DualBarChart
@@ -1156,8 +1157,8 @@ export function DetailsPage(props: DetailsPageProps) {
                     primary: customer.delivered,
                     secondary: customer.ordered
                   }))}
-                  primaryLabel="ส่งจริงใน Orders"
-                  secondaryLabel="สั่งใน Orders"
+                  primaryLabel="ส่งจริง"
+                  secondaryLabel="สั่งทั้งหมด"
                 />
                 {orderCustomerRows.length > 5 ? (
                   <p className="mt-3 border-t border-slate-100 pt-2 text-center text-[11px] font-semibold text-slate-400 dark:border-slate-800">
@@ -1170,7 +1171,7 @@ export function DetailsPage(props: DetailsPageProps) {
             <Card className="dashboard-card">
               <CardHeader className="border-b border-[#d9e3e6]">
                 <CardTitle className="text-lg">ไซต์ที่ส่งจริงสูงสุดจาก Orders</CardTitle>
-                <p className="text-xs font-medium text-slate-500">เรียงตาม quantity.delivered จาก Order API หรือ Sites API ตามแหล่งข้อมูลของแถวนั้น</p>
+                <p className="text-xs font-medium text-slate-500">เรียงตามยอดส่งจริงจากแหล่งข้อมูลของแต่ละไซต์</p>
               </CardHeader>
               <CardContent>
                 <ProgressList
