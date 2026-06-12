@@ -4,7 +4,7 @@ import { Layers3, MapPin, PackageCheck, TrendingDown, TrendingUp, Users } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
-import type { ApiState, Dealer } from "@/features/dealers/types";
+import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
 import type { PageKey } from "../config/pageMeta";
 import { parseDateValue } from "../lib/dates";
 import { groupByRegion } from "../lib/regions";
@@ -23,6 +23,7 @@ type DashboardPageProps = {
   apiMessage?: string;
   apiState: ApiState;
   filteredDealers: Dealer[];
+  filteredOrders: OrderItem[];
   region: string;
   regionRows: ReturnType<typeof groupByRegion>;
   regions: string[];
@@ -41,10 +42,7 @@ type DashboardPageProps = {
 // Compact KPI strip — replaces 3 large MetricCards
 function KpiStrip({
   activeRate,
-  activeDealersCount,
-  totalDealersCount,
   topRegion,
-  topRegionShare,
   totalGroups,
   totalVolume,
   unit
@@ -211,7 +209,10 @@ export function DashboardPage(props: DashboardPageProps) {
   const [dateTo, setDateTo] = useState("");
   const [selectedRegions, setSelectedRegions] = useState<string[] | null>(null);
   const volumeUnit =
-    props.filteredDealers.find((dealer) => dealer.unit)?.unit ?? props.topDealer?.unit ?? "m3";
+    props.filteredOrders.find((order) => order.quantity?.unit)?.quantity?.unit ??
+    props.filteredDealers.find((dealer) => dealer.unit)?.unit ??
+    props.topDealer?.unit ??
+    "m3";
 
   // Region list + per-region volumes for the toolbar filter
   const allRegions = useMemo(
@@ -220,27 +221,30 @@ export function DashboardPage(props: DashboardPageProps) {
   );
   const regionTotalVolumes = useMemo(() => {
     const map = new Map<string, number>();
-    props.filteredDealers.forEach((d) => {
-      if (!d.region) return;
-      map.set(d.region, (map.get(d.region) ?? 0) + d.volume);
+    const dealerById = new Map(props.filteredDealers.map((dealer) => [dealer.dealer_id, dealer]));
+    props.filteredOrders.forEach((order) => {
+      const region = dealerById.get(order.dealer_id)?.region;
+      if (!region) return;
+      map.set(region, (map.get(region) ?? 0) + (order.quantity?.delivered ?? 0));
     });
     return map;
-  }, [props.filteredDealers]);
+  }, [props.filteredDealers, props.filteredOrders]);
   const selectedRegionCount = (selectedRegions ?? allRegions).length;
   const selectedRegionVolume = (selectedRegions ?? allRegions).reduce(
     (sum, region) => sum + (regionTotalVolumes.get(region) ?? 0),
     0
   );
-  const selectedRegionPercent = props.totalVolume > 0 ? (selectedRegionVolume / props.totalVolume) * 100 : 0;
+  const deliveredOrderTotal = [...regionTotalVolumes.values()].reduce((sum, volume) => sum + volume, 0);
+  const selectedRegionPercent = deliveredOrderTotal > 0 ? (selectedRegionVolume / deliveredOrderTotal) * 100 : 0;
   const regionSummaryText = `เลือกภูมิภาค · ${selectedRegionCount}/${allRegions.length} · ${compactNumber(selectedRegionVolume)} ${volumeUnit} (${Math.round(selectedRegionPercent)}%)`;
 
   const chartDates = useMemo(
     () =>
-      props.filteredDealers
-        .map((dealer) => parseDateValue(dealer.last_active_at))
+      props.filteredOrders
+        .map((order) => parseDateValue(order.pour_datetime))
         .filter((date): date is Date => Boolean(date))
         .sort((a, b) => a.getTime() - b.getTime()),
-    [props.filteredDealers]
+    [props.filteredOrders]
   );
   const earliestDateKey = chartDates[0] ? inputDateKey(chartDates[0]) : "";
   const latestDateKey = chartDates[chartDates.length - 1] ? inputDateKey(chartDates[chartDates.length - 1]) : "";
@@ -352,6 +356,7 @@ export function DashboardPage(props: DashboardPageProps) {
       <section className="grid grid-cols-1">
         <TimeVolumeBarChart
           dealers={props.filteredDealers}
+          orders={props.filteredOrders}
           focusRange={chartFocusRange}
           range={chartRange}
           selectedRegions={selectedRegions}

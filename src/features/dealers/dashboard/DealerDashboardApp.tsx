@@ -51,6 +51,7 @@ function DealerDashboardApp() {
           apiMessage={data.apiMessage}
           apiState={data.apiState}
           filteredDealers={data.filteredDealers}
+          filteredOrders={data.ordersInDateRange}
           region={filters.region}
           regionRows={data.regionRows}
           regions={data.regions}
@@ -71,6 +72,7 @@ function DealerDashboardApp() {
         <NetworkPage
           apiState={data.apiState}
           dealers={data.filteredDealers}
+          orders={data.ordersInDateRange}
           onSelectDealer={(dealerId) => {
             data.setSelectedDealerId(dealerId);
             setPage("details");

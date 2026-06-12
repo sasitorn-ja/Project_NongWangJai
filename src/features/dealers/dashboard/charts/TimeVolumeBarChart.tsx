@@ -1,9 +1,7 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { TrendingUp } from "lucide-react";
-
 import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
-import type { Dealer } from "@/features/dealers/types";
+import type { Dealer, OrderItem } from "@/features/dealers/types";
 import { DropdownSelect } from "../filters/DropdownSelect";
 import { parseDateValue } from "../lib/dates";
 import { getRegionColor } from "../lib/regions";
@@ -57,32 +55,50 @@ function fmt(d: Date, opts: Intl.DateTimeFormatOptions) {
 // ── bucket builder ────────────────────────────────────────────────────────────
 function buildBuckets(
   dealers: Dealer[],
+  orders: OrderItem[],
   range: ChartRange,
   focusRange?: { from?: string; to?: string }
 ): TimeBucket[] {
   const allRegions = [...new Set(dealers.map((d) => d.region).filter(Boolean))].sort((a, b) => a.localeCompare(b, "th"));
+  const dealerById = new Map(dealers.map((dealer) => [dealer.dealer_id, dealer]));
+  const deliveredOrders = orders
+    .map((order) => ({
+      date: parseDateValue(order.pour_datetime),
+      dealer: dealerById.get(order.dealer_id),
+      volume: order.quantity?.delivered ?? 0
+    }))
+    .filter((row): row is { date: Date | null; dealer: Dealer; volume: number } => Boolean(row.dealer && row.volume > 0));
+
+  const addOrderToBucket = (bucket: TimeBucket, dealer: Dealer, volume: number) => {
+    bucket.value += volume;
+    const dealerSlice = bucket.dealerList.find((row) => row.dealerId === dealer.dealer_id);
+    if (dealerSlice) {
+      dealerSlice.volume += volume;
+    } else {
+      bucket.dealers += 1;
+      bucket.groups += dealer.group_count;
+      bucket.dealerList.push({ dealerId: dealer.dealer_id, name: dealer.dealer_name, region: dealer.region, volume });
+    }
+  };
 
   if (range === "all") {
     const map = new Map<string, TimeBucket>();
-    dealers.forEach((dealer) => {
+    deliveredOrders.forEach(({ dealer, volume }) => {
       const cur = map.get(dealer.region) ?? {
         dealerList: [], dealers: 0, end: new Date(0), groups: 0,
         key: dealer.region, label: dealer.region, periodLabel: dealer.region,
         regions: [], start: new Date(0), value: 0
       };
-      cur.dealers += 1;
-      cur.groups += dealer.group_count;
-      cur.value += dealer.volume;
-      cur.dealerList.push({ dealerId: dealer.dealer_id, name: dealer.dealer_name, region: dealer.region, volume: dealer.volume });
+      addOrderToBucket(cur, dealer, volume);
       cur.regions = [{ color: getRegionColor(dealer.region, allRegions), name: dealer.region, value: cur.value }];
       map.set(dealer.region, cur);
     });
-    return [...map.values()].sort((a, b) => b.value - a.value);
+    return [...map.values()]
+      .map((bucket) => ({ ...bucket, dealerList: bucket.dealerList.sort((a, b) => b.volume - a.volume) }))
+      .sort((a, b) => b.value - a.value);
   }
 
-  const rows = dealers
-    .map((dealer) => ({ dealer, date: parseDateValue(dealer.last_active_at) }))
-    .filter((r): r is { dealer: Dealer; date: Date } => Boolean(r.date));
+  const rows = deliveredOrders.filter((row): row is { date: Date; dealer: Dealer; volume: number } => Boolean(row.date));
 
   if (!rows.length) return [];
 
@@ -131,16 +147,13 @@ function buildBuckets(
   const bucketMap = new Map(buckets.map((b) => [b.key, b]));
   const regionVol = new Map<string, Map<string, number>>();
 
-  rows.forEach(({ dealer, date }) => {
+  rows.forEach(({ dealer, date, volume }) => {
     const bKey = range === "year" ? yearKey(startOfYear(date)) : range === "month" ? monthKey(startOfMonth(date)) : dateKey(startOfDay(date));
     const bucket = bucketMap.get(bKey);
     if (!bucket) return;
-    bucket.dealers += 1;
-    bucket.groups += dealer.group_count;
-    bucket.value += dealer.volume;
-    bucket.dealerList.push({ dealerId: dealer.dealer_id, name: dealer.dealer_name, region: dealer.region, volume: dealer.volume });
+    addOrderToBucket(bucket, dealer, volume);
     const rv = regionVol.get(bKey) ?? new Map<string, number>();
-    rv.set(dealer.region, (rv.get(dealer.region) ?? 0) + dealer.volume);
+    rv.set(dealer.region, (rv.get(dealer.region) ?? 0) + volume);
     regionVol.set(bKey, rv);
   });
 
@@ -162,7 +175,7 @@ function EmptyState() {
   return (
     <div className="flex h-[220px] flex-col items-center justify-center gap-2">
       <div className="text-sm font-semibold text-slate-600">ไม่มีข้อมูลสำหรับแสดงกราฟ</div>
-      <div className="text-xs font-medium text-slate-400">ยังไม่มีวันที่ใช้งานล่าสุดสำหรับ dealer ที่เลือก</div>
+      <div className="text-xs font-medium text-slate-400">ยังไม่มี Order ที่มีปริมาณส่งจริงและวันที่เทสำหรับ Dealer ที่เลือก</div>
     </div>
   );
 }
@@ -249,11 +262,8 @@ function Donut({
 // ── region filter (rendered by parent in the toolbar) ───────────────────────────
 export function RegionFilterPanel({
   allRegions,
-  regionTotalVolumes,
   selectedRegions,
-  onChange,
-  totalAllVolume,
-  unit = "m3"
+  onChange
 }: {
   allRegions: string[];
   regionTotalVolumes: Map<string, number>;
@@ -313,6 +323,7 @@ export type ChartFocusRange = { from?: string; to?: string };
 
 export function TimeVolumeBarChart({
   dealers,
+  orders,
   focusRange,
   range,
   selectedRegions = null,
@@ -322,6 +333,7 @@ export function TimeVolumeBarChart({
   regionSummary
 }: {
   dealers: Dealer[];
+  orders: OrderItem[];
   focusRange?: ChartFocusRange;
   range: ChartRange;
   selectedRegions?: string[] | null;
@@ -350,7 +362,7 @@ export function TimeVolumeBarChart({
   }, [dealers, selectedRegionSet, allRegions]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const buckets = useMemo(() => buildBuckets(visibleDealers, range, focusRange), [visibleDealers, focusRange?.from, focusRange?.to, range]);
+  const buckets = useMemo(() => buildBuckets(visibleDealers, orders, range, focusRange), [visibleDealers, orders, focusRange?.from, focusRange?.to, range]);
 
   const defaultBucket = range === "all"
     ? buckets.find((b) => b.value > 0) ?? buckets[0]
@@ -525,7 +537,7 @@ export function TimeVolumeBarChart({
               <div>
                 <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">ปริมาณการขายแยกตามพื้นที่ของ Dealer</h3>
                 <p className="mt-0.5 text-[11px] font-medium text-slate-400">
-                  ยอดขายสะสมแยกตามพื้นที่การจัดส่งคอนกรีต
+                  ปริมาณส่งจริงรวมจาก Order แยกตามพื้นที่ Dealer
                 </p>
               </div>
               <span className="shrink-0 whitespace-nowrap pt-0.5 text-[11px] font-medium text-slate-400">หน่วย : {unit}</span>
@@ -616,7 +628,7 @@ export function TimeVolumeBarChart({
             <div className="flex items-center justify-between border-b border-[#eef0f4] pb-3 mb-3 dark:border-slate-800">
               <div>
                 <h3 className="text-base font-semibold text-slate-950 dark:text-slate-50">Dealer Leaderboard</h3>
-	                <p className="mt-0.5 text-[11px] font-medium text-slate-400">ยอดขายสูงสุดราย Dealer</p>
+	                <p className="mt-0.5 text-[11px] font-medium text-slate-400">ปริมาณส่งจริงสูงสุดราย Dealer</p>
               </div>
               {dealerFilterRegions.length > 1 && (
                 <DropdownSelect
@@ -641,7 +653,6 @@ export function TimeVolumeBarChart({
                 <div className="space-y-2">
                   {pagedDealers.map((dealer, i) => {
                     const color = getRegionColor(dealer.region, regions);
-                    const share = (activeBucket?.value ?? 0) > 0 ? (dealer.volume / (activeBucket?.value ?? 1)) * 100 : 0;
                     const barShare = dealerLeaderboardMax > 0 ? (dealer.volume / dealerLeaderboardMax) * 100 : 0;
                     const rank = dealerPageStart + i + 1;
                     return (

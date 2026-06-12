@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
-import type { ApiState, Dealer } from "@/features/dealers/types";
+import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
 import { getRegionAccent, getRegionLabel } from "../lib/regions";
 import { WangjaiLogo } from "../ui/WangjaiLogo";
 
@@ -150,30 +150,53 @@ function RegionNetworkColumn({
 export function NetworkPage({
   apiState,
   dealers,
+  orders,
   onSelectDealer,
   selectedDealerId
 }: {
   apiState: ApiState;
   dealers: Dealer[];
+  orders: OrderItem[];
   onSelectDealer: (dealerId: number) => void;
   selectedDealerId: number | null;
 }) {
+  const deliveredByDealer = useMemo(() => {
+    const totals = new Map<number, { unit: string; volume: number }>();
+    orders.forEach((order) => {
+      const delivered = order.quantity?.delivered ?? 0;
+      if (delivered <= 0) return;
+      const current = totals.get(order.dealer_id) ?? {
+        unit: order.quantity?.unit || "m3",
+        volume: 0
+      };
+      current.volume += delivered;
+      totals.set(order.dealer_id, current);
+    });
+    return totals;
+  }, [orders]);
+
   const uniqueDealers = useMemo(() => {
     const byIdentity = new Map<string, Dealer>();
 
     dealers.forEach((dealer) => {
+      const delivered = deliveredByDealer.get(dealer.dealer_id);
+      const dealerWithDelivered = {
+        ...dealer,
+        unit: delivered?.unit || dealer.unit,
+        volume: delivered?.volume ?? 0
+      };
       const identity =
         dealer.dealer_code?.trim() ||
         `${dealer.dealer_name?.trim() || "unknown"}::${dealer.region?.trim() || "-"}::${dealer.province?.trim() || "-"}`;
       const current = byIdentity.get(identity);
       if (!current) {
-        byIdentity.set(identity, dealer);
+        byIdentity.set(identity, dealerWithDelivered);
         return;
       }
 
       byIdentity.set(identity, {
         ...current,
-        ...dealer,
+        ...dealerWithDelivered,
         dealer_id: current.dealer_id || dealer.dealer_id,
         dealer_code: current.dealer_code || dealer.dealer_code,
         dealer_name: current.dealer_name || dealer.dealer_name,
@@ -182,8 +205,8 @@ export function NetworkPage({
         province_id: current.province_id || dealer.province_id,
         province: current.province || dealer.province,
         group_count: current.group_count + dealer.group_count,
-        volume: current.volume + dealer.volume,
-        unit: current.unit || dealer.unit,
+        volume: current.volume + dealerWithDelivered.volume,
+        unit: current.unit || dealerWithDelivered.unit,
         last_active_days: current.last_active_days ?? dealer.last_active_days,
         last_active_at: current.last_active_at ?? dealer.last_active_at,
         created_at: current.created_at ?? dealer.created_at,
@@ -193,7 +216,7 @@ export function NetworkPage({
     });
 
     return Array.from(byIdentity.values());
-  }, [dealers]);
+  }, [dealers, deliveredByDealer]);
 
   const regionColumns = useMemo(() => {
     const grouped = uniqueDealers.reduce<

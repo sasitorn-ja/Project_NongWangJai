@@ -19,6 +19,8 @@ type CustomerGroup = {
   customerCode: string;
   customerKey: string;
   customerName: string;
+  dealerCode: string;
+  dealerName: string;
   latestPour: string | null;
   openOrderCount: number;
   orderCount: number;
@@ -80,13 +82,17 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
   orders.forEach((order) => {
     const customerCode = order.customer?.code?.trim() || order.customer?.id?.toString() || "-";
     const customerName = order.customer?.name?.trim() || "ไม่ระบุลูกค้า";
-    const key = `${customerCode}::${customerName}`;
+    const dealerCode = order.dealer_code?.trim() || String(order.dealer_id);
+    const dealerName = order.dealer_name?.trim() || "ไม่ระบุ Dealer";
+    const key = `${order.dealer_id}::${customerCode}::${customerName}`;
     let group = map.get(key);
     if (!group) {
       group = {
         customerCode,
         customerKey: key,
         customerName,
+        dealerCode,
+        dealerName,
         latestPour: null,
         openOrderCount: 0,
         orderCount: 0,
@@ -164,6 +170,9 @@ function CustomerAccordionRow({
             {group.customerName}
           </div>
           <div className="mt-0.5 flex items-center gap-2 text-[11px] font-medium text-slate-500">
+            <span className="max-w-[220px] truncate rounded-full bg-sky-50 px-2 py-0.5 font-bold text-sky-700" title={`${group.dealerName} (${group.dealerCode})`}>
+              Dealer: {group.dealerName}
+            </span>
             <span>รหัสลูกค้า {group.customerCode}</span>
             <span className="text-slate-300">·</span>
             <span>{formatNumber(group.uniqueSiteCount)} ไซต์</span>
@@ -245,6 +254,9 @@ function CustomerAccordionRow({
                           <div className="mt-0.5 line-clamp-2 text-[11px] font-medium leading-4 text-slate-500" title={order.order?.product_name ?? "-"}>
                             {order.order?.product_name ?? "-"}
                           </div>
+                          <div className="mt-1 truncate text-[10px] font-bold text-sky-700" title={`${order.dealer_name} (${order.dealer_code})`}>
+                            Dealer: {order.dealer_name || "-"}
+                          </div>
                         </div>
                       </td>
                       <td className="border-r border-[#edf1f2] px-2.5 py-2 align-middle">
@@ -314,6 +326,9 @@ function MobileCustomerCard({
           <div className="mt-0.5 text-[11px] font-medium text-slate-500">
             รหัสลูกค้า {group.customerCode} · {formatNumber(group.uniqueSiteCount)} ไซต์
           </div>
+          <div className="mt-1 truncate text-[11px] font-bold text-sky-700" title={`${group.dealerName} (${group.dealerCode})`}>
+            Dealer: {group.dealerName}
+          </div>
           <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
             <div>
               <div className="text-[10px] font-semibold text-slate-400">จำนวนออเดอร์</div>
@@ -350,6 +365,9 @@ function MobileCustomerCard({
                     <div className="mt-0.5 text-[11px] font-medium text-slate-500">{order.order?.product_name ?? "-"}</div>
                   </div>
                   <StatusBadge status={order.status?.order} />
+                </div>
+                <div className="mt-2 rounded-md bg-sky-50 px-2 py-1 text-[11px] font-bold text-sky-700">
+                  Dealer: {order.dealer_name || "-"} ({order.dealer_code || order.dealer_id})
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
                   <div>
@@ -418,7 +436,9 @@ export function OrdersPage({
   const customerGroups = useMemo(() => buildCustomerGroups(dealerOrders), [dealerOrders]);
 
   const totalOrdered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0);
-  const totalDelivered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
+  const deliveredOrders = dealerOrders.filter((row) => (row.quantity?.delivered ?? 0) > 0);
+  const totalDelivered = deliveredOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
+  const orderListTitle = selectedDealer ? `Order List ของ ${selectedDealer.dealer_name}` : "Order List แยกตาม Dealer";
 
   const toggleCustomer = (key: string) => {
     setExpandedCustomers((prev) => {
@@ -486,7 +506,7 @@ export function OrdersPage({
               )
             },
             {
-              detail: "ปริมาณส่งจริงรวมจาก order ทั้งหมด",
+              detail: `ปริมาณส่งจริงรวมจาก ${formatNumber(deliveredOrders.length)} order ที่มีการส่งจริง`,
               icon: <PackageCheck size={14} />,
               label: "ปริมาณส่งจริง",
               value: (
@@ -505,9 +525,9 @@ export function OrdersPage({
         <CardHeader className="border-b border-[#d9e3e6] bg-white">
           <div className="space-y-2">
             <div>
-              <CardTitle className="text-base">Order List ของ Dealer</CardTitle>
+              <CardTitle className="text-base">{orderListTitle}</CardTitle>
               <p className="mt-0.5 text-xs font-medium text-slate-500">
-                รวมตามลูกค้า · เรียงตามข้อมูลล่าสุดจากใหม่ไปเก่า · แตะเพื่อกางดูออเดอร์ของลูกค้านั้น
+                แยกตาม Dealer และลูกค้า · เรียงตามข้อมูลล่าสุดจากใหม่ไปเก่า · แตะเพื่อกางดูออเดอร์
               </p>
             </div>
             <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
@@ -565,9 +585,9 @@ export function OrdersPage({
         <CardHeader className="border-b border-[#d9e3e6] bg-white">
           <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] xl:items-center">
             <div>
-              <CardTitle className="text-lg">Order List ของ Dealer</CardTitle>
+              <CardTitle className="text-lg">{orderListTitle}</CardTitle>
               <p className="mt-1 text-xs font-medium text-slate-500">
-                รวมตามลูกค้า · เรียงตามข้อมูลล่าสุดจากใหม่ไปเก่า · คลิกแถวเพื่อกางดูออเดอร์ของลูกค้านั้น
+                แยกตาม Dealer และลูกค้า · เรียงตามข้อมูลล่าสุดจากใหม่ไปเก่า · คลิกแถวเพื่อกางดูออเดอร์
               </p>
             </div>
             <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">

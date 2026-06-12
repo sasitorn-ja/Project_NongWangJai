@@ -174,11 +174,14 @@ export function useDealerDashboardData({
     [dateFrom, dateTo, sites]
   );
 
+  const ordersInDateRange = useMemo(
+    () => orders.filter((order) => isWithinDateRange(order.pour_datetime, dateFrom, dateTo)),
+    [dateFrom, dateTo, orders]
+  );
+
   const filteredOrders = useMemo(() => {
     const q = normalizeSearch(orderSearch);
-    return orders.filter((order) => {
-      const matchDate = isWithinDateRange(order.pour_datetime, dateFrom, dateTo);
-      if (!matchDate) return false;
+    return ordersInDateRange.filter((order) => {
       if (!q) return true;
 
       const haystack = normalizeSearch(
@@ -200,7 +203,7 @@ export function useDealerDashboardData({
 
       return haystack.includes(q);
     });
-  }, [dateFrom, dateTo, orderSearch, orders]);
+  }, [orderSearch, ordersInDateRange]);
 
   return {
     activeRate,
@@ -214,6 +217,7 @@ export function useDealerDashboardData({
     filteredSites,
     filteredUsageRows,
     groupsState,
+    ordersInDateRange,
     ordersState,
     ordersMessage,
     regionRows,
