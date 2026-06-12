@@ -50,7 +50,7 @@ function DealerNetworkCard({
           <div className="mt-0.5 font-semibold text-slate-800">{formatNumber(dealer.group_count)}</div>
         </div>
         <div>
-          <div className="font-medium text-slate-400">Delivered Volume</div>
+          <div className="font-medium text-slate-400">ยอดรวมที่มีส่งจริง</div>
           <div className="mt-0.5 font-semibold text-slate-800">{compactNumber(dealer.volume)}</div>
         </div>
         <div>
@@ -278,7 +278,7 @@ export function NetworkPage({
                 </div>
                 <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
                   <div className="text-[24px] font-bold leading-none text-sky-600">{compactNumber(uniqueDealers.reduce((sum, dealer) => sum + dealer.volume, 0))}</div>
-                  <div className="mt-0.5 text-[12px] font-semibold text-slate-500">Delivered m3</div>
+                  <div className="mt-0.5 text-[12px] font-semibold text-slate-500">ยอดรวมที่มีส่งจริง</div>
                 </div>
               </div>
             </div>
