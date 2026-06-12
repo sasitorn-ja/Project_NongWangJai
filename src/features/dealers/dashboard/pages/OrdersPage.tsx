@@ -17,6 +17,7 @@ const DESKTOP_PAGE_SIZE = 15;
 
 type CustomerGroup = {
   customerCode: string;
+  customerCodeLabel: string;
   customerKey: string;
   customerName: string;
   dealerCode: string;
@@ -81,6 +82,7 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
   const map = new Map<string, CustomerGroup>();
   orders.forEach((order) => {
     const customerCode = order.customer?.code?.trim() || order.customer?.id?.toString() || "-";
+    const customerCodeLabel = order.customer?.code?.trim() ? "รหัสลูกค้า" : order.customer?.id != null ? "Customer ID" : "รหัสลูกค้า";
     const customerName = order.customer?.name?.trim() || "ไม่ระบุลูกค้า";
     const dealerCode = order.dealer_code?.trim() || String(order.dealer_id);
     const dealerName = order.dealer_name?.trim() || "ไม่ระบุ Dealer";
@@ -89,6 +91,7 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
     if (!group) {
       group = {
         customerCode,
+        customerCodeLabel,
         customerKey: key,
         customerName,
         dealerCode,
@@ -173,7 +176,7 @@ function CustomerAccordionRow({
             <span className="max-w-[220px] truncate rounded-full bg-sky-50 px-2 py-0.5 font-bold text-sky-700" title={`${group.dealerName} (${group.dealerCode})`}>
               Dealer: {group.dealerName}
             </span>
-            <span>รหัสลูกค้า {group.customerCode}</span>
+            <span>{group.customerCodeLabel} {group.customerCode}</span>
             <span className="text-slate-300">·</span>
             <span>{formatNumber(group.uniqueSiteCount)} ไซต์</span>
             {group.openOrderCount > 0 && (
@@ -207,16 +210,16 @@ function CustomerAccordionRow({
               <thead className="sticky top-0 z-10">
                 <tr className="border-b border-[#d9e3e6] bg-[#f6f8f9]">
                   <th className="w-[27%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
-                    Order / Product
+                    Order No. / Product
                   </th>
                   <th className="w-[24%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     Site
                   </th>
                   <th className="w-[7%] border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
-                    ที่สั่ง
+                    สั่งใน Order
                   </th>
                   <th className="w-[7%] border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
-                    ส่งจริง
+                    ส่งจริงใน Order
                   </th>
                   <th className="w-[11%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     เวลาเท
@@ -256,6 +259,9 @@ function CustomerAccordionRow({
                           </div>
                           <div className="mt-1 truncate text-[10px] font-bold text-sky-700" title={`${order.dealer_name} (${order.dealer_code})`}>
                             Dealer: {order.dealer_name || "-"}
+                          </div>
+                          <div className="mt-0.5 truncate text-[10px] font-medium text-slate-400" title={order.order?.order_no ?? "-"}>
+                            Order No: {order.order?.order_no ?? "-"}
                           </div>
                         </div>
                       </td>
@@ -324,7 +330,7 @@ function MobileCustomerCard({
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-bold text-slate-950" title={group.customerName}>{group.customerName}</div>
           <div className="mt-0.5 text-[11px] font-medium text-slate-500">
-            รหัสลูกค้า {group.customerCode} · {formatNumber(group.uniqueSiteCount)} ไซต์
+            {group.customerCodeLabel} {group.customerCode} · {formatNumber(group.uniqueSiteCount)} ไซต์
           </div>
           <div className="mt-1 truncate text-[11px] font-bold text-sky-700" title={`${group.dealerName} (${group.dealerCode})`}>
             Dealer: {group.dealerName}
@@ -363,6 +369,7 @@ function MobileCustomerCard({
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold text-slate-950">{order.order?.product_sku ?? "-"}</div>
                     <div className="mt-0.5 text-[11px] font-medium text-slate-500">{order.order?.product_name ?? "-"}</div>
+                    <div className="mt-0.5 truncate text-[10px] font-medium text-slate-400">Order No: {order.order?.order_no ?? "-"}</div>
                   </div>
                   <StatusBadge status={order.status?.order} />
                 </div>
@@ -495,7 +502,7 @@ export function OrdersPage({
               value: formatNumber(dealerOrders.length)
             },
             {
-              detail: "ปริมาณที่สั่งรวมจาก order ทั้งหมด",
+              detail: "รวม quantity.ordered จากรายการ Order",
               icon: <TrendingUp size={14} />,
               label: "ปริมาณที่สั่ง",
               value: (
@@ -527,7 +534,7 @@ export function OrdersPage({
             <div>
               <CardTitle className="text-base">{orderListTitle}</CardTitle>
               <p className="mt-0.5 text-xs font-medium text-slate-500">
-                แยกตาม Dealer และลูกค้า · เรียงตามข้อมูลล่าสุดจากใหม่ไปเก่า · แตะเพื่อกางดูออเดอร์
+                แสดงข้อมูลจาก Order API · ยอดต่อรายการอาจต่างจากยอดรวมระดับไซต์ใน Dealer Analysis
               </p>
             </div>
             <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
@@ -587,7 +594,7 @@ export function OrdersPage({
             <div>
               <CardTitle className="text-lg">{orderListTitle}</CardTitle>
               <p className="mt-1 text-xs font-medium text-slate-500">
-                แยกตาม Dealer และลูกค้า · เรียงตามข้อมูลล่าสุดจากใหม่ไปเก่า · คลิกแถวเพื่อกางดูออเดอร์
+                แสดงข้อมูลจาก Order API · ยอดต่อรายการอาจต่างจากยอดรวมระดับไซต์ใน Dealer Analysis
               </p>
             </div>
             <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
@@ -637,8 +644,8 @@ export function OrdersPage({
           <span></span>
           <span>ลูกค้า</span>
           <span className="text-right">จำนวนออเดอร์</span>
-          <span className="text-right">จำนวนที่สั่ง</span>
-          <span className="text-right">จำนวนที่ส่งจริง</span>
+          <span className="text-right">สั่งใน Orders</span>
+          <span className="text-right">ส่งจริงใน Orders</span>
           <span>ข้อมูลล่าสุด ↓</span>
         </div>
 

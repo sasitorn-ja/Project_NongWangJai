@@ -35,10 +35,6 @@ function getOrderUpdateDateText(order: OrderItem) {
   return order.updated_at ?? null;
 }
 
-function getOrderCreatedDateText(order: OrderItem) {
-  return order.created_at ?? null;
-}
-
 function CompactDateTime({ value }: { value?: string | null }) {
   const text = dateText(value);
   const parts = text.split(" ");
@@ -453,7 +449,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
 
         <div className="min-w-0">
           <div className="flex h-8 overflow-hidden rounded-lg bg-slate-100">
-            {compactRows.map((row, index) => {
+            {compactRows.map((row) => {
               const value = row.delivered;
               return (
                 <div
@@ -996,6 +992,22 @@ export function DetailsPage(props: DetailsPageProps) {
   }, [dealerOrders]);
 
   const isAllDealers = props.selectedDealerId == null;
+  const dealerSiteRows = useMemo(
+    () =>
+      props.sites
+        .map((site) => ({
+          customerName: site.customer?.name?.trim() || "ไม่ระบุลูกค้า",
+          delivered: site.total_delivered,
+          key: `${site.site_id}::${site.site_code}`,
+          latestPour: site.last_pour_datetime,
+          ordered: site.total_ordered,
+          siteCode: site.site_code || site.site_id.toString(),
+          siteName: site.site_name?.trim() || "ไม่ระบุไซต์"
+        }))
+        .sort((a, b) => b.delivered - a.delivered || b.ordered - a.ordered),
+    [props.sites]
+  );
+  const siteRows = isAllDealers ? orderSiteRows : dealerSiteRows;
   const areaRows = isAllDealers ? dealerAreaRows : siteProvinceRows;
   const areaUnit = props.selectedDealer?.unit ?? areaRows.find((row) => row.unit)?.unit ?? props.filteredDealers.find((dealer) => dealer.unit)?.unit ?? "m3";
   const totalAreaDelivered = areaRows.reduce((sum, row) => sum + row.delivered, 0);
@@ -1017,7 +1029,7 @@ export function DetailsPage(props: DetailsPageProps) {
     { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
   ];
 
-  const siteColumns: DataColumn<(typeof orderSiteRows)[number]>[] = [
+  const siteColumns: DataColumn<(typeof siteRows)[number]>[] = [
     { title: "ไซต์", key: "site", sortAccessor: (record) => record.siteName, width: 230, render: (_, record) => <div className="min-w-0"><div className="truncate text-[13px] font-semibold text-slate-950">{record.siteCode}</div><div className="line-clamp-2 text-[11px] font-medium leading-4 text-slate-500" title={record.siteName}>{record.siteName}</div></div> },
     { title: "ลูกค้า", key: "customerName", dataIndex: "customerName", width: 160, render: (value) => <span className="line-clamp-2 text-[13px] leading-5" title={String(value ?? "-")}>{String(value ?? "-")}</span> },
     { title: "จำนวนที่สั่ง", key: "ordered", dataIndex: "ordered", align: "right", width: 112, render: formatNumber },
@@ -1133,16 +1145,16 @@ export function DetailsPage(props: DetailsPageProps) {
               </CardHeader>
               <CardContent>
                 <ProgressList
-                  rows={orderSiteRows.slice(0, 5).map((site) => ({
+                  rows={siteRows.slice(0, 5).map((site) => ({
                     label: site.siteName,
                     total: Math.max(site.ordered, site.delivered),
                     unit: areaUnit,
                     value: site.delivered
                   }))}
                 />
-                {orderSiteRows.length > 5 ? (
+                {siteRows.length > 5 ? (
                   <p className="mt-3 border-t border-slate-100 pt-2 text-center text-[11px] font-semibold text-slate-400 dark:border-slate-800">
-                    + อีก {formatNumber(orderSiteRows.length - 5)} ไซต์ — ดูทั้งหมดที่แท็บ Sites ด้านล่าง
+                    + อีก {formatNumber(siteRows.length - 5)} ไซต์ — ดูทั้งหมดที่แท็บ Sites ด้านล่าง
                   </p>
                 ) : null}
               </CardContent>
@@ -1166,7 +1178,7 @@ export function DetailsPage(props: DetailsPageProps) {
             items={[
               { icon: <ShoppingCart size={18} />, label: "คำสั่งซื้อ", value: formatNumber(dealerOrders.length), hint: "จำนวน orders ทั้งหมด", tone: "blue" },
               { icon: <Users size={18} />, label: "ลูกค้า", value: formatNumber(orderCustomerRows.length), hint: "จำนวนลูกค้าที่สั่ง", tone: "violet" },
-              { icon: <MapPin size={18} />, label: "ไซต์", value: formatNumber(orderSiteRows.length || props.sites.length), hint: "ไซต์ที่มีรายการ", tone: "rose" },
+              { icon: <MapPin size={18} />, label: "ไซต์", value: formatNumber(siteRows.length), hint: "ไซต์จากข้อมูล Dealer", tone: "rose" },
               { icon: <Boxes size={18} />, label: "กลุ่ม", value: formatNumber(props.groups.length), hint: "กลุ่มของ dealer นี้", tone: "slate" },
               { icon: <Clock3 size={18} />, label: "จองคิว", value: formatNumber(usageSummary.bookingCreateCount), hint: "จำนวนครั้งที่สร้างจองคิว", tone: "amber" },
               { icon: <BarChart3 size={18} />, label: "เช็คราคา", value: formatNumber(usageSummary.priceConcreteCount), hint: "จำนวนครั้งที่เช็คราคา", tone: "teal" }
@@ -1209,7 +1221,7 @@ export function DetailsPage(props: DetailsPageProps) {
                 <p className="text-[11px] font-medium text-slate-500">ยอดส่งจริงแยกตามไซต์หลัก</p>
               </CardHeader>
               <CardContent>
-                <SitesDonut rows={orderSiteRows} unit={areaUnit} />
+                <SitesDonut rows={siteRows} unit={areaUnit} />
               </CardContent>
             </Card>
 
@@ -1258,7 +1270,7 @@ export function DetailsPage(props: DetailsPageProps) {
             content: (
               <Card className="dashboard-card overflow-hidden">
                 <CardContent className="p-0">
-                  <DataTable columns={siteColumns} data={orderSiteRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={858} pageSize={10} />
+                  <DataTable columns={siteColumns} data={siteRows} loading={isAllDealers ? props.ordersState === "loading" : props.sitesState === "loading"} rowKey="key" minWidth={858} pageSize={10} />
                 </CardContent>
               </Card>
             )
