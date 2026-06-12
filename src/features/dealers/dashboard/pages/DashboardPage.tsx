@@ -260,10 +260,7 @@ export function DashboardPage(props: DashboardPageProps) {
         ? { from: dateFrom || defaultDayFrom, to: dateTo || defaultDayTo }
         : undefined;
 
-  // Top region from regionRows (sorted by volume desc in groupByRegion)
-  const topRegionRow = props.regionRows[0];
-  const topRegionShare =
-    topRegionRow && props.totalVolume > 0 ? (topRegionRow.volume / props.totalVolume) * 100 : 0;
+  const topDeliveredRegion = [...regionTotalVolumes.entries()].sort((a, b) => b[1] - a[1])[0];
 
   // Active dealer counts (active = status truthy)
   const isActive = (s: Dealer["status"]) =>
@@ -338,17 +335,17 @@ export function DashboardPage(props: DashboardPageProps) {
       <KpiStrip
         activeDealersCount={activeDealersCount}
         activeRate={props.activeRate}
-        topRegion={topRegionRow?.region ?? null}
-        topRegionShare={topRegionShare}
+        topRegion={topDeliveredRegion?.[0] ?? null}
+        topRegionShare={deliveredOrderTotal > 0 ? ((topDeliveredRegion?.[1] ?? 0) / deliveredOrderTotal) * 100 : 0}
         totalDealersCount={props.filteredDealers.length}
         totalGroups={props.totalGroups}
-        totalVolume={props.totalVolume}
+        totalVolume={deliveredOrderTotal}
         unit={volumeUnit}
       />
 
       <WangjaiAdvisor
         accent="sky"
-        message={`ภาพรวมยอดส่งจริงเติบโตต่อเนื่อง โดย ${topRegionRow?.region ?? "CPAC Metro"} มียอดสูงสุด และนำติดตามดีลเลอร์กลุ่ม Active และกลุ่มที่มียอดเติบโตในภูมิภาค Northeast อย่างใกล้ชิดครับ`}
+        message={`ภาพรวมยอดส่งจริงจาก Order โดย ${topDeliveredRegion?.[0] ?? "ยังไม่มีภูมิภาค"} มียอดส่งจริงสูงสุด และควรติดตามดีลเลอร์กลุ่ม Active อย่างใกล้ชิดครับ`}
         title="น้องวางใจช่วยสรุปภาพรวม Dealer"
       />
 
