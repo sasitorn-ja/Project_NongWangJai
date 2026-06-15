@@ -56,9 +56,9 @@ export function DashboardLayout({
 
       <aside
         className={cn(
-          "brand-sider fixed bottom-0 left-0 top-0 z-30 w-[224px] transition-transform duration-200 md:z-20 md:transition-all",
+          "brand-sider fixed bottom-0 left-0 top-0 z-30 w-[200px] transition-transform duration-200 md:z-20 md:transition-all",
           mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-          collapsed ? "md:w-[68px]" : "md:w-[224px]"
+          collapsed ? "md:w-[60px]" : "md:w-[200px]"
         )}
       >
         <Sidebar
@@ -69,7 +69,7 @@ export function DashboardLayout({
         />
       </aside>
 
-      <div className={cn("min-h-screen transition-all", collapsed ? "md:pl-[68px]" : "md:pl-[224px]")}>
+      <div className={cn("min-h-screen transition-all", collapsed ? "md:pl-[60px]" : "md:pl-[200px]")}>
         <Header
           collapsed={collapsed}
           dateFrom={dateFrom}
