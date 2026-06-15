@@ -725,9 +725,11 @@ function SitesDonut({
 
 function TopCustomersList({
   rows,
+  showDealer = false,
   unit
 }: {
-  rows: { key: string; customerName: string; customerCode: string; delivered: number; ordered: number; orderCount: number; siteCount: number }[];
+  rows: { key: string; customerName: string; customerCode: string; dealerName: string; delivered: number; ordered: number; orderCount: number; siteCount: number }[];
+  showDealer?: boolean;
   unit: string;
 }) {
   const sorted = [...rows].sort((a, b) => b.delivered - a.delivered).slice(0, 5);
@@ -780,6 +782,11 @@ function TopCustomersList({
                 <span>·</span>
                 <span>{formatNumber(customer.siteCount)} ไซต์</span>
               </div>
+              {showDealer ? (
+                <div className="mt-0.5 truncate text-[10px] font-bold text-sky-700" title={customer.dealerName}>
+                  Dealer: {customer.dealerName}
+                </div>
+              ) : null}
               <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                 <div
                   className="h-full rounded-full transition-all duration-500"
@@ -909,6 +916,7 @@ export function DetailsPage(props: DetailsPageProps) {
         {
           customerCode: string;
           customerName: string;
+          dealerName: string;
           delivered: number;
           key: string;
           latestPour: string | null;
@@ -921,11 +929,14 @@ export function DetailsPage(props: DetailsPageProps) {
     >((acc, row) => {
       const customerCode = row.customer?.code?.trim() || row.customer?.id?.toString() || "-";
       const customerName = row.customer?.name?.trim() || "ไม่ระบุลูกค้า";
-      const key = `${customerCode}::${customerName}`;
+      const dealerName = row.dealer_name?.trim() || "ไม่ระบุ Dealer";
+      const dealerKey = row.dealer_code?.trim() || row.dealer_id.toString();
+      const key = props.selectedDealerId == null ? `${dealerKey}::${customerCode}::${customerName}` : `${customerCode}::${customerName}`;
       const current =
         acc.get(key) ?? {
           customerCode,
           customerName,
+          dealerName,
           delivered: 0,
           key,
           latestPour: null,
@@ -952,7 +963,7 @@ export function DetailsPage(props: DetailsPageProps) {
     }, new Map());
 
     return [...rows.values()].sort((a, b) => b.delivered - a.delivered);
-  }, [dealerOrders]);
+  }, [dealerOrders, props.selectedDealerId]);
 
   const orderSiteRows = useMemo(() => {
     const rows = dealerOrders.reduce<
@@ -960,6 +971,7 @@ export function DetailsPage(props: DetailsPageProps) {
         string,
         {
           customerName: string;
+          dealerName: string;
           delivered: number;
           key: string;
           latestPour: string | null;
@@ -972,10 +984,13 @@ export function DetailsPage(props: DetailsPageProps) {
     >((acc, row) => {
       const siteCode = row.site?.site_code?.trim() || row.site?.site_id?.toString() || "-";
       const siteName = row.site?.site_name?.trim() || "ไม่ระบุไซต์";
-      const key = `${siteCode}::${siteName}`;
+      const dealerName = row.dealer_name?.trim() || "ไม่ระบุ Dealer";
+      const dealerKey = row.dealer_code?.trim() || row.dealer_id.toString();
+      const key = `${dealerKey}::${siteCode}::${siteName}`;
       const current =
         acc.get(key) ?? {
           customerName: row.customer?.name?.trim() || "ไม่ระบุลูกค้า",
+          dealerName,
           delivered: 0,
           key,
           latestPour: null,
@@ -1013,6 +1028,7 @@ export function DetailsPage(props: DetailsPageProps) {
         const siteName = site.site_name?.trim() || "ไม่ระบุไซต์";
         rows.set(`${siteCode}::${siteName}`, {
           customerName: site.customer?.name?.trim() || "ไม่ระบุลูกค้า",
+          dealerName: props.selectedDealer?.dealer_name || "ไม่ระบุ Dealer",
           delivered: site.total_delivered,
           key: `${site.site_id}::${site.site_code}`,
           latestPour: site.last_pour_datetime,
@@ -1025,7 +1041,7 @@ export function DetailsPage(props: DetailsPageProps) {
 
       return [...rows.values()].sort((a, b) => b.delivered - a.delivered || b.ordered - a.ordered);
     },
-    [orderSiteRows, props.sites]
+    [orderSiteRows, props.selectedDealer?.dealer_name, props.sites]
   );
   const siteRows = isAllDealers ? orderSiteRows : dealerSiteRows;
   const areaRows = isAllDealers ? dealerAreaRows : siteProvinceRows;
@@ -1050,7 +1066,7 @@ export function DetailsPage(props: DetailsPageProps) {
   const dealerFulfillmentRate = dealerOrderedTotal > 0 ? (dealerDeliveredTotal / dealerOrderedTotal) * 100 : 0;
 
   const customerColumns: DataColumn<(typeof orderCustomerRows)[number]>[] = [
-    { title: "ลูกค้า", key: "customer", sortAccessor: (record) => record.customerName, width: 230, render: (_, record) => <div className="min-w-0"><div className="line-clamp-2 text-[13px] font-semibold leading-4 text-slate-950" title={record.customerName}>{record.customerName}</div><div className="truncate text-[11px] font-medium text-slate-500">{record.customerCode}</div></div> },
+    { title: "ลูกค้า", key: "customer", sortAccessor: (record) => record.customerName, width: 260, render: (_, record) => <div className="min-w-0"><div className="line-clamp-2 text-[13px] font-semibold leading-4 text-slate-950" title={record.customerName}>{record.customerName}</div><div className="truncate text-[11px] font-medium text-slate-500">{record.customerCode}</div>{isAllDealers ? <div className="truncate text-[11px] font-bold text-sky-700" title={record.dealerName}>Dealer: {record.dealerName}</div> : null}</div> },
     { title: "ไซต์", key: "siteCount", dataIndex: "siteCount", align: "right", width: 72, render: formatNumber },
     { title: "ออเดอร์", key: "orderCount", dataIndex: "orderCount", align: "right", width: 92, render: formatNumber },
     { title: "จำนวนที่สั่ง", key: "ordered", dataIndex: "ordered", align: "right", width: 112, render: formatNumber },
@@ -1059,7 +1075,7 @@ export function DetailsPage(props: DetailsPageProps) {
   ];
 
   const siteColumns: DataColumn<(typeof siteRows)[number]>[] = [
-    { title: "ไซต์", key: "site", sortAccessor: (record) => record.siteName, width: 230, render: (_, record) => <div className="min-w-0"><div className="truncate text-[13px] font-semibold text-slate-950">{record.siteCode}</div><div className="line-clamp-2 text-[11px] font-medium leading-4 text-slate-500" title={record.siteName}>{record.siteName}</div></div> },
+    { title: "ไซต์", key: "site", sortAccessor: (record) => record.siteName, width: 260, render: (_, record) => <div className="min-w-0"><div className="truncate text-[13px] font-semibold text-slate-950">รหัส Site: {record.siteCode}</div><div className="line-clamp-2 text-[11px] font-medium leading-4 text-slate-500" title={record.siteName}>{record.siteName}</div><div className="truncate text-[11px] font-bold text-sky-700" title={record.dealerName}>Dealer: {record.dealerName}</div></div> },
     { title: "ลูกค้า", key: "customerName", dataIndex: "customerName", width: 160, render: (value) => <span className="line-clamp-2 text-[13px] leading-5" title={String(value ?? "-")}>{String(value ?? "-")}</span> },
     { title: "จำนวนที่สั่ง", key: "ordered", dataIndex: "ordered", align: "right", width: 112, render: formatNumber },
     { title: "จำนวนส่งจริง", key: "delivered", dataIndex: "delivered", align: "right", width: 118, render: formatNumber },
@@ -1154,6 +1170,7 @@ export function DetailsPage(props: DetailsPageProps) {
                 <DualBarChart
                   data={orderCustomerRows.slice(0, 5).map((customer) => ({
                     label: customer.customerName,
+                    sublabel: isAllDealers ? `Dealer: ${customer.dealerName}` : undefined,
                     primary: customer.delivered,
                     secondary: customer.ordered
                   }))}
@@ -1177,6 +1194,7 @@ export function DetailsPage(props: DetailsPageProps) {
                 <ProgressList
                   rows={siteRows.slice(0, 5).map((site) => ({
                     label: site.siteName,
+                    sublabel: `รหัส Site: ${site.siteCode} · Dealer: ${site.dealerName}`,
                     total: Math.max(site.ordered, site.delivered),
                     unit: areaUnit,
                     value: site.delivered
@@ -1273,7 +1291,7 @@ export function DetailsPage(props: DetailsPageProps) {
                 </div>
               </CardHeader>
               <CardContent>
-                <TopCustomersList rows={orderCustomerRows} unit={orderUnit} />
+                <TopCustomersList rows={orderCustomerRows} showDealer={isAllDealers} unit={orderUnit} />
               </CardContent>
             </Card>
           </section>

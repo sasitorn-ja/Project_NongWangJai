@@ -259,22 +259,11 @@ export function DashboardPage(props: DashboardPageProps) {
       render: formatNumber
     },
     {
-      title: "Volume จาก Dealer API",
-      dataIndex: "volume",
-      key: "volume",
-      align: "right",
-      width: 140,
-      render: (_, record) => (
-        <span className="font-semibold text-slate-600 dark:text-slate-300">
-          {formatNumber(record.volume)} <span className="text-[11px] font-medium text-slate-400">{record.unit}</span>
-        </span>
-      )
-    },
-    {
       title: "สั่งใน Orders",
       key: "ordered",
       align: "right",
       width: 130,
+      sortAccessor: (record) => orderTotalsByDealer.get(record.dealer_id)?.ordered ?? 0,
       render: (_, record) => (
         <span className="font-semibold text-slate-700 dark:text-slate-200">
           {formatNumber(orderTotalsByDealer.get(record.dealer_id)?.ordered ?? 0)} <span className="text-[11px] font-medium text-slate-400">{orderTotalsByDealer.get(record.dealer_id)?.unit ?? "คิว"}</span>
@@ -286,6 +275,7 @@ export function DashboardPage(props: DashboardPageProps) {
       key: "delivered",
       align: "right",
       width: 140,
+      sortAccessor: (record) => orderTotalsByDealer.get(record.dealer_id)?.delivered ?? 0,
       render: (_, record) => <span className="font-bold text-slate-950">{formatNumber(orderTotalsByDealer.get(record.dealer_id)?.delivered ?? 0)} <span className="text-[11px] font-medium text-slate-400">{orderTotalsByDealer.get(record.dealer_id)?.unit ?? "คิว"}</span></span>
     },
     {
@@ -476,7 +466,7 @@ export function DashboardPage(props: DashboardPageProps) {
               data={props.filteredDealers}
               loading={props.apiState === "loading"}
               rowKey="dealer_id"
-              minWidth={1180}
+              minWidth={1040}
               pageSize={10}
             />
           </CardContent>

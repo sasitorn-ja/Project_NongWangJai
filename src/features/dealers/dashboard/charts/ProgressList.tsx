@@ -16,7 +16,7 @@ function EmptyChart() {
   );
 }
 
-export function ProgressList({ rows }: { rows: Array<{ label: string; total: number; unit: string; value: number }> }) {
+export function ProgressList({ rows }: { rows: Array<{ label: string; sublabel?: string; total: number; unit: string; value: number }> }) {
   if (!rows.length) return <EmptyChart />;
 
   return (
@@ -27,7 +27,10 @@ export function ProgressList({ rows }: { rows: Array<{ label: string; total: num
           <div key={`${row.label}-${index}`} className="rounded-lg border border-slate-100 bg-white px-3 py-2.5">
             <div className="mb-2 grid grid-cols-[24px_minmax(0,1fr)_auto] items-center gap-2 text-sm">
               <span className="flex h-6 w-6 items-center justify-center rounded-md bg-slate-100 text-[11px] font-bold text-slate-600">{index + 1}</span>
-              <span className="truncate font-semibold text-slate-800" title={row.label}>{row.label}</span>
+              <span className="min-w-0">
+                <span className="block truncate font-semibold text-slate-800" title={row.label}>{row.label}</span>
+                {row.sublabel ? <span className="mt-0.5 block truncate text-[10px] font-semibold text-sky-700" title={row.sublabel}>{row.sublabel}</span> : null}
+              </span>
               <span className="shrink-0 text-right font-bold text-slate-950">
                 {formatNumber(row.value)} <span className="text-[10px] font-semibold text-slate-400">{row.unit}</span>
               </span>
