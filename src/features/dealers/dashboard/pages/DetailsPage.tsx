@@ -877,7 +877,7 @@ export function DetailsPage(props: DetailsPageProps) {
         label,
         ordered: 0,
         provinces: new Set<string>(),
-        unit: order.quantity?.unit || "คิว"
+        unit: "m3"
       };
 
       current.delivered += order.quantity?.delivered ?? 0;
@@ -1045,9 +1045,8 @@ export function DetailsPage(props: DetailsPageProps) {
   );
   const siteRows = isAllDealers ? orderSiteRows : dealerSiteRows;
   const areaRows = isAllDealers ? dealerAreaRows : siteProvinceRows;
-  const orderUnit = dealerOrders.find((order) => order.quantity?.unit)?.quantity?.unit ?? "คิว";
-  const siteUnit = props.sites.find((site) => site.unit)?.unit ?? props.selectedDealer?.unit ?? "m3";
-  const areaUnit = isAllDealers ? orderUnit : siteUnit;
+  const orderUnit = "m3";
+  const areaUnit = "m3";
   const totalAreaDelivered = areaRows.reduce((sum, row) => sum + row.delivered, 0);
   const totalGroups = isAllDealers ? props.filteredDealers.reduce((sum, dealer) => sum + dealer.group_count, 0) : props.groups.length;
   const topDealerVolume = useMemo(() => {
@@ -1067,28 +1066,28 @@ export function DetailsPage(props: DetailsPageProps) {
 
   const customerColumns: DataColumn<(typeof orderCustomerRows)[number]>[] = [
     { title: "ลูกค้า", key: "customer", sortAccessor: (record) => record.customerName, width: 260, render: (_, record) => <div className="min-w-0"><div className="line-clamp-2 text-[13px] font-semibold leading-4 text-slate-950" title={record.customerName}>{record.customerName}</div><div className="truncate text-[11px] font-medium text-slate-500">{record.customerCode}</div>{isAllDealers ? <div className="truncate text-[11px] font-bold text-sky-700" title={record.dealerName}>Dealer: {record.dealerName}</div> : null}</div> },
-    { title: "ไซต์", key: "siteCount", dataIndex: "siteCount", align: "right", width: 72, render: formatNumber },
-    { title: "ออเดอร์", key: "orderCount", dataIndex: "orderCount", align: "right", width: 92, render: formatNumber },
-    { title: "จำนวนที่สั่ง", key: "ordered", dataIndex: "ordered", align: "right", width: 112, render: formatNumber },
-    { title: "จำนวนส่งจริง", key: "delivered", dataIndex: "delivered", align: "right", width: 118, render: formatNumber },
+    { title: "จำนวน Site", key: "siteCount", dataIndex: "siteCount", align: "right", width: 100, render: formatNumber },
+    { title: "ออเดอร์ /ครั้ง", key: "orderCount", dataIndex: "orderCount", align: "right", width: 108, render: formatNumber },
+    { title: `จำนวนที่สั่ง /${orderUnit}`, key: "ordered", dataIndex: "ordered", align: "right", width: 132, render: formatNumber },
+    { title: `จำนวนส่งจริง /${orderUnit}`, key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
     { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
   ];
 
   const siteColumns: DataColumn<(typeof siteRows)[number]>[] = [
     { title: "ไซต์", key: "site", sortAccessor: (record) => record.siteName, width: 260, render: (_, record) => <div className="min-w-0"><div className="truncate text-[13px] font-semibold text-slate-950">รหัส Site: {record.siteCode}</div><div className="line-clamp-2 text-[11px] font-medium leading-4 text-slate-500" title={record.siteName}>{record.siteName}</div><div className="truncate text-[11px] font-bold text-sky-700" title={record.dealerName}>Dealer: {record.dealerName}</div></div> },
     { title: "ลูกค้า", key: "customerName", dataIndex: "customerName", width: 160, render: (value) => <span className="line-clamp-2 text-[13px] leading-5" title={String(value ?? "-")}>{String(value ?? "-")}</span> },
-    { title: "จำนวนที่สั่ง", key: "ordered", dataIndex: "ordered", align: "right", width: 112, render: formatNumber },
-    { title: "จำนวนส่งจริง", key: "delivered", dataIndex: "delivered", align: "right", width: 118, render: formatNumber },
+    { title: `จำนวนที่สั่ง /${areaUnit}`, key: "ordered", dataIndex: "ordered", align: "right", width: 132, render: formatNumber },
+    { title: `จำนวนส่งจริง /${areaUnit}`, key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
     { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> },
     { title: "แหล่งข้อมูล", key: "source", dataIndex: "source", width: 105, render: (value) => <span className="whitespace-nowrap text-[11px] font-semibold text-sky-700">{String(value)}</span> }
   ];
 
   const groupColumns: DataColumn<DealerGroup>[] = [
     { title: "Group", dataIndex: "group_name", key: "group_name", width: 320, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.group_name}</div><div className="text-xs font-medium text-slate-500">ID: {record.group_id} | Type: {record.group_type ?? "-"}</div></div> },
-    { title: "ส่งจริง", dataIndex: "delivered_volume", key: "delivered_volume", align: "right", width: 150, render: (value, record) => `${formatNumber(value)} ${record.unit}` },
-    { title: "จอง", dataIndex: "booked_volume", key: "booked_volume", align: "right", width: 150, render: (value, record) => `${formatNumber(value)} ${record.unit}` },
-    { title: "เช็คราคา", dataIndex: "price_check_count", key: "price_check_count", align: "right", width: 130, render: formatNumber },
-    { title: "จองคิว", dataIndex: "booking_count", key: "booking_count", align: "right", width: 130, render: formatNumber },
+    { title: "เช็คราคา /ครั้ง", dataIndex: "price_check_count", key: "price_check_count", align: "right", width: 140, render: formatNumber },
+    { title: "จำนวนที่จอง /m3", dataIndex: "booked_volume", key: "booked_volume", align: "right", width: 180, render: formatNumber },
+    { title: "จำนวนที่ส่งจริง /m3", dataIndex: "delivered_volume", key: "delivered_volume", align: "right", width: 190, render: formatNumber },
+    { title: "จำนวนการเปิด Site /ครั้ง", dataIndex: "booking_count", key: "booking_count", align: "right", width: 190, render: formatNumber },
     { title: "วันที่สร้างกลุ่ม", dataIndex: "created_at", key: "created_at", width: 190, render: dateText },
     statusColumn<DealerGroup>()
   ];

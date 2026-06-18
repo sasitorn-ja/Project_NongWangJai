@@ -26,7 +26,7 @@ export function normalizeDealer(row: Dealer): Dealer {
     group_count: toNumber(row.group_count),
     volume: toNumber(row.volume),
     last_active_days: row.last_active_days == null ? null : toNumber(row.last_active_days),
-    unit: row.unit || "m3"
+    unit: "m3"
   };
 }
 
@@ -38,7 +38,7 @@ export function normalizeGroup(row: DealerGroup): DealerGroup {
     booked_volume: toNumber(row.booked_volume),
     price_check_count: toNumber(row.price_check_count),
     booking_count: toNumber(row.booking_count),
-    unit: row.unit || "m3"
+    unit: "m3"
   };
 }
 
@@ -74,7 +74,7 @@ export function normalizeSite(row: DealerSite): DealerSite {
     region_id: row.region_id == null ? undefined : toNumber(row.region_id),
     total_ordered: toNumber(row.total_ordered),
     total_delivered: toNumber(row.total_delivered),
-    unit: row.unit || "m3"
+    unit: "m3"
   };
 }
 
@@ -103,9 +103,9 @@ export function normalizeOrder(row: OrderItem): OrderItem {
           ...row.quantity,
           ordered: toNumber(row.quantity.ordered),
           delivered: toNumber(row.quantity.delivered),
-          unit: row.quantity.unit || "คิว"
+          unit: "m3"
         }
-      : { ordered: 0, delivered: 0, unit: "คิว" },
+      : { ordered: 0, delivered: 0, unit: "m3" },
     status: row.status
       ? {
           ...row.status

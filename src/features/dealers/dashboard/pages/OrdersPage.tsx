@@ -103,7 +103,7 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
         orders: [],
         totalDelivered: 0,
         totalOrdered: 0,
-        unit: order.quantity?.unit || "คิว",
+        unit: "m3",
         uniqueSiteCount: 0
       };
       map.set(key, group);
@@ -218,10 +218,10 @@ function CustomerAccordionRow({
                     Site
                   </th>
                   <th className="w-[7%] border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
-                    สั่งใน Order
+                    สั่งใน Order /{group.unit}
                   </th>
                   <th className="w-[7%] border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
-                    ส่งจริงใน Order
+                    ส่งจริงใน Order /{group.unit}
                   </th>
                   <th className="w-[11%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     เวลาเท
@@ -339,15 +339,15 @@ function MobileCustomerCard({
           </div>
           <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
             <div>
-              <div className="text-[10px] font-semibold text-slate-400">จำนวนออเดอร์</div>
+              <div className="text-[10px] font-semibold text-slate-400">จำนวนออเดอร์ /ครั้ง</div>
               <div className="font-bold text-slate-800">{formatNumber(group.orderCount)}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold text-slate-400">ปริมาณที่สั่ง</div>
+              <div className="text-[10px] font-semibold text-slate-400">ปริมาณที่สั่ง /{group.unit}</div>
               <div className="font-bold text-slate-800">{compactNumber(group.totalOrdered)} <span className="text-[9px] text-slate-400">{group.unit}</span></div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold text-slate-400">ปริมาณส่งจริง</div>
+              <div className="text-[10px] font-semibold text-slate-400">ปริมาณส่งจริง /{group.unit}</div>
               <div className={cn("font-bold", group.totalDelivered > 0 ? "text-slate-800" : "text-slate-400")}>
                 {compactNumber(group.totalDelivered)} <span className="text-[9px] text-slate-400">{group.unit}</span>
               </div>
@@ -447,7 +447,7 @@ export function OrdersPage({
   const totalOrdered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0);
   const deliveredOrders = dealerOrders.filter((row) => (row.quantity?.delivered ?? 0) > 0);
   const totalDelivered = deliveredOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
-  const orderUnit = dealerOrders.find((row) => row.quantity?.unit)?.quantity?.unit ?? "คิว";
+  const orderUnit = "m3";
   const orderListTitle = selectedDealer ? `Order List ของ ${selectedDealer.dealer_name}` : "Order List แยกตาม Dealer";
 
   const toggleCustomer = (key: string) => {
@@ -646,9 +646,9 @@ export function OrdersPage({
         <div className="grid grid-cols-[36px_minmax(0,2.4fr)_80px_110px_110px_140px] gap-3 border-b border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
           <span></span>
           <span>ลูกค้า</span>
-          <span className="text-right">จำนวนออเดอร์</span>
-          <span className="text-right">สั่งใน Orders</span>
-          <span className="text-right">ส่งจริงใน Orders</span>
+          <span className="text-right">จำนวนออเดอร์ /ครั้ง</span>
+          <span className="text-right">สั่งใน Orders /{orderUnit}</span>
+          <span className="text-right">ส่งจริงใน Orders /{orderUnit}</span>
           <span>ข้อมูลล่าสุด ↓</span>
         </div>
 

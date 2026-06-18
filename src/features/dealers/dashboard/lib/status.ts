@@ -17,7 +17,9 @@ export function isDealerActive(statusValue: Dealer["status"]) {
 
 export function statusText(value: unknown) {
   const key = getDealerStatusKey(value);
-  return key.charAt(0).toUpperCase() + key.slice(1);
+  if (key === "active") return "ใช้งานอยู่";
+  if (key === "new") return "ใหม่";
+  return "ไม่ได้ใช้งาน";
 }
 
 export function getOrderStatusKey(value?: string | null): "cancelled" | "confirmed" | "pending" | "other" {

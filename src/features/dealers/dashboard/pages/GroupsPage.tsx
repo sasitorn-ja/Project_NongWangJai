@@ -25,7 +25,7 @@ type GroupsPageProps = {
 };
 
 export function GroupsPage({ dealers, groups, groupsState, selectedDealer, selectedDealerId, setSelectedDealerId, usageRows }: GroupsPageProps) {
-  const volumeUnit = groups.find((group) => group.unit)?.unit ?? selectedDealer?.unit ?? "m3";
+  const volumeUnit = "m3";
   const totalDelivered = groups.reduce((sum, group) => sum + group.delivered_volume, 0);
   const totalBooked = groups.reduce((sum, group) => sum + group.booked_volume, 0);
   const totalPriceChecks = groups.reduce((sum, group) => sum + group.price_check_count, 0);
@@ -55,10 +55,10 @@ export function GroupsPage({ dealers, groups, groupsState, selectedDealer, selec
         </div>
       )
     },
-    { title: "ส่งจริง", dataIndex: "delivered_volume", key: "delivered_volume", align: "right", width: 150, render: (value, record) => `${formatNumber(value)} ${record.unit}` },
-    { title: "จอง", dataIndex: "booked_volume", key: "booked_volume", align: "right", width: 150, render: (value, record) => `${formatNumber(value)} ${record.unit}` },
-    { title: "เช็คราคา", dataIndex: "price_check_count", key: "price_check_count", align: "right", width: 130, render: formatNumber },
-    { title: "จองคิว", dataIndex: "booking_count", key: "booking_count", align: "right", width: 130, render: formatNumber },
+    { title: "เช็คราคา /ครั้ง", dataIndex: "price_check_count", key: "price_check_count", align: "right", width: 140, render: formatNumber },
+    { title: "จำนวนที่จอง /m3", dataIndex: "booked_volume", key: "booked_volume", align: "right", width: 180, render: formatNumber },
+    { title: "จำนวนที่ส่งจริง /m3", dataIndex: "delivered_volume", key: "delivered_volume", align: "right", width: 190, render: formatNumber },
+    { title: "จำนวนการเปิด Site /ครั้ง", dataIndex: "booking_count", key: "booking_count", align: "right", width: 190, render: formatNumber },
     { title: "วันที่สร้าง", dataIndex: "created_at", key: "created_at", width: 190, render: dateText },
     statusColumn<DealerGroup>()
   ];

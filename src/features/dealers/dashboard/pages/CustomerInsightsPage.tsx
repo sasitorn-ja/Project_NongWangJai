@@ -145,7 +145,7 @@ export function CustomerInsightsPage({
 
   const totalDelivered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
   const totalOrdered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0);
-  const volumeUnit = dealerOrders.find((order) => order.quantity?.unit)?.quantity?.unit ?? "คิว";
+  const volumeUnit = "m3";
   const totalCustomers = customerRows.length;
   const totalSites = siteRows.length;
   const topCustomers = customerRows.slice(0, topN);
@@ -163,10 +163,10 @@ export function CustomerInsightsPage({
         </div>
       )
     },
-    { title: "Sites", key: "siteCount", dataIndex: "siteCount", align: "right", width: 110, render: formatNumber },
-    { title: "Order Count", key: "orderCount", dataIndex: "orderCount", align: "right", width: 130, render: formatNumber },
-    { title: "Ordered Volume", key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
-    { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
+    { title: "จำนวน Site", key: "siteCount", dataIndex: "siteCount", align: "right", width: 110, render: formatNumber },
+    { title: "Order Count /ครั้ง", key: "orderCount", dataIndex: "orderCount", align: "right", width: 130, render: formatNumber },
+    { title: `Ordered Volume /${volumeUnit}`, key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
+    { title: `Delivered Volume /${volumeUnit}`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
     { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
   ];
 
@@ -184,8 +184,8 @@ export function CustomerInsightsPage({
       )
     },
     { title: "Dealer", key: "customerName", dataIndex: "customerName", width: 240 },
-    { title: "Ordered Volume", key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
-    { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
+    { title: `Ordered Volume /${volumeUnit}`, key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
+    { title: `Delivered Volume /${volumeUnit}`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
     { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
   ];
 

@@ -85,7 +85,7 @@ export function TopCustomersPage({
     () => ordersBeforeCustomer.filter((order) => customerFilter === "all" || order.customerName === customerFilter),
     [customerFilter, ordersBeforeCustomer]
   );
-  const volumeUnit = filteredOrders.find((order) => order.quantity?.unit)?.quantity?.unit ?? "คิว";
+  const volumeUnit = "m3";
 
   const customerRows = useMemo(() => {
     const rows = filteredOrders.reduce<
@@ -201,7 +201,7 @@ export function TopCustomersPage({
       )
     },
     {
-      title: <span className="inline-block pr-3">CountSite</span>,
+      title: <span className="inline-block pr-3">จำนวน Site</span>,
       key: "countSite",
       dataIndex: "countSite",
       align: "right",
@@ -209,7 +209,7 @@ export function TopCustomersPage({
       render: (value) => <span className="inline-block pr-4">{formatNumber(Number(value ?? 0))}</span>
     },
     {
-      title: <span className="inline-block pr-6">Delivered Volume</span>,
+      title: <span className="inline-block pr-6">Delivered Volume /{volumeUnit}</span>,
       key: "delivered",
       dataIndex: "delivered",
       align: "right",
@@ -220,7 +220,7 @@ export function TopCustomersPage({
 
   const monthlyColumns: DataColumn<(typeof monthlyRows)[number]>[] = [
     { title: "Month", key: "month", dataIndex: "monthLabel", sortAccessor: (record) => record.monthKey, width: 120 },
-    { title: "Delivered Volume", key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
+    { title: `Delivered Volume /${volumeUnit}`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
     {
       title: "TopN Dealer",
       key: "topCustomers",

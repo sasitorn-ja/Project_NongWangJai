@@ -138,7 +138,7 @@ export function TopProductsPage({
     () => ordersBeforeProduct.filter((order) => productFilter === "all" || order.productKey === productFilter),
     [ordersBeforeProduct, productFilter]
   );
-  const volumeUnit = filteredOrders.find((order) => order.quantity?.unit)?.quantity?.unit ?? "คิว";
+  const volumeUnit = "m3";
 
   const productRows = useMemo(() => {
     const rows = filteredOrders.reduce<
@@ -275,7 +275,7 @@ export function TopProductsPage({
       )
     },
     {
-      title: "จำนวนออเดอร์",
+      title: "จำนวนออเดอร์ /ครั้ง",
       key: "orderCount",
       dataIndex: "orderCount",
       align: "right",
@@ -287,26 +287,26 @@ export function TopProductsPage({
       )
     },
     {
-      title: "ปริมาณที่สั่ง",
+      title: `ปริมาณที่สั่ง /${volumeUnit}`,
       key: "ordered",
       dataIndex: "ordered",
       align: "right",
       width: 86,
       render: (value) => (
         <span>
-          {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">คิว</span>
+          {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
         </span>
       )
     },
     {
-      title: "ปริมาณส่งจริง",
+      title: `ปริมาณส่งจริง /${volumeUnit}`,
       key: "delivered",
       dataIndex: "delivered",
       align: "right",
       width: 86,
       render: (value) => (
         <span>
-          {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">คิว</span>
+          {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
         </span>
       )
     },
@@ -321,7 +321,7 @@ export function TopProductsPage({
 
   const monthlyColumns: DataColumn<(typeof monthlyRows)[number]>[] = [
     { title: "Month", key: "month", dataIndex: "monthLabel", sortAccessor: (record) => record.monthKey, width: 78 },
-    { title: "Delivered", key: "delivered", dataIndex: "delivered", align: "right", width: 78, render: formatNumber },
+    { title: `Delivered /${volumeUnit}`, key: "delivered", dataIndex: "delivered", align: "right", width: 78, render: formatNumber },
     {
       title: "TopN Product",
       key: "topProducts",
@@ -415,7 +415,7 @@ export function TopProductsPage({
             },
             {
               accent: "emerald",
-              detail: "นับจำนวนออเดอร์เป็นครั้ง ไม่ใช่ปริมาณคิว",
+              detail: "นับจำนวนออเดอร์เป็นครั้ง ไม่ใช่ปริมาตร m3",
               icon: <ClipboardList size={18} />,
               label: "จำนวนออเดอร์",
               value: formatNumber(totalOrders)
@@ -464,7 +464,7 @@ export function TopProductsPage({
         <Card className="dashboard-card overflow-hidden">
           <CardHeader className="border-b border-[#d9e3e6]">
             <CardTitle className="text-lg">Product Ranking</CardTitle>
-            <p className="text-xs font-medium text-slate-500">จำนวนออเดอร์คือจำนวนครั้ง ส่วนปริมาณที่สั่ง/ส่งจริงคือคิวรวม</p>
+            <p className="text-xs font-medium text-slate-500">จำนวนออเดอร์คือจำนวนครั้ง ส่วนปริมาณที่สั่ง/ส่งจริงมีหน่วยเป็น m3</p>
           </CardHeader>
           <CardContent className="p-0">
             <DataTable columns={productColumns} data={productRows} loading={ordersState === "loading"} rowKey="key" minWidth={940} pageSize={10} />

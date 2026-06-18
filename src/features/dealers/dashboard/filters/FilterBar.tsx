@@ -41,9 +41,9 @@ export function FilterBar({
         className="sm:col-span-2 xl:col-span-1"
         options={[
           { label: "ทุกสถานะ", value: "all" },
-          { label: "Active", value: "active" },
-          { label: "Idle", value: "idle" },
-          { label: "New", value: "new" }
+          { label: "ใช้งานอยู่", value: "active" },
+          { label: "ไม่ได้ใช้งาน", value: "idle" },
+          { label: "ใหม่", value: "new" }
         ]}
         value={status}
         onChange={setStatus}

@@ -175,7 +175,7 @@ export function NetworkPage({
     orders.forEach((order) => {
       const delivered = order.quantity?.delivered ?? 0;
       const current = totals.get(order.dealer_id) ?? {
-        unit: order.quantity?.unit || "คิว",
+        unit: "m3",
         volume: 0
       };
       current.volume += Math.max(delivered, 0);
@@ -190,7 +190,7 @@ export function NetworkPage({
       return {
         ...dealer,
         priceCheckCount: priceChecksByDealer.get(dealer.dealer_id) ?? 0,
-        unit: delivered?.unit || "คิว",
+        unit: "m3",
         volume: delivered?.volume ?? 0
       };
     });
@@ -217,14 +217,14 @@ export function NetworkPage({
           dealerCount: 0,
           totalGroups: 0,
           totalVolume: 0,
-          unit: dealer.unit || "คิว"
+          unit: "m3"
         };
 
       current.dealers.push(dealer);
       current.dealerCount += 1;
       current.totalGroups += dealer.group_count;
       current.totalVolume += dealer.volume;
-      current.unit = current.unit || dealer.unit || "คิว";
+      current.unit = "m3";
       acc.set(dealer.region, current);
       return acc;
     }, new Map());
@@ -258,7 +258,7 @@ export function NetworkPage({
                   <div className="mt-0.5 text-[12px] font-semibold text-slate-500">กลุ่ม</div>
                 </div>
                 <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
-                  <div className="text-[24px] font-bold leading-none text-sky-600">{compactNumber(uniqueDealers.reduce((sum, dealer) => sum + dealer.volume, 0))} <span className="text-[12px]">{uniqueDealers.find((dealer) => dealer.volume > 0)?.unit ?? "คิว"}</span></div>
+                  <div className="text-[24px] font-bold leading-none text-sky-600">{compactNumber(uniqueDealers.reduce((sum, dealer) => sum + dealer.volume, 0))} <span className="text-[12px]">m3</span></div>
                   <div className="mt-0.5 text-[12px] font-semibold text-slate-500">ยอดรวมที่มีส่งจริง</div>
                 </div>
               </div>

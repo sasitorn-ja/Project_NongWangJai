@@ -86,7 +86,7 @@ function KpiStrip({
       textColor: "text-emerald-600 dark:text-emerald-400",
       valueColor: "text-emerald-600 dark:text-emerald-300",
       icon: <Users size={22} />,
-      label: "Active Dealer Rate",
+      label: "อัตรา Dealer ที่ใช้งานอยู่",
       value: (
         <>
           {activeRate}
@@ -175,11 +175,7 @@ export function DashboardPage(props: DashboardPageProps) {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedRegions, setSelectedRegions] = useState<string[] | null>(null);
-  const volumeUnit =
-    props.filteredOrders.find((order) => order.quantity?.unit)?.quantity?.unit ??
-    props.filteredDealers.find((dealer) => dealer.unit)?.unit ??
-    props.topDealer?.unit ??
-    "m3";
+  const volumeUnit = "m3";
 
   // Region list + per-region volumes for the toolbar filter
   const allRegions = useMemo(
@@ -231,7 +227,7 @@ export function DashboardPage(props: DashboardPageProps) {
   const orderTotalsByDealer = useMemo(() => {
     const map = new Map<number, { delivered: number; ordered: number; unit: string }>();
     props.filteredOrders.forEach((order) => {
-      const current = map.get(order.dealer_id) ?? { delivered: 0, ordered: 0, unit: order.quantity?.unit || "คิว" };
+      const current = map.get(order.dealer_id) ?? { delivered: 0, ordered: 0, unit: "m3" };
       current.ordered += order.quantity?.ordered ?? 0;
       current.delivered += order.quantity?.delivered ?? 0;
       map.set(order.dealer_id, current);
@@ -251,7 +247,7 @@ export function DashboardPage(props: DashboardPageProps) {
     }),
     { title: "พื้นที่", dataIndex: "region", key: "region", width: 150, render: regionPill },
     {
-      title: "กลุ่ม",
+      title: "จำนวนกลุ่ม /กลุ่ม",
       dataIndex: "group_count",
       key: "group_count",
       align: "right",
@@ -259,27 +255,27 @@ export function DashboardPage(props: DashboardPageProps) {
       render: formatNumber
     },
     {
-      title: "สั่งใน Orders",
+      title: `สั่งใน Orders /${volumeUnit}`,
       key: "ordered",
       align: "right",
       width: 130,
       sortAccessor: (record) => orderTotalsByDealer.get(record.dealer_id)?.ordered ?? 0,
       render: (_, record) => (
         <span className="font-semibold text-slate-700 dark:text-slate-200">
-          {formatNumber(orderTotalsByDealer.get(record.dealer_id)?.ordered ?? 0)} <span className="text-[11px] font-medium text-slate-400">{orderTotalsByDealer.get(record.dealer_id)?.unit ?? "คิว"}</span>
+          {formatNumber(orderTotalsByDealer.get(record.dealer_id)?.ordered ?? 0)} <span className="text-[11px] font-medium text-slate-400">m3</span>
         </span>
       )
     },
     {
-      title: "ส่งจริงใน Orders",
+      title: `ส่งจริงใน Orders /${volumeUnit}`,
       key: "delivered",
       align: "right",
       width: 140,
       sortAccessor: (record) => orderTotalsByDealer.get(record.dealer_id)?.delivered ?? 0,
-      render: (_, record) => <span className="font-bold text-slate-950">{formatNumber(orderTotalsByDealer.get(record.dealer_id)?.delivered ?? 0)} <span className="text-[11px] font-medium text-slate-400">{orderTotalsByDealer.get(record.dealer_id)?.unit ?? "คิว"}</span></span>
+      render: (_, record) => <span className="font-bold text-slate-950">{formatNumber(orderTotalsByDealer.get(record.dealer_id)?.delivered ?? 0)} <span className="text-[11px] font-medium text-slate-400">m3</span></span>
     },
     {
-      title: "อัตราส่งจริงใน Orders",
+      title: "อัตราส่งจริงใน Orders /%",
       key: "delivery_rate",
       width: 180,
       render: (_, record) => {
@@ -313,7 +309,7 @@ export function DashboardPage(props: DashboardPageProps) {
 
       <WangjaiAdvisor
         accent="sky"
-        message={`ภาพรวมยอดส่งจริงจาก Order โดย ${topDeliveredRegion?.[0] ?? "ยังไม่มีภูมิภาค"} มียอดส่งจริงสูงสุด และควรติดตามดีลเลอร์กลุ่ม Active อย่างใกล้ชิดครับ`}
+        message={`ภาพรวมยอดส่งจริงจาก Order โดย ${topDeliveredRegion?.[0] ?? "ยังไม่มีภูมิภาค"} มียอดส่งจริงสูงสุด และควรติดตาม Dealer กลุ่มใช้งานอยู่อย่างใกล้ชิดครับ`}
         title="น้องวางใจช่วยสรุปภาพรวม Dealer"
       />
 
