@@ -327,7 +327,7 @@ export function TimeVolumeBarChart({
   focusRange,
   range,
   selectedRegions = null,
-  unit = "m3",
+  unit = "คิว",
   headerControls,
   regionFilterPanel,
   regionSummary

@@ -55,7 +55,7 @@ export function GroupVolumeInsights({
       {/* Group rows: delivered vs booked bars */}
       <div className="space-y-3.5">
         {topGroups.map((group, index) => {
-          const groupUnit = "m3";
+          const groupUnit = "คิว";
           return (
             <div key={group.group_id}>
               <div className="flex items-center justify-between gap-3">

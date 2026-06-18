@@ -10,15 +10,15 @@ export const FIXED_DIVISIONS = [
 ] as const;
 
 export const REGION_COLORS: Record<string, string> = {
-  "CPAC Metro": "#3b82f6",
-  "CPAC Northeast": "#14b8a6",
-  "CPAC West": "#8b5cf6",
-  "CPAC North": "#06b6d4",
-  "RMC - South Chain": "#f59e0b",
-  "CPAC East": "#10b981"
+  "CPAC East": "#0284c7",
+  "CPAC Metro": "#2563eb",
+  "CPAC North": "#0891b2",
+  "CPAC Northeast": "#0d9488",
+  "CPAC West": "#4f46e5",
+  "RMC - South Chain": "#0ea5e9"
 };
 
-const FALLBACK_COLORS = ["#3b82f6", "#14b8a6", "#8b5cf6", "#06b6d4", "#f59e0b", "#10b981", "#e11d48", "#7c3aed"];
+const FALLBACK_COLORS = ["#0284c7", "#2563eb", "#0891b2", "#0d9488", "#4f46e5", "#0ea5e9", "#0369a1", "#1d4ed8"];
 
 export function getRegionColor(region: string, allRegions: readonly string[] = FIXED_DIVISIONS) {
   return REGION_COLORS[region] ?? FALLBACK_COLORS[Math.max(allRegions.indexOf(region), 0) % FALLBACK_COLORS.length];
@@ -56,10 +56,10 @@ export function getRegionLabel(region: string) {
 
 export function getRegionAccent(region: string) {
   if (region === "CPAC Metro") return "sky";
-  if (region === "CPAC East") return "emerald";
-  if (region === "CPAC West") return "violet";
+  if (region === "CPAC East") return "cyan";
+  if (region === "CPAC West") return "blue";
   if (region === "CPAC North") return "cyan";
   if (region === "CPAC Northeast") return "teal";
-  if (region === "RMC - South Chain") return "amber";
+  if (region === "RMC - South Chain") return "sky";
   return "slate";
 }

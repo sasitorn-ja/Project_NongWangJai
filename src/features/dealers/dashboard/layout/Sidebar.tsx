@@ -43,7 +43,7 @@ export function Sidebar({
           <img
             src={cpacSidebarLogo}
             alt="CPAC"
-            className={collapsed && !mobileNavOpen ? "mx-auto h-[31px] w-12 object-contain" : "h-[77px] w-[120px] object-contain"}
+            className={collapsed && !mobileNavOpen ? "mx-auto h-6 w-10 object-contain" : "h-[50px] w-[78px] object-contain"}
           />
         </div>
       </div>

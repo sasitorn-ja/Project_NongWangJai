@@ -103,7 +103,7 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
         orders: [],
         totalDelivered: 0,
         totalOrdered: 0,
-        unit: "m3",
+        unit: "คิว",
         uniqueSiteCount: 0
       };
       map.set(key, group);
@@ -163,14 +163,14 @@ function CustomerAccordionRow({
         onClick={onToggle}
         aria-expanded={expanded}
         className={cn(
-          "grid w-full grid-cols-[36px_minmax(0,2.4fr)_80px_110px_110px_140px] items-center gap-3 px-5 py-3.5 text-left transition-colors",
+          "grid w-full grid-cols-[36px_minmax(0,2.4fr)_128px_140px_140px_150px] items-center px-5 py-3.5 text-left transition-colors",
           expanded ? "bg-sky-50/60 hover:bg-sky-50" : "hover:bg-slate-50"
         )}
       >
         <span className={cn("flex h-7 w-7 items-center justify-center rounded-lg transition-colors", expanded ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-500")}>
           <ChevronDown size={16} className={cn("transition-transform", expanded ? "rotate-0" : "-rotate-90")} />
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 px-3">
           <div className="truncate text-sm font-bold text-slate-950" title={group.customerName}>
             {group.customerName}
           </div>
@@ -194,45 +194,45 @@ function CustomerAccordionRow({
             )}
           </div>
         </div>
-        <div className="text-right font-bold text-slate-900">{formatNumber(group.orderCount)}</div>
-        <div className="text-right font-bold text-slate-900">
-          {compactNumber(group.totalOrdered)} <span className="text-[10px] font-semibold text-slate-400">{group.unit}</span>
+        <div className="flex h-full items-center justify-end border-l border-[#e3e9ed] px-3 text-right font-bold text-slate-900">{formatNumber(group.orderCount)}</div>
+        <div className="flex h-full items-center justify-end border-l border-[#e3e9ed] px-3 text-right font-bold text-slate-900">
+          {compactNumber(group.totalOrdered)} <span className="ml-1 text-[10px] font-semibold text-slate-400">{group.unit}</span>
         </div>
-        <div className={cn("text-right font-bold", group.totalDelivered > 0 ? "text-slate-900" : "text-slate-400")}>
-          {compactNumber(group.totalDelivered)} <span className="text-[10px] font-semibold text-slate-400">{group.unit}</span>
+        <div className={cn("flex h-full items-center justify-end border-l border-[#e3e9ed] px-3 text-right font-bold", group.totalDelivered > 0 ? "text-slate-900" : "text-slate-400")}>
+          {compactNumber(group.totalDelivered)} <span className="ml-1 text-[10px] font-semibold text-slate-400">{group.unit}</span>
         </div>
-        <div className="truncate text-xs font-medium text-slate-600">{dateText(group.latestPour)}</div>
+        <div className="flex h-full items-center truncate border-l border-[#e3e9ed] px-3 text-xs font-medium text-slate-600">{dateText(group.latestPour)}</div>
       </button>
 
       {/* Expanded order list */}
       {expanded && (
         <div className="border-t border-slate-100 bg-white px-5 py-3">
           <div className="max-h-[420px] overflow-auto rounded-lg border border-[#d9e3e6]">
-            <table className="w-full table-fixed border-collapse text-[14px]">
+            <table className="w-full min-w-[1180px] table-fixed border-collapse text-[14px]">
               <thead className="sticky top-0 z-10">
                 <tr className="border-b border-[#d9e3e6] bg-[#f6f8f9]">
-                  <th className="w-[27%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
-                    Order No. / Product
+                  <th className="w-[27%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                    Order No. (Product)
                   </th>
-                  <th className="w-[24%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                  <th className="w-[24%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     Site
                   </th>
-                  <th className="w-[7%] border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
-                    สั่งใน Order /{group.unit}
+                  <th className="w-[7%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
+                    สั่งใน Order ({group.unit})
                   </th>
-                  <th className="w-[7%] border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
-                    ส่งจริงใน Order /{group.unit}
+                  <th className="w-[7%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
+                    ส่งจริงใน Order ({group.unit})
                   </th>
-                  <th className="w-[11%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                  <th className="w-[11%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     เวลาเท
                   </th>
-                  <th className="w-[11%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                  <th className="w-[11%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     สร้างออเดอร์
                   </th>
-                  <th className="w-[11%] border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                  <th className="w-[11%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     อัปเดตรายการ ↓
                   </th>
-                  <th className="w-[6%] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                  <th className="w-[6%] whitespace-nowrap px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     สถานะ
                   </th>
                 </tr>
@@ -339,15 +339,15 @@ function MobileCustomerCard({
           </div>
           <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
             <div>
-              <div className="text-[10px] font-semibold text-slate-400">จำนวนออเดอร์ /ครั้ง</div>
+              <div className="text-[10px] font-semibold text-slate-400">จำนวนออเดอร์ (ครั้ง)</div>
               <div className="font-bold text-slate-800">{formatNumber(group.orderCount)}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold text-slate-400">ปริมาณที่สั่ง /{group.unit}</div>
+              <div className="text-[10px] font-semibold text-slate-400">ปริมาณที่สั่ง ({group.unit})</div>
               <div className="font-bold text-slate-800">{compactNumber(group.totalOrdered)} <span className="text-[9px] text-slate-400">{group.unit}</span></div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold text-slate-400">ปริมาณส่งจริง /{group.unit}</div>
+              <div className="text-[10px] font-semibold text-slate-400">ปริมาณส่งจริง ({group.unit})</div>
               <div className={cn("font-bold", group.totalDelivered > 0 ? "text-slate-800" : "text-slate-400")}>
                 {compactNumber(group.totalDelivered)} <span className="text-[9px] text-slate-400">{group.unit}</span>
               </div>
@@ -447,7 +447,7 @@ export function OrdersPage({
   const totalOrdered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0);
   const deliveredOrders = dealerOrders.filter((row) => (row.quantity?.delivered ?? 0) > 0);
   const totalDelivered = deliveredOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
-  const orderUnit = "m3";
+  const orderUnit = "คิว";
   const orderListTitle = selectedDealer ? `Order List ของ ${selectedDealer.dealer_name}` : "Order List แยกตาม Dealer";
 
   const toggleCustomer = (key: string) => {
@@ -544,7 +544,7 @@ export function OrdersPage({
               <Search size={15} className="shrink-0 text-slate-500" />
               <input
                 className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
-                placeholder="ค้นหา customer / site / product"
+                placeholder="ค้นหา customer (site) (product)"
                 value={orderSearch}
                 onChange={(event) => {
                   setOrderSearch(event.target.value);
@@ -604,7 +604,7 @@ export function OrdersPage({
               <Search size={15} className="shrink-0 text-slate-500" />
               <input
                 className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
-                placeholder="ค้นหา customer / site / product"
+                placeholder="ค้นหา customer (site) (product)"
                 value={orderSearch}
                 onChange={(event) => {
                   setOrderSearch(event.target.value);
@@ -643,13 +643,13 @@ export function OrdersPage({
         </div>
 
         {/* Column header */}
-        <div className="grid grid-cols-[36px_minmax(0,2.4fr)_80px_110px_110px_140px] gap-3 border-b border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+        <div className="grid grid-cols-[36px_minmax(0,2.4fr)_128px_140px_140px_150px] border-b border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
           <span></span>
-          <span>ลูกค้า</span>
-          <span className="text-right">จำนวนออเดอร์ /ครั้ง</span>
-          <span className="text-right">สั่งใน Orders /{orderUnit}</span>
-          <span className="text-right">ส่งจริงใน Orders /{orderUnit}</span>
-          <span>ข้อมูลล่าสุด ↓</span>
+          <span className="whitespace-nowrap px-3">ลูกค้า</span>
+          <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right">จำนวนออเดอร์ (ครั้ง)</span>
+          <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right">สั่งใน Orders ({orderUnit})</span>
+          <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right">ส่งจริงใน Orders ({orderUnit})</span>
+          <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3">ข้อมูลล่าสุด ↓</span>
         </div>
 
         <CardContent className="p-0">

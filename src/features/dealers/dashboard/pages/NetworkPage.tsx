@@ -17,7 +17,7 @@ function DealerNetworkCard({
   selected
 }: {
   dealer: NetworkDealer;
-    accent: "sky" | "emerald" | "amber" | "violet" | "cyan" | "teal" | "slate";
+    accent: "sky" | "blue" | "emerald" | "amber" | "violet" | "cyan" | "teal" | "slate";
   dotClass: string;
   onSelect: (dealerId: number) => void;
   selected: boolean;
@@ -34,7 +34,7 @@ function DealerNetworkCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-	            <span className={cn("flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-black uppercase", accent === "sky" && "bg-sky-50 text-sky-700", accent === "emerald" && "bg-emerald-50 text-emerald-700", accent === "amber" && "bg-amber-50 text-amber-700", accent === "violet" && "bg-violet-50 text-violet-700", accent === "cyan" && "bg-cyan-50 text-cyan-700", accent === "teal" && "bg-teal-50 text-teal-700", accent === "slate" && "bg-slate-50 text-slate-700")}>
+	            <span className={cn("flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-black uppercase", accent === "sky" && "bg-sky-50 text-sky-700", accent === "blue" && "bg-blue-50 text-blue-700", accent === "emerald" && "bg-emerald-50 text-emerald-700", accent === "amber" && "bg-amber-50 text-amber-700", accent === "violet" && "bg-violet-50 text-violet-700", accent === "cyan" && "bg-cyan-50 text-cyan-700", accent === "teal" && "bg-teal-50 text-teal-700", accent === "slate" && "bg-slate-50 text-slate-700")}>
               {dealer.dealer_name.slice(0, 1)}
             </span>
             <div className="min-w-0">
@@ -91,6 +91,7 @@ function RegionNetworkColumn({
   const accent = getRegionAccent(region.region);
   const accentClasses = {
     sky: "border-sky-200 text-sky-700 bg-sky-50",
+    blue: "border-blue-200 text-blue-700 bg-blue-50",
     emerald: "border-emerald-200 text-emerald-700 bg-emerald-50",
 	    amber: "border-amber-200 text-amber-700 bg-amber-50",
 	    violet: "border-violet-200 text-violet-700 bg-violet-50",
@@ -100,6 +101,7 @@ function RegionNetworkColumn({
   } as const;
   const dotClasses = {
     sky: "bg-sky-500",
+    blue: "bg-blue-500",
     emerald: "bg-emerald-500",
 	    amber: "bg-amber-500",
 	    violet: "bg-violet-500",
@@ -175,7 +177,7 @@ export function NetworkPage({
     orders.forEach((order) => {
       const delivered = order.quantity?.delivered ?? 0;
       const current = totals.get(order.dealer_id) ?? {
-        unit: "m3",
+        unit: "คิว",
         volume: 0
       };
       current.volume += Math.max(delivered, 0);
@@ -190,7 +192,7 @@ export function NetworkPage({
       return {
         ...dealer,
         priceCheckCount: priceChecksByDealer.get(dealer.dealer_id) ?? 0,
-        unit: "m3",
+        unit: "คิว",
         volume: delivered?.volume ?? 0
       };
     });
@@ -217,14 +219,14 @@ export function NetworkPage({
           dealerCount: 0,
           totalGroups: 0,
           totalVolume: 0,
-          unit: "m3"
+          unit: "คิว"
         };
 
       current.dealers.push(dealer);
       current.dealerCount += 1;
       current.totalGroups += dealer.group_count;
       current.totalVolume += dealer.volume;
-      current.unit = "m3";
+      current.unit = "คิว";
       acc.set(dealer.region, current);
       return acc;
     }, new Map());
@@ -258,7 +260,7 @@ export function NetworkPage({
                   <div className="mt-0.5 text-[12px] font-semibold text-slate-500">กลุ่ม</div>
                 </div>
                 <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
-                  <div className="text-[24px] font-bold leading-none text-sky-600">{compactNumber(uniqueDealers.reduce((sum, dealer) => sum + dealer.volume, 0))} <span className="text-[12px]">m3</span></div>
+                  <div className="text-[24px] font-bold leading-none text-sky-600">{compactNumber(uniqueDealers.reduce((sum, dealer) => sum + dealer.volume, 0))} <span className="text-[12px]">คิว</span></div>
                   <div className="mt-0.5 text-[12px] font-semibold text-slate-500">ยอดรวมที่มีส่งจริง</div>
                 </div>
               </div>

@@ -17,13 +17,13 @@ export function SortHeader({
   return (
     <button
       className={cn(
-        "inline-flex items-center gap-1 font-semibold transition-colors hover:text-slate-700",
+        "inline-flex items-center gap-1 whitespace-nowrap font-semibold transition-colors hover:text-slate-700",
         active && "text-slate-900"
       )}
       onClick={onClick}
       type="button"
     >
-      <span>{label}</span>
+      <span className="whitespace-nowrap">{label}</span>
       <ArrowUpDown
         size={13}
         className={cn(

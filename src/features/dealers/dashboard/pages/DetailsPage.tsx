@@ -413,7 +413,6 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
   const hasOrdered = rows.some((row) => row.ordered > 0);
   const totalDelivered = rows.reduce((sum, row) => sum + row.delivered, 0);
   const totalOrdered = rows.reduce((sum, row) => sum + row.ordered, 0);
-  const segmentTotal = compactRows.reduce((sum, row) => sum + row.delivered, 0) || 1;
   const rowColor = (row: AreaRow) => (row.key === OTHER_AREAS_KEY ? "#94a3b8" : getRegionColor(row.label));
   const fulfillmentRate = totalOrdered > 0 ? (totalDelivered / totalOrdered) * 100 : 0;
 
@@ -435,43 +434,16 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)] lg:items-center">
+      <div className="grid gap-3">
         <div className="rounded-lg border border-[#e5e7eb] bg-[#fbfcfd] px-3 py-2.5">
-          <div className="text-xs font-semibold text-slate-500">ส่งจริง / สั่งทั้งหมด</div>
+          <div className="text-xs font-semibold text-slate-500">ส่งจริง (สั่งทั้งหมด)</div>
           <div className="mt-0.5 text-[11px] font-medium text-slate-400">อ้างอิงจากรายการ Order</div>
           <div className="mt-1 text-lg font-bold text-slate-950">
-            {compactNumber(totalDelivered)} / {compactNumber(totalOrdered)} {unit}
+            {compactNumber(totalDelivered)} ({compactNumber(totalOrdered)}) {unit}
           </div>
           <div className="mt-1 flex flex-wrap gap-2 text-xs font-medium text-slate-500">
             {formatNumber(rows.length)} พื้นที่ทั้งหมด
             {totalOrdered > 0 ? <span className="rounded bg-emerald-50 px-1.5 font-bold text-emerald-700">ส่งได้ {formatPercent(fulfillmentRate)}</span> : null}
-          </div>
-        </div>
-
-        <div className="min-w-0">
-          <div className="flex h-8 overflow-hidden rounded-lg bg-slate-100">
-            {compactRows.map((row) => {
-              const value = row.delivered;
-              return (
-                <div
-                  key={row.key}
-                  className="min-w-[3px] border-r border-white/70 last:border-r-0"
-                  style={{
-                    backgroundColor: rowColor(row),
-                    width: `${Math.max((value / segmentTotal) * 100, value > 0 ? 3 : 0)}%`
-                  }}
-                  title={`${row.label}: ส่งจริง ${formatNumber(row.delivered)} / สั่งทั้งหมด ${formatNumber(row.ordered)}`}
-                />
-              );
-            })}
-          </div>
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-            {compactRows.slice(0, 6).map((row) => (
-              <span key={row.key} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
-                <i className="h-2 w-2 rounded-sm" style={{ backgroundColor: rowColor(row) }} />
-                {row.label}
-              </span>
-            ))}
           </div>
         </div>
       </div>
@@ -553,8 +525,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                   </>
                 ) : null}
               </div>
-              <div className="mt-2 flex items-center justify-between gap-3 text-xs font-medium text-slate-500">
-                <span>{row.detail}</span>
+              <div className="mt-2 flex items-center justify-end gap-3 text-xs font-medium text-slate-500">
                 {row.ordered > 0 ? <span className="font-bold text-emerald-700">ส่งได้ {formatPercent(rowFulfillmentRate)}</span> : null}
               </div>
 
@@ -805,7 +776,7 @@ function TopCustomersList({
       })}
       {rows.length > 5 && (
         <p className="pt-2 text-center text-[11px] font-semibold text-slate-400 border-t border-slate-100 dark:border-slate-800">
-          + อีก {formatNumber(rows.length - 5)} ลูกค้า — ดูทั้งหมดที่ Tab "Customers" ด้านล่าง
+          + อีก {formatNumber(rows.length - 5)} ลูกค้า
         </p>
       )}
     </div>
@@ -848,7 +819,7 @@ export function DetailsPage(props: DetailsPageProps) {
         key,
         label,
         ordered: 0,
-        unit: site.unit || props.selectedDealer?.unit || "m3"
+        unit: site.unit || props.selectedDealer?.unit || "คิว"
       };
 
       current.delivered += site.total_delivered;
@@ -877,7 +848,7 @@ export function DetailsPage(props: DetailsPageProps) {
         label,
         ordered: 0,
         provinces: new Set<string>(),
-        unit: "m3"
+        unit: "คิว"
       };
 
       current.delivered += order.quantity?.delivered ?? 0;
@@ -888,7 +859,7 @@ export function DetailsPage(props: DetailsPageProps) {
 
     areaMap.forEach((row) => {
       row.count = props.filteredDealers.filter((dealer) => dealer.region === row.label).length;
-      row.detail = `${formatNumber(row.count)} Dealer | ${formatNumber(row.provinces.size)} จังหวัด`;
+      row.detail = `Dealer ${formatNumber(row.count)} ราย · ${formatNumber(row.provinces.size)} จังหวัด`;
     });
 
     return [...areaMap.values()]
@@ -1026,8 +997,15 @@ export function DetailsPage(props: DetailsPageProps) {
       props.sites.forEach((site) => {
         const siteCode = site.site_code || site.site_id.toString();
         const siteName = site.site_name?.trim() || "ไม่ระบุไซต์";
-        rows.set(`${siteCode}::${siteName}`, {
-          customerName: site.customer?.name?.trim() || "ไม่ระบุลูกค้า",
+        const mapKey = `${siteCode}::${siteName}`;
+        const existing = rows.get(mapKey);
+        // Prefer the real customer name from Orders; fall back to the Sites API customer only when orders have none
+        const orderCustomerName =
+          existing && existing.customerName && existing.customerName !== "ไม่ระบุลูกค้า"
+            ? existing.customerName
+            : null;
+        rows.set(mapKey, {
+          customerName: orderCustomerName ?? site.customer?.name?.trim() ?? "ไม่ระบุลูกค้า",
           dealerName: props.selectedDealer?.dealer_name || "ไม่ระบุ Dealer",
           delivered: site.total_delivered,
           key: `${site.site_id}::${site.site_code}`,
@@ -1045,8 +1023,8 @@ export function DetailsPage(props: DetailsPageProps) {
   );
   const siteRows = isAllDealers ? orderSiteRows : dealerSiteRows;
   const areaRows = isAllDealers ? dealerAreaRows : siteProvinceRows;
-  const orderUnit = "m3";
-  const areaUnit = "m3";
+  const orderUnit = "คิว";
+  const areaUnit = "คิว";
   const totalAreaDelivered = areaRows.reduce((sum, row) => sum + row.delivered, 0);
   const totalGroups = isAllDealers ? props.filteredDealers.reduce((sum, dealer) => sum + dealer.group_count, 0) : props.groups.length;
   const topDealerVolume = useMemo(() => {
@@ -1067,27 +1045,26 @@ export function DetailsPage(props: DetailsPageProps) {
   const customerColumns: DataColumn<(typeof orderCustomerRows)[number]>[] = [
     { title: "ลูกค้า", key: "customer", sortAccessor: (record) => record.customerName, width: 260, render: (_, record) => <div className="min-w-0"><div className="line-clamp-2 text-[13px] font-semibold leading-4 text-slate-950" title={record.customerName}>{record.customerName}</div><div className="truncate text-[11px] font-medium text-slate-500">{record.customerCode}</div>{isAllDealers ? <div className="truncate text-[11px] font-bold text-sky-700" title={record.dealerName}>Dealer: {record.dealerName}</div> : null}</div> },
     { title: "จำนวน Site", key: "siteCount", dataIndex: "siteCount", align: "right", width: 100, render: formatNumber },
-    { title: "ออเดอร์ /ครั้ง", key: "orderCount", dataIndex: "orderCount", align: "right", width: 108, render: formatNumber },
-    { title: `จำนวนที่สั่ง /${orderUnit}`, key: "ordered", dataIndex: "ordered", align: "right", width: 132, render: formatNumber },
-    { title: `จำนวนส่งจริง /${orderUnit}`, key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
+    { title: "ออเดอร์ (ครั้ง)", key: "orderCount", dataIndex: "orderCount", align: "right", width: 108, render: formatNumber },
+    { title: `จำนวนที่สั่ง (${orderUnit})`, key: "ordered", dataIndex: "ordered", align: "right", width: 132, render: formatNumber },
+    { title: `จำนวนส่งจริง (${orderUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
     { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
   ];
 
   const siteColumns: DataColumn<(typeof siteRows)[number]>[] = [
+    { title: "ชื่อลูกค้า", key: "customerName", dataIndex: "customerName", width: 160, render: (value) => <span className="line-clamp-2 text-[13px] leading-5" title={String(value ?? "-")}>{String(value ?? "-")}</span> },
     { title: "ไซต์", key: "site", sortAccessor: (record) => record.siteName, width: 260, render: (_, record) => <div className="min-w-0"><div className="truncate text-[13px] font-semibold text-slate-950">รหัส Site: {record.siteCode}</div><div className="line-clamp-2 text-[11px] font-medium leading-4 text-slate-500" title={record.siteName}>{record.siteName}</div><div className="truncate text-[11px] font-bold text-sky-700" title={record.dealerName}>Dealer: {record.dealerName}</div></div> },
-    { title: "ลูกค้า", key: "customerName", dataIndex: "customerName", width: 160, render: (value) => <span className="line-clamp-2 text-[13px] leading-5" title={String(value ?? "-")}>{String(value ?? "-")}</span> },
-    { title: `จำนวนที่สั่ง /${areaUnit}`, key: "ordered", dataIndex: "ordered", align: "right", width: 132, render: formatNumber },
-    { title: `จำนวนส่งจริง /${areaUnit}`, key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
-    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> },
-    { title: "แหล่งข้อมูล", key: "source", dataIndex: "source", width: 105, render: (value) => <span className="whitespace-nowrap text-[11px] font-semibold text-sky-700">{String(value)}</span> }
+    { title: `จำนวนที่สั่ง (${areaUnit})`, key: "ordered", dataIndex: "ordered", align: "right", width: 132, render: formatNumber },
+    { title: `จำนวนส่งจริง (${areaUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
+    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
   ];
 
   const groupColumns: DataColumn<DealerGroup>[] = [
-    { title: "Group", dataIndex: "group_name", key: "group_name", width: 320, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.group_name}</div><div className="text-xs font-medium text-slate-500">ID: {record.group_id} | Type: {record.group_type ?? "-"}</div></div> },
-    { title: "เช็คราคา /ครั้ง", dataIndex: "price_check_count", key: "price_check_count", align: "right", width: 140, render: formatNumber },
-    { title: "จำนวนที่จอง /m3", dataIndex: "booked_volume", key: "booked_volume", align: "right", width: 180, render: formatNumber },
-    { title: "จำนวนที่ส่งจริง /m3", dataIndex: "delivered_volume", key: "delivered_volume", align: "right", width: 190, render: formatNumber },
-    { title: "จำนวนการเปิด Site /ครั้ง", dataIndex: "booking_count", key: "booking_count", align: "right", width: 190, render: formatNumber },
+    { title: "ชื่อ Group", dataIndex: "group_name", key: "group_name", width: 320, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.group_name}</div><div className="text-xs font-medium text-slate-500">ID: {record.group_id} | Type: {record.group_type ?? "-"}</div></div> },
+    { title: "จำนวนเช็คราคา (ครั้ง)", dataIndex: "price_check_count", key: "price_check_count", align: "right", width: 140, render: formatNumber },
+    { title: "จำนวนการเปิด Site (ครั้ง)", dataIndex: "booking_count", key: "booking_count", align: "right", width: 190, render: formatNumber },
+    { title: "จำนวนที่จอง (คิว)", dataIndex: "booked_volume", key: "booked_volume", align: "right", width: 180, render: formatNumber },
+    { title: "จำนวนที่ส่งจริง (คิว)", dataIndex: "delivered_volume", key: "delivered_volume", align: "right", width: 190, render: formatNumber },
     { title: "วันที่สร้างกลุ่ม", dataIndex: "created_at", key: "created_at", width: 190, render: dateText },
     statusColumn<DealerGroup>()
   ];
@@ -1178,7 +1155,7 @@ export function DetailsPage(props: DetailsPageProps) {
                 />
                 {orderCustomerRows.length > 5 ? (
                   <p className="mt-3 border-t border-slate-100 pt-2 text-center text-[11px] font-semibold text-slate-400 dark:border-slate-800">
-                    + อีก {formatNumber(orderCustomerRows.length - 5)} ราย — ดูทั้งหมดที่แท็บ Customers ด้านล่าง
+                    + อีก {formatNumber(orderCustomerRows.length - 5)} ราย
                   </p>
                 ) : null}
               </CardContent>
@@ -1187,7 +1164,7 @@ export function DetailsPage(props: DetailsPageProps) {
             <Card className="dashboard-card">
               <CardHeader className="border-b border-[#d9e3e6]">
                 <CardTitle className="text-lg">ไซต์ที่ส่งจริงสูงสุดจาก Orders</CardTitle>
-                <p className="text-xs font-medium text-slate-500">เรียงตามยอดส่งจริงจากแหล่งข้อมูลของแต่ละไซต์</p>
+                <p className="text-xs font-medium text-slate-500">เรียงตามยอดส่งจริงของแต่ละไซต์</p>
               </CardHeader>
               <CardContent>
                 <ProgressList
@@ -1281,7 +1258,7 @@ export function DetailsPage(props: DetailsPageProps) {
                     </div>
                     <div>
                       <CardTitle className="text-base">ลูกค้าหลัก 5 อันดับ</CardTitle>
-                      <p className="text-[11px] font-medium text-slate-500">เรียงตามยอดส่งจริง · ดูทั้งหมดที่ tab Customers ด้านล่าง</p>
+                      <p className="text-[11px] font-medium text-slate-500">เรียงตามยอดส่งจริง</p>
                     </div>
                   </div>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
@@ -1301,19 +1278,19 @@ export function DetailsPage(props: DetailsPageProps) {
       <ShadcnTabs
         items={[
           {
-            key: "customers",
-            label: "Customers",
+            key: "groups",
+            label: "Customer",
             content: (
               <Card className="dashboard-card overflow-hidden">
                 <CardContent className="p-0">
-                  <DataTable columns={customerColumns} data={orderCustomerRows} loading={props.ordersState === "loading"} rowKey="key" minWidth={860} pageSize={10} />
+                  <DataTable columns={groupColumns} data={props.groups} loading={props.groupsState === "loading"} rowKey={(record) => `${record.group_id}-${record.group_name}`} minWidth={1180} pageSize={10} />
                 </CardContent>
               </Card>
             )
           },
           {
             key: "sites",
-            label: "Sites",
+            label: "Site by customer",
             content: (
               <Card className="dashboard-card overflow-hidden">
                 <CardContent className="p-0">
@@ -1321,22 +1298,7 @@ export function DetailsPage(props: DetailsPageProps) {
                 </CardContent>
               </Card>
             )
-          },
-          ...(!isAllDealers
-            ? [
-                {
-                  key: "groups",
-                  label: "Groups",
-                  content: (
-                    <Card className="dashboard-card overflow-hidden">
-                      <CardContent className="p-0">
-                        <DataTable columns={groupColumns} data={props.groups} loading={props.groupsState === "loading"} rowKey="group_id" minWidth={1180} pageSize={10} />
-                      </CardContent>
-                    </Card>
-                  )
-                }
-              ]
-            : [])
+          }
         ]}
       />
     </>

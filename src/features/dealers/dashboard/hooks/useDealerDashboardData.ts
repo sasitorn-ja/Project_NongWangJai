@@ -92,6 +92,15 @@ export function useDealerDashboardData({
     setSitesState(siteResult.state);
   }, []);
 
+  const loadAllGroups = useCallback(async (allDealers: Dealer[]) => {
+    setGroupsState("loading");
+    const results = await Promise.all(allDealers.map((dealer) => fetchDealerGroups(dealer.dealer_id)));
+    const rows = results.flatMap((result) => result.rows);
+    const anyLive = results.some((result) => result.state === "live");
+    setGroups(rows);
+    setGroupsState(results.length === 0 ? "live" : anyLive ? "live" : "error");
+  }, []);
+
   useEffect(() => {
     const requestId = window.setTimeout(() => {
       void loadDealers();
@@ -105,12 +114,16 @@ export function useDealerDashboardData({
   useEffect(() => {
     if (!selectedDealerId) {
       const requestId = window.setTimeout(() => {
-        setGroups([]);
         setCustomers([]);
         setSites([]);
-        setGroupsState("live");
         setCustomersState("live");
         setSitesState("live");
+        if (dealers.length === 0) {
+          setGroups([]);
+          setGroupsState("live");
+        } else {
+          void loadAllGroups(dealers);
+        }
       }, 0);
       return () => window.clearTimeout(requestId);
     }
@@ -122,7 +135,7 @@ export function useDealerDashboardData({
     }, 0);
 
     return () => window.clearTimeout(requestId);
-  }, [dealers, loadDealerChildren, selectedDealerId]);
+  }, [dealers, loadAllGroups, loadDealerChildren, selectedDealerId]);
 
   const selectedDealer = useMemo(
     () => (selectedDealerId == null ? undefined : dealers.find((dealer) => dealer.dealer_id === selectedDealerId)),

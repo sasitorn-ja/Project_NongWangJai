@@ -25,7 +25,7 @@ export function FilterBar({
         <Search size={15} className="shrink-0 text-slate-500" />
         <input
           className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
-          placeholder="ค้นหา dealer / จังหวัด"
+          placeholder="ค้นหา dealer (จังหวัด)"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />

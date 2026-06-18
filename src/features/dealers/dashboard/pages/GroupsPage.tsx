@@ -25,7 +25,7 @@ type GroupsPageProps = {
 };
 
 export function GroupsPage({ dealers, groups, groupsState, selectedDealer, selectedDealerId, setSelectedDealerId, usageRows }: GroupsPageProps) {
-  const volumeUnit = "m3";
+  const volumeUnit = "คิว";
   const totalDelivered = groups.reduce((sum, group) => sum + group.delivered_volume, 0);
   const totalBooked = groups.reduce((sum, group) => sum + group.booked_volume, 0);
   const totalPriceChecks = groups.reduce((sum, group) => sum + group.price_check_count, 0);
@@ -55,10 +55,10 @@ export function GroupsPage({ dealers, groups, groupsState, selectedDealer, selec
         </div>
       )
     },
-    { title: "เช็คราคา /ครั้ง", dataIndex: "price_check_count", key: "price_check_count", align: "right", width: 140, render: formatNumber },
-    { title: "จำนวนที่จอง /m3", dataIndex: "booked_volume", key: "booked_volume", align: "right", width: 180, render: formatNumber },
-    { title: "จำนวนที่ส่งจริง /m3", dataIndex: "delivered_volume", key: "delivered_volume", align: "right", width: 190, render: formatNumber },
-    { title: "จำนวนการเปิด Site /ครั้ง", dataIndex: "booking_count", key: "booking_count", align: "right", width: 190, render: formatNumber },
+    { title: "จำนวนเช็คราคา (ครั้ง)", dataIndex: "price_check_count", key: "price_check_count", align: "right", width: 140, render: formatNumber },
+    { title: "จำนวนที่จอง (คิว)", dataIndex: "booked_volume", key: "booked_volume", align: "right", width: 180, render: formatNumber },
+    { title: "จำนวนที่ส่งจริง (คิว)", dataIndex: "delivered_volume", key: "delivered_volume", align: "right", width: 190, render: formatNumber },
+    { title: "จำนวนการเปิด Site (ครั้ง)", dataIndex: "booking_count", key: "booking_count", align: "right", width: 190, render: formatNumber },
     { title: "วันที่สร้าง", dataIndex: "created_at", key: "created_at", width: 190, render: dateText },
     statusColumn<DealerGroup>()
   ];
@@ -81,7 +81,7 @@ export function GroupsPage({ dealers, groups, groupsState, selectedDealer, selec
         <MetricCard icon={<Layers3 size={18} />} label="Groups" value={formatNumber(groups.length)} detail={selectedDealer?.dealer_name ?? "Select dealer"} />
         <MetricCard icon={<PackageCheck size={18} />} label="Delivered Volume" value={`${compactNumber(totalDelivered)} ${volumeUnit}`} detail="ปริมาณคอนกรีตส่งจริงของกลุ่ม" tone="green" />
         <MetricCard icon={<TrendingUp size={18} />} label="Booked Volume" value={`${compactNumber(totalBooked)} ${volumeUnit}`} detail="ปริมาณคอนกรีตที่มีการจอง" tone="amber" />
-        <MetricCard icon={<Search size={18} />} label="Price / Booking" value={`${formatNumber(totalPriceChecks)} / ${formatNumber(totalBookings)}`} detail="จำนวนเช็คราคาและจองคิว" tone="rose" />
+        <MetricCard icon={<Search size={18} />} label="Price (Booking)" value={`${formatNumber(totalPriceChecks)} (${formatNumber(totalBookings)})`} detail="จำนวนเช็คราคาและจองคิว" tone="rose" />
       </section>
 
       <section className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(280px,.8fr)]">

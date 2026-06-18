@@ -145,7 +145,7 @@ export function CustomerInsightsPage({
 
   const totalDelivered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
   const totalOrdered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0);
-  const volumeUnit = "m3";
+  const volumeUnit = "คิว";
   const totalCustomers = customerRows.length;
   const totalSites = siteRows.length;
   const topCustomers = customerRows.slice(0, topN);
@@ -164,9 +164,9 @@ export function CustomerInsightsPage({
       )
     },
     { title: "จำนวน Site", key: "siteCount", dataIndex: "siteCount", align: "right", width: 110, render: formatNumber },
-    { title: "Order Count /ครั้ง", key: "orderCount", dataIndex: "orderCount", align: "right", width: 130, render: formatNumber },
-    { title: `Ordered Volume /${volumeUnit}`, key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
-    { title: `Delivered Volume /${volumeUnit}`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
+    { title: "Order Count (ครั้ง)", key: "orderCount", dataIndex: "orderCount", align: "right", width: 130, render: formatNumber },
+    { title: `Ordered Volume (${volumeUnit})`, key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
+    { title: `Delivered Volume (${volumeUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
     { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
   ];
 
@@ -184,8 +184,8 @@ export function CustomerInsightsPage({
       )
     },
     { title: "Dealer", key: "customerName", dataIndex: "customerName", width: 240 },
-    { title: `Ordered Volume /${volumeUnit}`, key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
-    { title: `Delivered Volume /${volumeUnit}`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
+    { title: `Ordered Volume (${volumeUnit})`, key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
+    { title: `Delivered Volume (${volumeUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
     { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
   ];
 
@@ -214,7 +214,7 @@ export function CustomerInsightsPage({
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={<Users size={18} />} label="Customers" value={formatNumber(totalCustomers)} detail={currentDealer?.dealer_name ?? "จำนวนลูกค้าในข้อมูล orders ที่กรองอยู่"} />
-        <MetricCard icon={<Database size={18} />} label="Sites" value={formatNumber(totalSites)} detail="นับจาก site code/site id ที่ไม่ซ้ำ" tone="rose" />
+        <MetricCard icon={<Database size={18} />} label="Sites" value={formatNumber(totalSites)} detail="นับจาก site code (site id) ที่ไม่ซ้ำ" tone="rose" />
         <MetricCard icon={<TrendingUp size={18} />} label="Ordered Volume" value={compactNumber(totalOrdered)} detail="ปริมาณที่สั่งรวมจาก orders ที่กรองอยู่" tone="amber" />
         <MetricCard icon={<PackageCheck size={18} />} label="Delivered Volume" value={compactNumber(totalDelivered)} detail="ปริมาณส่งจริงรวมจาก orders ที่กรองอยู่" tone="green" />
       </section>
