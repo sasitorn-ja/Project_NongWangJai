@@ -435,16 +435,44 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
   return (
     <div className="space-y-4">
       <div className="grid gap-3">
-        <div className="rounded-lg border border-[#e5e7eb] bg-[#fbfcfd] px-3 py-2.5">
-          <div className="text-xs font-semibold text-slate-500">ส่งจริง (สั่งทั้งหมด)</div>
-          <div className="mt-0.5 text-[11px] font-medium text-slate-400">อ้างอิงจากรายการ Order</div>
-          <div className="mt-1 text-lg font-bold text-slate-950">
-            {compactNumber(totalDelivered)} ({compactNumber(totalOrdered)}) {unit}
+        <div className="rounded-lg border border-[#e5e7eb] bg-[#fbfcfd] px-4 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold text-slate-500">สรุปการส่งมอบจาก Orders</div>
+              <div className="mt-0.5 text-[11px] font-medium text-slate-400">
+                อ้างอิงจากรายการ Order · {formatNumber(rows.length)} พื้นที่
+              </div>
+            </div>
+            {totalOrdered > 0 ? (
+              <span className="shrink-0 rounded-md bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">
+                ส่งได้ {formatPercent(fulfillmentRate)}
+              </span>
+            ) : null}
           </div>
-          <div className="mt-1 flex flex-wrap gap-2 text-xs font-medium text-slate-500">
-            {formatNumber(rows.length)} พื้นที่ทั้งหมด
-            {totalOrdered > 0 ? <span className="rounded bg-emerald-50 px-1.5 font-bold text-emerald-700">ส่งได้ {formatPercent(fulfillmentRate)}</span> : null}
+
+          <div className="mt-3 flex items-end gap-6">
+            <div>
+              <div className="text-[11px] font-medium text-slate-400">ส่งจริง</div>
+              <div className="text-xl font-bold text-emerald-600">
+                {compactNumber(totalDelivered)} <span className="text-sm font-semibold text-slate-400">{unit}</span>
+              </div>
+            </div>
+            <div className="border-l border-slate-200 pl-6">
+              <div className="text-[11px] font-medium text-slate-400">สั่งทั้งหมด</div>
+              <div className="text-xl font-bold text-slate-900">
+                {compactNumber(totalOrdered)} <span className="text-sm font-semibold text-slate-400">{unit}</span>
+              </div>
+            </div>
           </div>
+
+          {totalOrdered > 0 ? (
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-2 rounded-full bg-emerald-500"
+                style={{ width: `${Math.min(Math.max(fulfillmentRate, totalDelivered > 0 ? 2 : 0), 100)}%` }}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
 
