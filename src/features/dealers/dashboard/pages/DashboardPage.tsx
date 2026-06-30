@@ -251,7 +251,7 @@ export function DashboardPage(props: DashboardPageProps) {
       dataIndex: "group_count",
       key: "group_count",
       align: "right",
-      width: 90,
+      width: 120,
       render: formatNumber
     },
     {

@@ -279,7 +279,7 @@ export function TopProductsPage({
       key: "orderCount",
       dataIndex: "orderCount",
       align: "right",
-      width: 78,
+      width: 120,
       render: (value) => (
         <span>
           {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">ครั้ง</span>
@@ -291,7 +291,7 @@ export function TopProductsPage({
       key: "ordered",
       dataIndex: "ordered",
       align: "right",
-      width: 86,
+      width: 110,
       render: (value) => (
         <span>
           {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
@@ -303,7 +303,7 @@ export function TopProductsPage({
       key: "delivered",
       dataIndex: "delivered",
       align: "right",
-      width: 86,
+      width: 110,
       render: (value) => (
         <span>
           {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
@@ -314,7 +314,7 @@ export function TopProductsPage({
       title: "เวลาเทล่าสุด",
       key: "latestPour",
       dataIndex: "latestPour",
-      width: 94,
+      width: 110,
       render: (value) => dateText(String(value ?? ""))
     }
   ];
