@@ -96,8 +96,10 @@ export function DashboardLayout({
           collapsed={collapsed}
           mobileNavOpen={mobileNavOpen}
           onCloseMobileNav={() => setMobileNavOpen(false)}
+          onLogout={onLogout}
           onSelectPage={selectPage}
           page={page}
+          user={user}
         />
       </aside>
 
@@ -107,6 +109,7 @@ export function DashboardLayout({
           dateFrom={dateFrom}
           datePreset={datePreset}
           dateTo={dateTo}
+          mobileNavOpen={mobileNavOpen}
           onLogout={onLogout}
           onOpenMobileNav={() => setMobileNavOpen(true)}
           onToggleCollapsed={() => setCollapsed((value) => !value)}

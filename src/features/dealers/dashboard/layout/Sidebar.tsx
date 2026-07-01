@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import type { AuthSession } from "@/features/auth/types";
 
 import type { PageKey } from "../config/pageMeta";
 import { DASHBOARD_NAV_ITEMS } from "../config/navigation";
@@ -10,14 +11,18 @@ export function Sidebar({
   collapsed,
   mobileNavOpen,
   onCloseMobileNav,
+  onLogout,
   onSelectPage,
-  page
+  page,
+  user
 }: {
   collapsed: boolean;
   mobileNavOpen: boolean;
   onCloseMobileNav: () => void;
+  onLogout: () => void;
   onSelectPage: (page: PageKey) => void;
   page: PageKey;
+  user: AuthSession;
 }) {
   return (
     <div className="flex h-full flex-col">
@@ -51,6 +56,22 @@ export function Sidebar({
           );
         })}
       </nav>
+
+      {mobileNavOpen ? (
+        <div className="px-3 pb-4 xl:hidden">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-3 dark:border-slate-800 dark:bg-slate-900/70">
+            <div className="truncate text-sm font-semibold text-slate-700 dark:text-slate-200">{user.user}</div>
+            <div className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">{user.email}</div>
+            <button
+              className="mt-3 w-full rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
+              onClick={onLogout}
+              type="button"
+            >
+              ออกจากระบบ
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-auto px-3 pb-5">
         <div className="border-t border-slate-200 pt-5 dark:border-slate-800">

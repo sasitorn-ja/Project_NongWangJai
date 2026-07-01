@@ -20,6 +20,7 @@ type HeaderProps = {
   dateFrom: string;
   datePreset: DatePreset;
   dateTo: string;
+  mobileNavOpen: boolean;
   onLogout: () => void;
   onOpenMobileNav: () => void;
   onToggleCollapsed: () => void;
@@ -35,6 +36,7 @@ export const Header = forwardRef<HTMLElement, HeaderProps>(function Header({
   dateFrom,
   datePreset,
   dateTo,
+  mobileNavOpen,
   onLogout,
   onOpenMobileNav,
   onToggleCollapsed,
@@ -99,7 +101,7 @@ export const Header = forwardRef<HTMLElement, HeaderProps>(function Header({
           </div>
         )}
 
-        <div className="flex items-center justify-between border-t border-[#edf1f5] px-3 py-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+        <div className={mobileNavOpen ? "hidden" : "flex items-center justify-between border-t border-[#edf1f5] px-3 py-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400"}>
           <div className="min-w-0">
             <div className="truncate font-semibold text-slate-700 dark:text-slate-200">{user.user}</div>
             <div className="truncate">{user.email}</div>
