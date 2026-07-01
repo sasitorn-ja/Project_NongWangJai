@@ -279,7 +279,7 @@ export function TopProductsPage({
       key: "orderCount",
       dataIndex: "orderCount",
       align: "right",
-      width: 120,
+      width: 155,
       render: (value) => (
         <span>
           {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">ครั้ง</span>
@@ -291,7 +291,7 @@ export function TopProductsPage({
       key: "ordered",
       dataIndex: "ordered",
       align: "right",
-      width: 110,
+      width: 140,
       render: (value) => (
         <span>
           {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
@@ -303,7 +303,7 @@ export function TopProductsPage({
       key: "delivered",
       dataIndex: "delivered",
       align: "right",
-      width: 110,
+      width: 150,
       render: (value) => (
         <span>
           {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
@@ -321,11 +321,21 @@ export function TopProductsPage({
 
   const monthlyColumns: DataColumn<(typeof monthlyRows)[number]>[] = [
     { title: "Month", key: "month", dataIndex: "monthLabel", sortAccessor: (record) => record.monthKey, width: 78 },
-    { title: `Delivered (${volumeUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 78, render: formatNumber },
+    {
+      title: `Delivered (${volumeUnit})`,
+      key: "delivered",
+      dataIndex: "delivered",
+      align: "right",
+      headerClassName: "whitespace-normal leading-tight",
+      width: 92,
+      render: formatNumber
+    },
     {
       title: "TopN Product",
       key: "topProducts",
+      headerClassName: "whitespace-normal leading-tight",
       sortable: false,
+      width: 118,
       render: (_, record) => (
         <div className="space-y-0.5">
           {record.topProducts.slice(0, 2).map((product, productIndex) => (
@@ -467,7 +477,7 @@ export function TopProductsPage({
             <p className="text-xs font-medium text-slate-500">จำนวนออเดอร์คือจำนวนครั้ง ส่วนปริมาณที่สั่งและส่งจริงมีหน่วยเป็น คิว</p>
           </CardHeader>
           <CardContent className="p-0">
-            <DataTable columns={productColumns} data={productRows} loading={ordersState === "loading"} rowKey="key" minWidth={940} pageSize={10} />
+            <DataTable columns={productColumns} data={productRows} loading={ordersState === "loading"} rowKey="key" minWidth={960} pageSize={10} />
           </CardContent>
         </Card>
       </section>

@@ -106,14 +106,16 @@ export function DataTable<T>({
                 <th
                   key={column.key}
                   className={cn(
-	                    "border-r border-[#e5e9ec] px-3 py-2 text-[12px] font-semibold text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400",
-                    alignClass(column.align)
+                    "whitespace-nowrap border-r border-[#e5e9ec] px-3 py-2 text-[12px] font-semibold text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400",
+                    alignClass(column.align),
+                    column.headerClassName
                   )}
                   style={{ width: column.width }}
                 >
                   {sortableColumns.has(column.key) ? (
                     <SortHeader
                       active={sort?.key === column.key}
+                      className={column.headerClassName}
                       direction={sort?.key === column.key ? sort.direction : null}
                       label={column.title}
                       onClick={() => toggleSort(column.key)}

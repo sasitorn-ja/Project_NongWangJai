@@ -245,20 +245,20 @@ export function DashboardPage(props: DashboardPageProps) {
       props.setSelectedDealerId(dealer.dealer_id);
       props.setPage("details");
     }),
-    { title: "พื้นที่", dataIndex: "region", key: "region", width: 150, render: regionPill },
+    { title: "พื้นที่", dataIndex: "region", key: "region", width: 140, render: regionPill },
     {
       title: "จำนวนกลุ่ม (กลุ่ม)",
       dataIndex: "group_count",
       key: "group_count",
       align: "right",
-      width: 120,
+      width: 160,
       render: formatNumber
     },
     {
       title: `สั่งใน Orders (${volumeUnit})`,
       key: "ordered",
       align: "right",
-      width: 130,
+      width: 160,
       sortAccessor: (record) => orderTotalsByDealer.get(record.dealer_id)?.ordered ?? 0,
       render: (_, record) => (
         <span className="font-semibold text-slate-700 dark:text-slate-200">
@@ -270,14 +270,14 @@ export function DashboardPage(props: DashboardPageProps) {
       title: `ส่งจริงใน Orders (${volumeUnit})`,
       key: "delivered",
       align: "right",
-      width: 140,
+      width: 175,
       sortAccessor: (record) => orderTotalsByDealer.get(record.dealer_id)?.delivered ?? 0,
       render: (_, record) => <span className="font-bold text-slate-950">{formatNumber(orderTotalsByDealer.get(record.dealer_id)?.delivered ?? 0)} <span className="text-[11px] font-medium text-slate-400">คิว</span></span>
     },
     {
       title: "อัตราส่งจริงใน Orders (%)",
       key: "delivery_rate",
-      width: 180,
+      width: 200,
       render: (_, record) => {
         const totals = orderTotalsByDealer.get(record.dealer_id);
         return <DeliveryRateCell rate={totals?.ordered ? totals.delivered / totals.ordered : 0} />;
@@ -462,7 +462,7 @@ export function DashboardPage(props: DashboardPageProps) {
               data={props.filteredDealers}
               loading={props.apiState === "loading"}
               rowKey="dealer_id"
-              minWidth={1040}
+              minWidth={1245}
               pageSize={10}
             />
           </CardContent>

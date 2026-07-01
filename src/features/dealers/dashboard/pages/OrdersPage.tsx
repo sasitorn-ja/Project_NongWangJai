@@ -163,7 +163,7 @@ function CustomerAccordionRow({
         onClick={onToggle}
         aria-expanded={expanded}
         className={cn(
-          "grid w-full grid-cols-[36px_minmax(0,2.4fr)_128px_140px_140px_150px] items-center px-5 py-3.5 text-left transition-colors",
+          "grid w-full grid-cols-[36px_minmax(0,2.4fr)_155px_155px_170px_160px] items-center px-5 py-3.5 text-left transition-colors",
           expanded ? "bg-sky-50/60 hover:bg-sky-50" : "hover:bg-slate-50"
         )}
       >
@@ -208,31 +208,41 @@ function CustomerAccordionRow({
       {expanded && (
         <div className="border-t border-slate-100 bg-white px-5 py-3">
           <div className="max-h-[420px] overflow-auto rounded-lg border border-[#d9e3e6]">
-            <table className="w-full min-w-[1180px] table-fixed border-collapse text-[14px]">
+            <table className="w-full min-w-[1280px] table-fixed border-collapse text-[14px]">
+              <colgroup>
+                <col className="w-[24%]" />
+                <col className="w-[20%]" />
+                <col className="w-[11%]" />
+                <col className="w-[12%]" />
+                <col className="w-[10%]" />
+                <col className="w-[9%]" />
+                <col className="w-[9%]" />
+                <col className="w-[5%]" />
+              </colgroup>
               <thead className="sticky top-0 z-10">
                 <tr className="border-b border-[#d9e3e6] bg-[#f6f8f9]">
-                  <th className="w-[27%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     Order No. (Product)
                   </th>
-                  <th className="w-[24%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     Site
                   </th>
-                  <th className="w-[7%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
-                    สั่งใน Order ({group.unit})
+                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
+                    สั่ง ({group.unit})
                   </th>
-                  <th className="w-[7%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
-                    ส่งจริงใน Order ({group.unit})
+                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
+                    ส่งจริง ({group.unit})
                   </th>
-                  <th className="w-[11%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     เวลาเท
                   </th>
-                  <th className="w-[11%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     สร้างออเดอร์
                   </th>
-                  <th className="w-[11%] whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     อัปเดตรายการ ↓
                   </th>
-                  <th className="w-[6%] whitespace-nowrap px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
+                  <th className="whitespace-nowrap px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
                     สถานะ
                   </th>
                 </tr>
@@ -343,11 +353,11 @@ function MobileCustomerCard({
               <div className="font-bold text-slate-800">{formatNumber(group.orderCount)}</div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold text-slate-400">ปริมาณที่สั่ง ({group.unit})</div>
+              <div className="text-[10px] font-semibold text-slate-400">สั่งใน Orders ({group.unit})</div>
               <div className="font-bold text-slate-800">{compactNumber(group.totalOrdered)} <span className="text-[9px] text-slate-400">{group.unit}</span></div>
             </div>
             <div>
-              <div className="text-[10px] font-semibold text-slate-400">ปริมาณส่งจริง ({group.unit})</div>
+              <div className="text-[10px] font-semibold text-slate-400">ส่งจริงใน Orders ({group.unit})</div>
               <div className={cn("font-bold", group.totalDelivered > 0 ? "text-slate-800" : "text-slate-400")}>
                 {compactNumber(group.totalDelivered)} <span className="text-[9px] text-slate-400">{group.unit}</span>
               </div>
@@ -397,11 +407,11 @@ function MobileCustomerCard({
                     <div className="font-medium text-slate-700">{dateText(getOrderUpdateDateText(order))}</div>
                   </div>
                   <div>
-                    <div className="text-slate-400">ปริมาณที่สั่ง</div>
+                    <div className="text-slate-400">สั่งใน Order ({order.quantity?.unit ?? "-"})</div>
                     <div className="font-bold text-slate-800">{formatNumber(order.quantity?.ordered ?? 0)} <span className="text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span></div>
                   </div>
                   <div>
-                    <div className="text-slate-400">ปริมาณส่งจริง</div>
+                    <div className="text-slate-400">ส่งจริงใน Order ({order.quantity?.unit ?? "-"})</div>
                     <div className="font-bold text-slate-800">{formatNumber(order.quantity?.delivered ?? 0)} <span className="text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span></div>
                   </div>
                 </div>
@@ -643,7 +653,7 @@ export function OrdersPage({
         </div>
 
         {/* Column header */}
-        <div className="grid grid-cols-[36px_minmax(0,2.4fr)_128px_140px_140px_150px] border-b border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+        <div className="grid grid-cols-[36px_minmax(0,2.4fr)_155px_155px_170px_160px] border-b border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
           <span></span>
           <span className="whitespace-nowrap px-3">ลูกค้า</span>
           <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right">จำนวนออเดอร์ (ครั้ง)</span>
