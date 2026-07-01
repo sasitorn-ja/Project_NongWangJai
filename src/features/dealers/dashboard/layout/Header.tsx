@@ -1,4 +1,5 @@
 import { Menu } from "lucide-react";
+import type { AuthSession } from "@/features/auth/types";
 
 import { DateRangeToolbar } from "../filters/DateRangeToolbar";
 import { DropdownSelect } from "../filters/DropdownSelect";
@@ -18,23 +19,27 @@ export function Header({
   dateFrom,
   datePreset,
   dateTo,
+  onLogout,
   onOpenMobileNav,
   onToggleCollapsed,
   page,
   setDateFrom,
   setDatePreset,
-  setDateTo
+  setDateTo,
+  user
 }: {
   collapsed: boolean;
   dateFrom: string;
   datePreset: DatePreset;
   dateTo: string;
+  onLogout: () => void;
   onOpenMobileNav: () => void;
   onToggleCollapsed: () => void;
   page: PageKey;
   setDateFrom: (value: string) => void;
   setDatePreset: (value: DatePreset) => void;
   setDateTo: (value: string) => void;
+  user: AuthSession;
 }) {
   return (
     <header className="app-header sticky top-0 z-40 border-b border-[#edf1f5] bg-white dark:border-slate-800 dark:bg-slate-950">
@@ -90,6 +95,20 @@ export function Header({
             />
           </div>
         )}
+
+        <div className="flex items-center justify-between border-t border-[#edf1f5] px-3 py-2 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+          <div className="min-w-0">
+            <div className="truncate font-semibold text-slate-700 dark:text-slate-200">{user.user}</div>
+            <div className="truncate">{user.email}</div>
+          </div>
+          <button
+            className="rounded-full border border-slate-200 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            onClick={onLogout}
+            type="button"
+          >
+            ออกจากระบบ
+          </button>
+        </div>
       </div>
 
       {/* ── Desktop layout (hidden below xl) ── */}
@@ -111,6 +130,17 @@ export function Header({
         </div>
 
         <div className="flex items-center gap-4">
+          <div className="hidden min-w-0 text-right 2xl:block">
+            <div className="truncate text-sm font-semibold text-slate-700 dark:text-slate-200">{user.user}</div>
+            <div className="truncate text-xs text-slate-500 dark:text-slate-400">{user.email}</div>
+          </div>
+          <button
+            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            onClick={onLogout}
+            type="button"
+          >
+            ออกจากระบบ
+          </button>
           <div className="relative">
             <DateRangeToolbar
             dateFrom={dateFrom}

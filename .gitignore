@@ -1,6 +1,9 @@
 node_modules
 dist
+dist-server
 dist-verify
 tmp
 .env
 .DS_Store
+AGENTS_DEPLOY_RMC.md
+nong-wang-jai-sso-handoff (1).md

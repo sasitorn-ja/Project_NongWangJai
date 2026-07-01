@@ -1,0 +1,22 @@
+name: nong-wang-jai
+
+services:
+  nong-wang-jai:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nong-wang-jai
+    restart: unless-stopped
+    env_file:
+      - /opt/rmc-deploy/nong-wang-jai/env/production.env
+    environment:
+      PORT: 3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "rmc-sso.cipcloud.net:192.168.1.48"
+    networks:
+      - rmc-portal-network
+
+networks:
+  rmc-portal-network:
+    external: true

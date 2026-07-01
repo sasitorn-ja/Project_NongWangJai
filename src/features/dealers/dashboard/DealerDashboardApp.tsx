@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { AuthSession } from "@/features/auth/types";
 
 import type { PageKey } from "./config/pageMeta";
 import { useDashboardFilters } from "./hooks/useDashboardFilters";
@@ -16,7 +17,7 @@ import { ApiErrorBanner } from "./table/columns";
 
 const ORDER_DATA_PAGES: PageKey[] = ["details", "topCustomers", "topProducts", "customerInsights", "orders"];
 
-function DealerDashboardApp() {
+function DealerDashboardApp({ onLogout, user }: { onLogout: () => void; user: AuthSession }) {
   const [page, setPage] = useState<PageKey>("dashboard");
   const filters = useDashboardFilters();
   const data = useDealerDashboardData({
@@ -33,11 +34,13 @@ function DealerDashboardApp() {
       dateFrom={filters.dateFrom}
       datePreset={filters.datePreset}
       dateTo={filters.dateTo}
+      onLogout={onLogout}
       page={page}
       setDateFrom={filters.setDateFrom}
       setDatePreset={filters.setDatePreset}
       setDateTo={filters.setDateTo}
       setPage={setPage}
+      user={user}
     >
       {ORDER_DATA_PAGES.includes(page) && data.ordersState === "error" && (
         <section className="grid grid-cols-1">

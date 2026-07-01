@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useState } from "react";
 
+import type { AuthSession } from "@/features/auth/types";
 import { cn } from "@/lib/cn";
 import type { PageKey } from "../config/pageMeta";
 import type { DatePreset } from "../lib/dates";
@@ -11,21 +12,25 @@ export function DashboardLayout({
   dateFrom,
   datePreset,
   dateTo,
+  onLogout,
   page,
   setDateFrom,
   setDatePreset,
   setDateTo,
-  setPage
+  setPage,
+  user
 }: {
   children: ReactNode;
   dateFrom: string;
   datePreset: DatePreset;
   dateTo: string;
+  onLogout: () => void;
   page: PageKey;
   setDateFrom: (value: string) => void;
   setDatePreset: (value: DatePreset) => void;
   setDateTo: (value: string) => void;
   setPage: (page: PageKey) => void;
+  user: AuthSession;
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -75,12 +80,14 @@ export function DashboardLayout({
           dateFrom={dateFrom}
           datePreset={datePreset}
           dateTo={dateTo}
+          onLogout={onLogout}
           onOpenMobileNav={() => setMobileNavOpen(true)}
           onToggleCollapsed={() => setCollapsed((value) => !value)}
           page={page}
           setDateFrom={setDateFrom}
           setDatePreset={setDatePreset}
           setDateTo={setDateTo}
+          user={user}
         />
 
         <main className="space-y-2.5 px-3 py-3 lg:px-4 lg:py-3">{children}</main>

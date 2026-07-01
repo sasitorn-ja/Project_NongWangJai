@@ -1,3 +1,5 @@
+import { apiPath } from "@/lib/base-path";
+
 function toReadableMessage(value: unknown): string | undefined {
   if (typeof value === "string") {
     const trimmed = value.trim();
@@ -44,7 +46,8 @@ async function extractErrorMessage(response: Response) {
 }
 
 export async function requestJson<T>(input: string): Promise<T> {
-  const response = await fetch(input, {
+  const response = await fetch(apiPath(input), {
+    credentials: "same-origin",
     headers: { Accept: "application/json" }
   });
 

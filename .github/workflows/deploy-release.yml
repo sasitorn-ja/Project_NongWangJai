@@ -1,0 +1,106 @@
+name: Deploy Release
+
+on:
+  push:
+    branches:
+      - release
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+      - rmc-prod
+      - mapster
+    env:
+      PROJECT_SLUG: nong-wang-jai
+      DEPLOY_ROOT: /opt/rmc-deploy/nong-wang-jai
+      TRAEFIK_DYNAMIC_FILE: /opt/rmc-portal/traefik/config/dynamic/nong-wang-jai.yaml
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare directories
+        run: |
+          mkdir -p "$DEPLOY_ROOT/source" "$DEPLOY_ROOT/env"
+
+      - name: Sync source
+        run: |
+          rsync -a --delete \
+            --exclude ".git" \
+            --exclude "node_modules" \
+            --exclude "dist" \
+            --exclude "dist-server" \
+            ./ "$DEPLOY_ROOT/source/"
+
+      - name: Write production env
+        env:
+          DEPLOY_ENV_FILE: ${{ secrets.DEPLOY_ENV_FILE }}
+        run: |
+          if [ -z "$DEPLOY_ENV_FILE" ]; then
+            echo "Missing DEPLOY_ENV_FILE secret" >&2
+            exit 1
+          fi
+
+          printf '%s\n' "$DEPLOY_ENV_FILE" > "$DEPLOY_ROOT/env/production.env"
+
+      - name: Ensure shared docker network
+        run: |
+          docker network inspect rmc-portal-network >/dev/null 2>&1 || docker network create rmc-portal-network
+
+      - name: Write Traefik route
+        run: |
+          cat > "$TRAEFIK_DYNAMIC_FILE" <<'EOF'
+          http:
+            routers:
+              nong-wang-jai:
+                rule: "Host(`rmc.cipcloud.net`) && (Path(`/nong-wang-jai`) || PathPrefix(`/nong-wang-jai/`))"
+                entryPoints:
+                  - websecure
+                service: nong-wang-jai
+                middlewares:
+                  - rmc-security
+                priority: 500
+                tls: {}
+
+              nong-wang-jai-http:
+                rule: "Host(`rmc.cipcloud.net`) && (Path(`/nong-wang-jai`) || PathPrefix(`/nong-wang-jai/`))"
+                entryPoints:
+                  - web
+                middlewares:
+                  - redirect-https
+                service: noop@internal
+                priority: 500
+
+            services:
+              nong-wang-jai:
+                loadBalancer:
+                  servers:
+                    - url: "http://nong-wang-jai:3000"
+                  healthCheck:
+                    path: /nong-wang-jai/api/health
+                    interval: 30s
+                    timeout: 5s
+          EOF
+
+      - name: Deploy containers
+        working-directory: ${{ env.DEPLOY_ROOT }}/source
+        run: |
+          docker compose -p "$PROJECT_SLUG" -f docker-compose.production.yml up -d --build --remove-orphans
+
+      - name: Verify health
+        run: |
+          for attempt in $(seq 1 20); do
+            if docker run --rm --network rmc-portal-network curlimages/curl:8.12.1 \
+              -fsS "http://nong-wang-jai:3000/nong-wang-jai/api/health" >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+
+          echo "Health check failed" >&2
+          docker ps --filter "name=nong-wang-jai"
+          docker logs --tail 200 nong-wang-jai || true
+          exit 1

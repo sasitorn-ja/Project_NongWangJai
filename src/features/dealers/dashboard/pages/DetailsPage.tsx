@@ -1070,15 +1070,6 @@ export function DetailsPage(props: DetailsPageProps) {
   const dealerDeliveredTotal = useMemo(() => dealerOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0), [dealerOrders]);
   const dealerFulfillmentRate = dealerOrderedTotal > 0 ? (dealerDeliveredTotal / dealerOrderedTotal) * 100 : 0;
 
-  const customerColumns: DataColumn<(typeof orderCustomerRows)[number]>[] = [
-    { title: "ลูกค้า", key: "customer", sortAccessor: (record) => record.customerName, width: 260, render: (_, record) => <div className="min-w-0"><div className="line-clamp-2 text-[13px] font-semibold leading-4 text-slate-950" title={record.customerName}>{record.customerName}</div><div className="truncate text-[11px] font-medium text-slate-500">{record.customerCode}</div>{isAllDealers ? <div className="truncate text-[11px] font-bold text-sky-700" title={record.dealerName}>Dealer: {record.dealerName}</div> : null}</div> },
-    { title: "จำนวน Site", key: "siteCount", dataIndex: "siteCount", align: "right", width: 100, render: formatNumber },
-    { title: "ออเดอร์ (ครั้ง)", key: "orderCount", dataIndex: "orderCount", align: "right", width: 108, render: formatNumber },
-    { title: `จำนวนที่สั่ง (${orderUnit})`, key: "ordered", dataIndex: "ordered", align: "right", width: 132, render: formatNumber },
-    { title: `จำนวนส่งจริง (${orderUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
-    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
-  ];
-
   const siteColumns: DataColumn<(typeof siteRows)[number]>[] = [
     { title: "ชื่อลูกค้า", key: "customerName", dataIndex: "customerName", width: 160, render: (value) => <span className="line-clamp-2 text-[13px] leading-5" title={String(value ?? "-")}>{String(value ?? "-")}</span> },
     { title: "ไซต์", key: "site", sortAccessor: (record) => record.siteName, width: 260, render: (_, record) => <div className="min-w-0"><div className="truncate text-[13px] font-semibold text-slate-950">รหัส Site: {record.siteCode}</div><div className="line-clamp-2 text-[11px] font-medium leading-4 text-slate-500" title={record.siteName}>{record.siteName}</div><div className="truncate text-[11px] font-bold text-sky-700" title={record.dealerName}>Dealer: {record.dealerName}</div></div> },

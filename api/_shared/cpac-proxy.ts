@@ -1,4 +1,5 @@
 import process from "node:process";
+import { requireAuth } from "./auth.js";
 
 function cleanEnv(value?: string) {
   if (!value) return "";
@@ -51,6 +52,11 @@ function buildResponseHeaders(source: Headers) {
 
 export async function proxyToCpac(request: Request, upstreamPath: string) {
   try {
+    const auth = requireAuth(request);
+    if (auth instanceof Response) {
+      return auth;
+    }
+
     const { password, target, user } = getProxyConfig();
 
     if (!user || !password) {

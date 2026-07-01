@@ -62,6 +62,30 @@ src/features/dealers/dashboard/
 npm run dev
 npm run build
 npm run lint
+npm run start
 ```
 
-`npm run build` creates `dist/`. That folder is build output, is ignored by git, and can be deleted safely.
+`npm run build` creates `dist/` and `dist-server/`. Those folders are build output, are ignored by git, and can be deleted safely.
+
+## RMC SSO
+
+This project now uses the server-side OIDC Authorization Code Flow with PKCE described in [nong-wang-jai-sso-handoff.md](/Users/toonchaianan/git/Project_NongWangJai/nong-wang-jai-sso-handoff.md:1).
+
+- `GET /api/auth/login` starts the RMC SSO redirect flow and stores `state` + `code_verifier` in an HTTP-only cookie.
+- `GET /api/auth/callback/rmc-sso` exchanges the authorization code on the server, verifies the `id_token`, and creates the app session cookie.
+- `GET /api/auth/session` returns the current signed-in user for the SPA auth gate.
+- `GET /api/auth/logout` clears the app session first, then redirects to the RMC SSO end-session endpoint.
+- All existing `/api/dealers*` and `/api/orders` routes now require a valid application session.
+
+Set the SSO environment variables in `.env` or your deployment platform before using the auth flow. A placeholder template is provided in `.env.example`; do not commit real secrets.
+
+For local development on `http://localhost:5173`, the updated handoff also registers local callback and signed-out URLs. You can set `DEV_UI_BASE_URL`, `DEV_SSO_REDIRECT_URI`, and `DEV_SSO_POST_LOGOUT_REDIRECT_URI` so the auth flow stays on localhost instead of redirecting to production.
+
+## Production Deploy
+
+This repo is prepared to run under `https://rmc.cipcloud.net/nong-wang-jai/`.
+
+- Set `APP_BASE_PATH=/nong-wang-jai` in the production env file.
+- Build and run through [Dockerfile](/Users/toonchaianan/git/Project_NongWangJai/Dockerfile:1) and [docker-compose.production.yml](/Users/toonchaianan/git/Project_NongWangJai/docker-compose.production.yml:1).
+- Push to branch `release` to trigger [.github/workflows/deploy-release.yml](/Users/toonchaianan/git/Project_NongWangJai/.github/workflows/deploy-release.yml:1) on the self-hosted runner.
+- Store the full production `.env` in the GitHub secret `DEPLOY_ENV_FILE`.
