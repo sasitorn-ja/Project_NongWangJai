@@ -124,7 +124,7 @@ export function WangjaiAdvisor({
       <div className="pointer-events-none absolute -left-12 -top-16 z-0 h-40 w-40 rounded-full bg-white/65 blur-2xl" />
       <div className="pointer-events-none absolute -bottom-16 right-16 z-0 h-32 w-72 rounded-full bg-sky-200/35 blur-3xl" />
 
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-[28%] items-end justify-end gap-1 pr-3 sm:flex lg:w-[24%]">
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-0 hidden w-[28%] items-end justify-end gap-1 pr-3 md:flex lg:w-[24%]">
         {[30, 42, 52, 66, 82].map((h, i) => (
           <div
             key={i}
@@ -145,7 +145,7 @@ export function WangjaiAdvisor({
         </svg>
       </div>
 
-      <div className="pointer-events-none absolute -top-7 bottom-[-8px] right-10 z-20 hidden items-end sm:flex md:right-14 lg:right-20">
+      <div className="pointer-events-none absolute -top-7 bottom-[-8px] right-10 z-20 hidden items-end md:flex md:right-14 lg:right-20">
         <div className="absolute bottom-1 right-2 h-20 w-32 rounded-full bg-sky-300/25 blur-2xl" />
         <div className="absolute bottom-[-4px] right-7 h-4 w-24 rounded-full bg-slate-900/10 blur-md" />
         <WangjaiLogo
@@ -154,7 +154,7 @@ export function WangjaiAdvisor({
         />
       </div>
 
-      <div className="relative z-10 flex min-h-full items-center gap-3 pr-[112px] sm:gap-4 md:pr-[230px] lg:pr-[320px]">
+      <div className="relative z-10 flex min-h-full items-center gap-3 sm:gap-4 md:pr-[230px] lg:pr-[320px]">
         <div className="hidden h-[58px] w-[58px] shrink-0 items-center justify-center rounded-full bg-sky-100/80 text-sky-600 ring-1 ring-sky-200 sm:flex">
           <ChatBubblesIcon className="h-8 w-8" />
         </div>

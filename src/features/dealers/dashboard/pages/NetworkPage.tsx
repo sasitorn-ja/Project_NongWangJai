@@ -115,7 +115,7 @@ function RegionNetworkColumn({
 
   return (
     <div className="relative">
-      <div className="mx-auto mb-4 h-6 w-px bg-[#b7d7f5]" />
+      <div className="mx-auto mb-4 hidden h-6 w-px bg-[#b7d7f5] xl:block" />
       <div className="rounded-[22px] border border-[#a8d5ff] bg-white px-4 py-4 shadow-sm">
         <div className={cn("text-[10px] font-black tracking-[0.22em]", accentClasses[accent].split(" ")[1])}>{getRegionLabel(region.region)}</div>
         <div className="mt-2 text-xl font-semibold text-slate-900">{region.region}</div>
@@ -126,7 +126,7 @@ function RegionNetworkColumn({
         </div>
       </div>
 
-      <div className="mx-auto mt-4 h-6 w-px bg-[#d9e7f7]" />
+      <div className="mx-auto mt-4 hidden h-6 w-px bg-[#d9e7f7] xl:block" />
       <div className="space-y-3">
         {visibleDealers.map((dealer) => (
           <DealerNetworkCard
@@ -245,12 +245,12 @@ export function NetworkPage({
     <section className="space-y-4">
       <Card className="overflow-hidden border-0 bg-transparent shadow-none">
         <CardContent className="px-0 pt-0">
-          <div className="mx-auto grid max-w-[720px] grid-cols-[112px_minmax(0,1fr)] items-center gap-5 rounded-lg border border-sky-200 bg-gradient-to-br from-sky-600 via-blue-600 to-sky-500 px-5 py-4 text-white shadow-[0_16px_36px_rgba(14,116,214,0.22)]">
-            <WangjaiLogo variant="full" className="h-[120px] object-contain drop-shadow-[0_12px_18px_rgba(15,23,42,0.18)]" />
+          <div className="mx-auto grid max-w-[720px] grid-cols-1 items-center gap-4 rounded-lg border border-sky-200 bg-gradient-to-br from-sky-600 via-blue-600 to-sky-500 px-4 py-4 text-white shadow-[0_16px_36px_rgba(14,116,214,0.22)] sm:grid-cols-[96px_minmax(0,1fr)] sm:gap-5 sm:px-5">
+            <WangjaiLogo variant="full" className="mx-auto h-[92px] object-contain drop-shadow-[0_12px_18px_rgba(15,23,42,0.18)] sm:mx-0 sm:h-[120px]" />
             <div className="min-w-0 text-center">
-              <div className="text-[26px] font-bold leading-tight">CPAC - AI วางใจ</div>
-              <div className="mt-1 text-[16px] font-medium text-sky-50/95">Dealer Network ทั่วประเทศ</div>
-              <div className="mt-4 grid grid-cols-3 gap-3 text-sky-950">
+              <div className="text-[18px] font-bold leading-tight sm:text-[24px] xl:text-[26px]">CPAC - AI วางใจ</div>
+              <div className="mt-1 text-[13px] font-medium text-sky-50/95 sm:text-[16px]">Dealer Network ทั่วประเทศ</div>
+              <div className="mt-4 grid grid-cols-1 gap-2 text-sky-950 sm:grid-cols-3 sm:gap-3">
                 <div className="rounded-lg bg-white px-3 py-2 shadow-sm">
                   <div className="text-[24px] font-bold leading-none text-sky-600">{formatNumber(totalDealers)}</div>
                   <div className="mt-0.5 text-[12px] font-semibold text-slate-500">Dealers</div>
@@ -269,7 +269,15 @@ export function NetworkPage({
         </CardContent>
       </Card>
 
-      <div className="overflow-x-auto pb-2">
+      <div className="pb-2 xl:hidden">
+        <div className="grid gap-4 px-1 sm:grid-cols-2">
+          {regionColumns.map((region) => (
+            <RegionNetworkColumn key={region.region} onSelectDealer={onSelectDealer} region={region} selectedDealerId={selectedDealerId} />
+          ))}
+        </div>
+      </div>
+
+      <div className="hidden overflow-x-auto pb-2 xl:block">
         <div className="min-w-[1180px] px-1">
           <div className="mx-auto h-8 w-px bg-[#b7d7f5]" />
           <div className="h-px w-full bg-[#b7d7f5]" />

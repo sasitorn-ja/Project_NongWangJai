@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { Menu } from "lucide-react";
 import type { AuthSession } from "@/features/auth/types";
 
@@ -14,20 +15,7 @@ const DATE_PRESET_OPTIONS: Array<{ label: string; value: DatePreset }> = [
   { label: "กำหนดเอง", value: "custom" }
 ];
 
-export function Header({
-  collapsed,
-  dateFrom,
-  datePreset,
-  dateTo,
-  onLogout,
-  onOpenMobileNav,
-  onToggleCollapsed,
-  page,
-  setDateFrom,
-  setDatePreset,
-  setDateTo,
-  user
-}: {
+type HeaderProps = {
   collapsed: boolean;
   dateFrom: string;
   datePreset: DatePreset;
@@ -40,14 +28,29 @@ export function Header({
   setDatePreset: (value: DatePreset) => void;
   setDateTo: (value: string) => void;
   user: AuthSession;
-}) {
+};
+
+export const Header = forwardRef<HTMLElement, HeaderProps>(function Header({
+  collapsed,
+  dateFrom,
+  datePreset,
+  dateTo,
+  onLogout,
+  onOpenMobileNav,
+  onToggleCollapsed,
+  page,
+  setDateFrom,
+  setDatePreset,
+  setDateTo,
+  user
+}, ref) {
   return (
-    <header className="app-header sticky top-0 z-40 border-b border-[#edf1f5] bg-white dark:border-slate-800 dark:bg-slate-950">
+    <header ref={ref} className="app-header sticky top-0 z-40 border-b border-[#edf1f5] bg-white dark:border-slate-800 dark:bg-slate-950">
 
       {/* ── Mobile layout (hidden on xl+) ── */}
       <div className="xl:hidden">
-        {/* Single row: hamburger | title | date filter */}
-        <div className="flex items-center gap-2 px-3 py-2.5">
+        {/* Compact mobile layout: keep the title readable and let controls wrap cleanly */}
+        <div className="grid grid-cols-[auto,minmax(0,1fr)] gap-x-2 gap-y-2 px-3 py-2.5 sm:flex sm:items-center sm:gap-2">
 
           {/* Hamburger */}
           <button
@@ -60,15 +63,15 @@ export function Header({
           </button>
 
           {/* Title */}
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 self-center sm:flex-1">
             <h1 className="truncate text-sm font-semibold text-slate-950 dark:text-slate-100 sm:text-base">
               {getPageTitle(page)}
             </h1>
           </div>
 
-	          <DropdownSelect
-            buttonClassName="h-9 rounded-xl px-2.5 text-xs font-medium shadow-sm"
-            className="w-[126px] flex-none"
+          <DropdownSelect
+            buttonClassName="h-9 w-full justify-between rounded-xl px-3 text-xs font-medium shadow-sm"
+            className="col-span-2 w-full min-w-0 sm:col-auto sm:w-[150px] sm:flex-none"
             options={DATE_PRESET_OPTIONS}
             value={datePreset}
             onChange={setDatePreset}
@@ -78,7 +81,7 @@ export function Header({
 
         {/* Date inputs row — only when "กำหนดเอง" */}
         {datePreset === "custom" && (
-          <div className="grid grid-cols-2 gap-2 px-3 pb-2.5">
+          <div className="grid grid-cols-1 gap-2 px-3 pb-2.5 sm:grid-cols-2">
             <input
               aria-label="วันที่เริ่มต้น"
               className="h-10 w-full rounded-2xl border border-[#d5e0e3] bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
@@ -102,7 +105,7 @@ export function Header({
             <div className="truncate">{user.email}</div>
           </div>
           <button
-            className="rounded-full border border-slate-200 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+            className="ml-3 shrink-0 rounded-full border border-slate-200 px-3 py-1.5 font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
             onClick={onLogout}
             type="button"
           >
@@ -156,4 +159,4 @@ export function Header({
 
     </header>
   );
-}
+});

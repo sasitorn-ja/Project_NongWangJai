@@ -540,8 +540,8 @@ export function OrdersPage({
         />
       </section>
 
-      {/* ─── Mobile customer accordion (hidden on md+) ─── */}
-      <Card className="dashboard-card overflow-hidden md:hidden">
+      {/* ─── Mobile customer accordion (hidden on xl+) ─── */}
+      <Card className="dashboard-card overflow-hidden xl:hidden">
         <CardHeader className="border-b border-[#d9e3e6] bg-white">
           <div className="space-y-2">
             <div>
@@ -600,8 +600,8 @@ export function OrdersPage({
         )}
       </Card>
 
-      {/* ─── Desktop customer accordion (hidden below md) ─── */}
-      <Card className="dashboard-card hidden overflow-hidden md:block">
+      {/* ─── Desktop customer accordion (hidden below xl) ─── */}
+      <Card className="dashboard-card hidden overflow-hidden xl:block">
         <CardHeader className="border-b border-[#d9e3e6] bg-white">
           <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] xl:items-center">
             <div>
