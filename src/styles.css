@@ -47,6 +47,195 @@ body {
   font-size: 14px;
 }
 
+.login-screen {
+  background:
+    radial-gradient(circle at top left, rgba(105, 198, 255, 0.34), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(41, 132, 255, 0.18), transparent 24%),
+    linear-gradient(135deg, #d8edff 0%, #eff7ff 42%, #dcebff 100%);
+}
+
+.login-screen__orb {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.24));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+}
+
+.login-screen__orb--left {
+  left: -48px;
+  bottom: 18%;
+  width: 230px;
+  height: 230px;
+  opacity: 0.5;
+}
+
+.login-screen__orb--right {
+  right: 6.5%;
+  top: 26%;
+  width: 84px;
+  height: 84px;
+  opacity: 0.75;
+}
+
+.login-screen__glow {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 999px;
+  filter: blur(40px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.login-screen__glow--left {
+  left: -140px;
+  bottom: -120px;
+  background: rgba(91, 203, 255, 0.45);
+}
+
+.login-screen__glow--right {
+  top: -140px;
+  right: -120px;
+  background: rgba(14, 116, 216, 0.18);
+}
+
+.login-screen__banner {
+  right: -8%;
+  width: 70%;
+  transform: translateY(-6%);
+  opacity: 0.22;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.1) 88%, rgba(0, 0, 0, 0) 100%);
+}
+
+.login-mascot-stage {
+  position: relative;
+  display: flex;
+  width: min(100%, 620px);
+  min-height: 620px;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-mascot-stage__halo {
+  position: absolute;
+  inset: 10% 10% 18%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.86) 0%, rgba(255, 255, 255, 0.08) 64%, rgba(255, 255, 255, 0) 76%);
+}
+
+.login-mascot-stage__ring {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.58);
+}
+
+.login-mascot-stage__ring--outer {
+  width: 430px;
+  height: 430px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0) 69%);
+}
+
+.login-mascot-stage__ring--inner {
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(126, 211, 255, 0.12) 0%, rgba(255, 255, 255, 0) 72%);
+}
+
+.login-mascot-stage__sphere {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: radial-gradient(circle at 32% 28%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.25));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(12px);
+}
+
+.login-mascot-stage__sphere--one {
+  top: 16%;
+  right: 8%;
+  width: 42px;
+  height: 42px;
+}
+
+.login-mascot-stage__sphere--two {
+  right: 10%;
+  bottom: 21%;
+  width: 72px;
+  height: 72px;
+  opacity: 0.9;
+}
+
+.login-mascot-stage__sphere--three {
+  left: 12%;
+  bottom: 7%;
+  width: 32px;
+  height: 32px;
+  opacity: 0.72;
+}
+
+.login-mascot-stage__waterline {
+  position: absolute;
+  left: -8%;
+  right: -8%;
+  bottom: -2%;
+  height: 31%;
+  border-radius: 52% 48% 0 0 / 100% 100% 0 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.82));
+  filter: blur(0.2px);
+}
+
+.login-mascot-stage__figure {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 430px);
+  filter: drop-shadow(0 30px 44px rgba(15, 23, 42, 0.16));
+  animation: mascot-float 4.8s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes mascot-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+
+  50% {
+    transform: translateY(-12px) rotate(1deg);
+  }
+}
+
+@media (max-width: 1023px) {
+  .login-screen__banner {
+    display: none;
+  }
+
+  .login-screen__orb--right {
+    top: 17%;
+    right: -10px;
+  }
+
+  .login-mascot-stage {
+    min-height: 300px;
+    width: 100%;
+  }
+
+  .login-mascot-stage__ring--outer {
+    width: 300px;
+    height: 300px;
+  }
+
+  .login-mascot-stage__ring--inner {
+    width: 220px;
+    height: 220px;
+  }
+
+  .login-mascot-stage__figure {
+    width: min(100%, 245px);
+  }
+}
+
 button,
 input,
 textarea,
