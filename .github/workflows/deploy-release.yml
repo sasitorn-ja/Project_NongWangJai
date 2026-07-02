@@ -28,11 +28,12 @@ jobs:
 
       - name: Sync source
         run: |
-          rsync -a --delete \
+          rsync -rltz --delete --omit-dir-times \
             --exclude ".git" \
             --exclude "node_modules" \
             --exclude "dist" \
             --exclude "dist-server" \
+            --exclude ".env" \
             ./ "$DEPLOY_ROOT/source/"
 
       - name: Write production env
