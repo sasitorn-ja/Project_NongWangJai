@@ -10,11 +10,11 @@ import type { DealerApiResponse } from "./responses";
 
 const DEALER_CREATED_AT_CUTOFF = "2026-03-15";
 
-export function isDealerCreatedByCutoff(dealer: Dealer) {
-  if (!dealer.created_at) return true;
+export function isDealerCreatedAfterCutoff(dealer: Dealer) {
+  if (!dealer.created_at) return false;
 
   const datePart = dealer.created_at.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
-  return !datePart || datePart <= DEALER_CREATED_AT_CUTOFF;
+  return Boolean(datePart && datePart > DEALER_CREATED_AT_CUTOFF);
 }
 
 export function toNumber(value: unknown): number {
@@ -128,5 +128,5 @@ export function normalizeDealers(payload: DealerApiResponse): Dealer[] {
     ? payload
     : payload.items ?? payload.data ?? payload.result ?? payload.dealers ?? payload.rows ?? [];
 
-  return rows.map(normalizeDealer).filter(isDealerCreatedByCutoff);
+  return rows.map(normalizeDealer).filter(isDealerCreatedAfterCutoff);
 }
