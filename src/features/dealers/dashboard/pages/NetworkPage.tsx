@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
 import type { ApiState, Dealer, DealerUsage, OrderItem } from "@/features/dealers/types";
+import { dateText } from "../lib/dates";
 import { getRegionAccent, getRegionLabel } from "../lib/regions";
 import { WangjaiLogo } from "../ui/WangjaiLogo";
 
@@ -62,6 +63,10 @@ function DealerNetworkCard({
         <div>
           <div className="font-medium text-slate-400">เช็คราคารวม</div>
           <div className="mt-0.5 font-semibold text-slate-800">{formatNumber(dealer.priceCheckCount)} ครั้ง</div>
+        </div>
+        <div className="col-span-2 border-t border-slate-100 pt-2">
+          <div className="font-medium text-slate-400">Created at</div>
+          <div className="mt-0.5 font-semibold text-slate-800">{dateText(dealer.created_at)}</div>
         </div>
       </div>
 
