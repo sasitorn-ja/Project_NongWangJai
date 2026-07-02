@@ -41,8 +41,13 @@ jobs:
           DEPLOY_ENV_FILE: ${{ secrets.DEPLOY_ENV_FILE }}
         run: |
           if [ -z "$DEPLOY_ENV_FILE" ]; then
-            echo "Missing DEPLOY_ENV_FILE secret" >&2
-            exit 1
+            if [ ! -f "$DEPLOY_ROOT/env/production.env" ]; then
+              echo "Missing DEPLOY_ENV_FILE secret and no existing production env found" >&2
+              exit 1
+            fi
+
+            echo "DEPLOY_ENV_FILE secret is not set; keeping existing production env on server"
+            exit 0
           fi
 
           printf '%s\n' "$DEPLOY_ENV_FILE" > "$DEPLOY_ROOT/env/production.env"
