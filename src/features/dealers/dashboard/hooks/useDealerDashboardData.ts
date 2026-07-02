@@ -142,6 +142,11 @@ export function useDealerDashboardData({
     [dealers, selectedDealerId]
   );
 
+  const allowedDealerIds = useMemo(
+    () => new Set(dealers.map((dealer) => dealer.dealer_id)),
+    [dealers]
+  );
+
   const regions = useMemo(() => Array.from(new Set(dealers.map((dealer) => dealer.region))).sort(), [dealers]);
 
   const filteredDealers = useMemo(() => {
@@ -172,8 +177,11 @@ export function useDealerDashboardData({
   );
 
   const filteredUsageRows = useMemo(
-    () => usageRows.filter((row) => isWithinDateRange(row.updated_at, dateFrom, dateTo)),
-    [dateFrom, dateTo, usageRows]
+    () =>
+      usageRows.filter(
+        (row) => allowedDealerIds.has(row.dealer_id) && isWithinDateRange(row.updated_at, dateFrom, dateTo)
+      ),
+    [allowedDealerIds, dateFrom, dateTo, usageRows]
   );
 
   const filteredCustomers = useMemo(
@@ -187,8 +195,11 @@ export function useDealerDashboardData({
   );
 
   const ordersInDateRange = useMemo(
-    () => orders.filter((order) => isWithinDateRange(order.pour_datetime, dateFrom, dateTo)),
-    [dateFrom, dateTo, orders]
+    () =>
+      orders.filter(
+        (order) => allowedDealerIds.has(order.dealer_id) && isWithinDateRange(order.pour_datetime, dateFrom, dateTo)
+      ),
+    [allowedDealerIds, dateFrom, dateTo, orders]
   );
 
   const filteredOrders = useMemo(() => {

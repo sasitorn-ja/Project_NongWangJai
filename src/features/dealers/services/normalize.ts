@@ -8,6 +8,15 @@ import type {
 } from "@/features/dealers/types";
 import type { DealerApiResponse } from "./responses";
 
+const DEALER_CREATED_AT_CUTOFF = "2026-03-15";
+
+export function isDealerCreatedByCutoff(dealer: Dealer) {
+  if (!dealer.created_at) return true;
+
+  const datePart = dealer.created_at.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
+  return !datePart || datePart <= DEALER_CREATED_AT_CUTOFF;
+}
+
 export function toNumber(value: unknown): number {
   if (typeof value === "number") return value;
   if (typeof value === "string") {
@@ -119,5 +128,5 @@ export function normalizeDealers(payload: DealerApiResponse): Dealer[] {
     ? payload
     : payload.items ?? payload.data ?? payload.result ?? payload.dealers ?? payload.rows ?? [];
 
-  return rows.map(normalizeDealer);
+  return rows.map(normalizeDealer).filter(isDealerCreatedByCutoff);
 }
