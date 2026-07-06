@@ -1,0 +1,1 @@
+[      54ms] [ERROR] Failed to load module script: Expected a JavaScript-or-Wasm module script but the server responded with a MIME type of "text/html". Strict MIME type checking is enforced for module scripts per HTML spec. @ http://localhost:3000/nong-wang-jai/assets/index-DHF4QCE-.js:0

@@ -3,7 +3,8 @@ import { Layers3, PackageCheck, Search, TrendingUp } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { compactNumber, formatNumber } from "@/lib/number";
-import type { ApiState, Dealer, DealerGroup, DealerUsage } from "@/features/dealers/types";
+import type { DealerGroup } from "@/features/dealers/types";
+import { useDashboardOutletContext } from "../DealerDashboardApp";
 import { dateText } from "../lib/dates";
 import type { DataColumn } from "../table/types";
 import { MetricCard } from "../ui/MetricCard";
@@ -14,17 +15,17 @@ import { CompactFunnelSummary } from "../charts/CompactFunnelSummary";
 import { statusColumn } from "../table/columns";
 import { WangjaiAdvisor } from "../ui/WangjaiAdvisor";
 
-type GroupsPageProps = {
-  dealers: Dealer[];
-  groups: DealerGroup[];
-  groupsState: ApiState;
-  selectedDealer?: Dealer;
-  selectedDealerId: number | null;
-  setSelectedDealerId: (id: number | null) => void;
-  usageRows: DealerUsage[];
-};
-
-export function GroupsPage({ dealers, groups, groupsState, selectedDealer, selectedDealerId, setSelectedDealerId, usageRows }: GroupsPageProps) {
+export function GroupsPage() {
+  const { data } = useDashboardOutletContext();
+  const {
+    dealers,
+    filteredGroups: groups,
+    groupsState,
+    selectedDealer,
+    selectedDealerId,
+    setSelectedDealerId,
+    filteredUsageRows: usageRows
+  } = data;
   const volumeUnit = "คิว";
   const totalDelivered = groups.reduce((sum, group) => sum + group.delivered_volume, 0);
   const totalBooked = groups.reduce((sum, group) => sum + group.booked_volume, 0);

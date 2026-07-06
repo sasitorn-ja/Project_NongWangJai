@@ -6,13 +6,13 @@ import type {
   DealerUsage,
   OrderItem
 } from "@/features/dealers/types";
-import { requestJson } from "./client";
+import { requestJson, requestJsonPost } from "./client";
 import {
   normalizeCustomer,
   normalizeDealers,
   normalizeGroup,
-  normalizeOrder,
   normalizeSite,
+  normalizeSoOrder,
   normalizeUsage
 } from "./normalize";
 import {
@@ -22,7 +22,7 @@ import {
   type DealerGroupsResponse,
   type DealerSiteResponse,
   type DealerUsageResponse,
-  type OrderResponse,
+  type SoOrdersResponse,
   normalizeList,
   responseMessage
 } from "./responses";
@@ -84,10 +84,27 @@ export async function fetchDealerSites(dealerKey: number | string): Promise<ApiL
   }
 }
 
-export async function fetchOrders(): Promise<ApiListResult<OrderItem>> {
+export async function fetchOrders({
+  startDate,
+  endDate,
+  dealers
+}: {
+  startDate: string;
+  endDate: string;
+  dealers: Dealer[];
+}): Promise<ApiListResult<OrderItem>> {
   try {
-    const payload = await requestJson<OrderResponse>("/api/orders");
-    return { rows: normalizeList(payload).map(normalizeOrder), state: "live", message: responseMessage(payload) };
+    const payload = await requestJsonPost<SoOrdersResponse>("/api/so-orders", {
+      start_date: startDate,
+      end_date: endDate,
+      limit: 1000,
+      page: 1
+    });
+
+    const dealerMap = new Map(dealers.map((dealer) => [dealer.dealer_code, dealer]));
+    const rows = (payload.items ?? []).map((item) => normalizeSoOrder(item, dealerMap));
+
+    return { rows, state: "live", message: responseMessage(payload) };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to load orders";
     console.error("Failed to load orders:", error);

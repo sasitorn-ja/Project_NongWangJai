@@ -1,4 +1,4 @@
-import { proxyToCpac } from "../../../_shared/cpac-proxy.js";
+import { findCustomerUsageByDealerId } from "../../../_shared/repositories/customerUsage.js";
 
 function resolveDealerId(request: Request) {
   const url = new URL(request.url);
@@ -6,5 +6,31 @@ function resolveDealerId(request: Request) {
 }
 
 export async function GET(request: Request) {
-  return proxyToCpac(request, `/api/ai-wangjai/dealers/${resolveDealerId(request)}/customers/usage`);
+  try {
+    const dealerId = Number(resolveDealerId(request));
+
+    if (!Number.isFinite(dealerId)) {
+      return Response.json(
+        { status: false, items: [], message: "Invalid dealer id" },
+        { status: 400 }
+      );
+    }
+
+    const rows = await findCustomerUsageByDealerId(dealerId);
+
+    return Response.json({
+      status: true,
+      items: rows,
+      message: "success"
+    });
+  } catch (error) {
+    console.error("Failed to load customer usage from database", { error });
+
+    const message = error instanceof Error ? error.message : "Unknown database error";
+
+    return Response.json(
+      { status: false, items: [], message },
+      { status: 500 }
+    );
+  }
 }

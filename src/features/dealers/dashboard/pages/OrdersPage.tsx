@@ -4,7 +4,8 @@ import { ChevronDown, PackageCheck, Search, TrendingUp, Users } from "lucide-rea
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
-import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
+import type { OrderItem } from "@/features/dealers/types";
+import { useDashboardOutletContext } from "../DealerDashboardApp";
 import { dateText, parseDateValue } from "../lib/dates";
 import { getOrderStatusKey, orderStatusText } from "../lib/status";
 import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
@@ -28,6 +29,8 @@ type CustomerGroup = {
   orders: OrderItem[];
   totalDelivered: number;
   totalOrdered: number;
+  fullLoopDelivered: number;
+  notFullLoopDelivered: number;
   unit: string;
   uniqueSiteCount: number;
 };
@@ -103,6 +106,8 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
         orders: [],
         totalDelivered: 0,
         totalOrdered: 0,
+        fullLoopDelivered: 0,
+        notFullLoopDelivered: 0,
         unit: "คิว",
         uniqueSiteCount: 0
       };
@@ -112,6 +117,11 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
     group.orderCount += 1;
     group.totalOrdered += order.quantity?.ordered ?? 0;
     group.totalDelivered += order.quantity?.delivered ?? 0;
+    if (order.full_loop) {
+      group.fullLoopDelivered += order.quantity?.delivered ?? 0;
+    } else {
+      group.notFullLoopDelivered += order.quantity?.delivered ?? 0;
+    }
     const statusKey = getOrderStatusKey(order.status?.order);
     if (statusKey === "confirmed" || statusKey === "pending") group.openOrderCount += 1;
 
@@ -163,7 +173,7 @@ function CustomerAccordionRow({
         onClick={onToggle}
         aria-expanded={expanded}
         className={cn(
-          "grid w-full grid-cols-[36px_minmax(0,2.4fr)_155px_155px_170px_160px] items-center px-5 py-3.5 text-left transition-colors",
+          "grid w-full grid-cols-[36px_minmax(0,2.4fr)_140px_140px_140px_140px_140px_140px] items-center px-5 py-3.5 text-left transition-colors",
           expanded ? "bg-sky-50/60 hover:bg-sky-50" : "hover:bg-slate-50"
         )}
       >
@@ -200,6 +210,12 @@ function CustomerAccordionRow({
         </div>
         <div className={cn("flex h-full items-center justify-end border-l border-[#e3e9ed] px-3 text-right font-bold", group.totalDelivered > 0 ? "text-slate-900" : "text-slate-400")}>
           {compactNumber(group.totalDelivered)} <span className="ml-1 text-[10px] font-semibold text-slate-400">{group.unit}</span>
+        </div>
+        <div className="flex h-full items-center justify-end border-l border-[#e3e9ed] px-3 text-right font-bold text-emerald-700">
+          {compactNumber(group.fullLoopDelivered)} <span className="ml-1 text-[10px] font-semibold text-slate-400">{group.unit}</span>
+        </div>
+        <div className="flex h-full items-center justify-end border-l border-[#e3e9ed] px-3 text-right font-bold text-rose-700">
+          {compactNumber(group.notFullLoopDelivered)} <span className="ml-1 text-[10px] font-semibold text-slate-400">{group.unit}</span>
         </div>
         <div className="flex h-full items-center truncate border-l border-[#e3e9ed] px-3 text-xs font-medium text-slate-600">{dateText(group.latestPour)}</div>
       </button>
@@ -269,8 +285,18 @@ function CustomerAccordionRow({
                           <div className="mt-0.5 line-clamp-2 text-[11px] font-medium leading-4 text-slate-500" title={order.order?.product_name ?? "-"}>
                             {order.order?.product_name ?? "-"}
                           </div>
-                          <div className="mt-1 truncate text-[10px] font-bold text-sky-700" title={`${order.dealer_name} (${order.dealer_code})`}>
-                            Dealer: {order.dealer_name || "-"}
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <span className="truncate text-[10px] font-bold text-sky-700" title={`${order.dealer_name} (${order.dealer_code})`}>
+                              Dealer: {order.dealer_name || "-"}
+                            </span>
+                            <span className={cn(
+                              "inline-flex items-center rounded-full px-1.5 py-0.2 text-[8px] font-bold ring-1 shrink-0",
+                              order.full_loop 
+                                ? "bg-emerald-50 text-emerald-700 ring-emerald-200" 
+                                : "bg-amber-50 text-amber-700 ring-amber-200"
+                            )}>
+                              {order.full_loop ? "Full Loop" : "ไม่ Full Loop"}
+                            </span>
                           </div>
                           <div className="mt-0.5 truncate text-[10px] font-medium text-slate-400" title={order.order?.order_no ?? "-"}>
                             Order No: {order.order?.order_no ?? "-"}
@@ -347,7 +373,7 @@ function MobileCustomerCard({
           <div className="mt-1 truncate text-[11px] font-bold text-sky-700" title={`${group.dealerName} (${group.dealerCode})`}>
             Dealer: {group.dealerName}
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+          <div className="mt-2 grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-2">
             <div>
               <div className="text-[10px] font-semibold text-slate-400">จำนวนออเดอร์ (ครั้ง)</div>
               <div className="font-bold text-slate-800">{formatNumber(group.orderCount)}</div>
@@ -360,6 +386,18 @@ function MobileCustomerCard({
               <div className="text-[10px] font-semibold text-slate-400">ส่งจริงใน Orders ({group.unit})</div>
               <div className={cn("font-bold", group.totalDelivered > 0 ? "text-slate-800" : "text-slate-400")}>
                 {compactNumber(group.totalDelivered)} <span className="text-[9px] text-slate-400">{group.unit}</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-semibold text-emerald-600">Full Loop ({group.unit})</div>
+              <div className="font-bold text-emerald-700">
+                {compactNumber(group.fullLoopDelivered)} <span className="text-[9px] text-slate-400">{group.unit}</span>
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] font-semibold text-rose-600">ไม่ Full Loop ({group.unit})</div>
+              <div className="font-bold text-rose-700">
+                {compactNumber(group.notFullLoopDelivered)} <span className="text-[9px] text-slate-400">{group.unit}</span>
               </div>
             </div>
           </div>
@@ -381,7 +419,17 @@ function MobileCustomerCard({
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold text-slate-950">{order.order?.product_sku ?? "-"}</div>
                     <div className="mt-0.5 text-[11px] font-medium text-slate-500">{order.order?.product_name ?? "-"}</div>
-                    <div className="mt-0.5 truncate text-[10px] font-medium text-slate-400">Order No: {order.order?.order_no ?? "-"}</div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                      <span className="truncate text-[10px] font-medium text-slate-400">Order No: {order.order?.order_no ?? "-"}</span>
+                      <span className={cn(
+                        "inline-flex items-center rounded-full px-1.5 py-0.2 text-[8px] font-bold ring-1 shrink-0",
+                        order.full_loop 
+                          ? "bg-emerald-50 text-emerald-700 ring-emerald-200" 
+                          : "bg-amber-50 text-amber-700 ring-amber-200"
+                      )}>
+                        {order.full_loop ? "Full Loop" : "ไม่ Full Loop"}
+                      </span>
+                    </div>
                   </div>
                   <StatusBadge status={order.status?.order} />
                 </div>
@@ -424,25 +472,17 @@ function MobileCustomerCard({
   );
 }
 
-export function OrdersPage({
-  dealers,
-  orders,
-  ordersState,
-  orderSearch,
-  selectedDealer,
-  selectedDealerId,
-  setOrderSearch,
-  setSelectedDealerId
-}: {
-  dealers: Dealer[];
-  orders: OrderItem[];
-  ordersState: ApiState;
-  orderSearch: string;
-  selectedDealer?: Dealer;
-  selectedDealerId: number | null;
-  setOrderSearch: (value: string) => void;
-  setSelectedDealerId: (id: number | null) => void;
-}) {
+export function OrdersPage() {
+  const { data, filters } = useDashboardOutletContext();
+  const {
+    dealers,
+    filteredOrders: orders,
+    ordersState,
+    selectedDealer,
+    selectedDealerId,
+    setSelectedDealerId
+  } = data;
+  const { orderSearch, setOrderSearch } = filters;
   const [mobilePage, setMobilePage] = useState(1);
   const [desktopPage, setDesktopPage] = useState(1);
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
@@ -457,6 +497,8 @@ export function OrdersPage({
   const totalOrdered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0);
   const deliveredOrders = dealerOrders.filter((row) => (row.quantity?.delivered ?? 0) > 0);
   const totalDelivered = deliveredOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
+  const fullLoopVolume = dealerOrders.filter((row) => row.full_loop).reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
+  const notFullLoopVolume = dealerOrders.filter((row) => !row.full_loop).reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
   const orderUnit = "คิว";
   const orderListTitle = selectedDealer ? `Order List ของ ${selectedDealer.dealer_name}` : "Order List แยกตาม Dealer";
 
@@ -494,7 +536,8 @@ export function OrdersPage({
         stats={[
           { label: "Scope", value: selectedDealer?.dealer_name ?? "ทุก Dealer" },
           { label: "ออเดอร์", value: formatNumber(dealerOrders.length) },
-          { label: "ส่งจริง", value: `${compactNumber(totalDelivered)} ${orderUnit}` }
+          { label: "Full Loop", value: `${compactNumber(fullLoopVolume)} ${orderUnit}` },
+          { label: "ไม่ Full Loop", value: `${compactNumber(notFullLoopVolume)} ${orderUnit}` }
         ]}
         title="เช็กรายการ Order แบบเร็ว"
       />
@@ -532,6 +575,28 @@ export function OrdersPage({
               value: (
                 <>
                   {compactNumber(totalDelivered)}{" "}
+                  <span className="text-xs font-semibold text-slate-400">{orderUnit}</span>
+                </>
+              )
+            },
+            {
+              detail: "ปริมาณคิวจาก SO ที่เป็น Full Loop (create_form_wangjai = 1)",
+              icon: <PackageCheck size={14} />,
+              label: "Full Loop",
+              value: (
+                <>
+                  {compactNumber(fullLoopVolume)}{" "}
+                  <span className="text-xs font-semibold text-slate-400">{orderUnit}</span>
+                </>
+              )
+            },
+            {
+              detail: "ปริมาณคิวจาก SO ที่ไม่เป็น Full Loop",
+              icon: <PackageCheck size={14} />,
+              label: "ไม่ Full Loop",
+              value: (
+                <>
+                  {compactNumber(notFullLoopVolume)}{" "}
                   <span className="text-xs font-semibold text-slate-400">{orderUnit}</span>
                 </>
               )
@@ -653,12 +718,14 @@ export function OrdersPage({
         </div>
 
         {/* Column header */}
-        <div className="grid grid-cols-[36px_minmax(0,2.4fr)_155px_155px_170px_160px] border-b border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+        <div className="grid grid-cols-[36px_minmax(0,2.4fr)_140px_140px_140px_140px_140px_140px] border-b border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
           <span></span>
           <span className="whitespace-nowrap px-3">ลูกค้า</span>
           <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right">จำนวนออเดอร์ (ครั้ง)</span>
           <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right">สั่งใน Orders ({orderUnit})</span>
           <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right">ส่งจริงใน Orders ({orderUnit})</span>
+          <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right text-emerald-600">Full Loop ({orderUnit})</span>
+          <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right text-rose-600">ไม่ Full Loop ({orderUnit})</span>
           <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3">ข้อมูลล่าสุด ↓</span>
         </div>
 

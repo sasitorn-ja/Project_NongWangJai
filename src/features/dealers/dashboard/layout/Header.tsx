@@ -1,11 +1,13 @@
 import { forwardRef } from "react";
+import { useLocation } from "react-router-dom";
 import { Menu } from "lucide-react";
 import type { AuthSession } from "@/features/auth/types";
 
 import { DateRangeToolbar } from "../filters/DateRangeToolbar";
 import { DropdownSelect } from "../filters/DropdownSelect";
-import type { DatePreset } from "../lib/dates";
 import { type PageKey, getPageTitle } from "../config/pageMeta";
+import { getPageKeyFromPath } from "../config/routes";
+import type { DatePreset } from "../lib/dates";
 
 const DATE_PRESET_OPTIONS: Array<{ label: string; value: DatePreset }> = [
   { label: "ทุกช่วงเวลา", value: "all" },
@@ -24,7 +26,6 @@ type HeaderProps = {
   onLogout: () => void;
   onOpenMobileNav: () => void;
   onToggleCollapsed: () => void;
-  page: PageKey;
   setDateFrom: (value: string) => void;
   setDatePreset: (value: DatePreset) => void;
   setDateTo: (value: string) => void;
@@ -40,12 +41,14 @@ export const Header = forwardRef<HTMLElement, HeaderProps>(function Header({
   onLogout,
   onOpenMobileNav,
   onToggleCollapsed,
-  page,
   setDateFrom,
   setDatePreset,
   setDateTo,
   user
 }, ref) {
+  const location = useLocation();
+  const page: PageKey = getPageKeyFromPath(location.pathname) ?? "dashboard";
+
   return (
     <header ref={ref} className="app-header sticky top-0 z-40 border-b border-[#edf1f5] bg-white dark:border-slate-800 dark:bg-slate-950">
 

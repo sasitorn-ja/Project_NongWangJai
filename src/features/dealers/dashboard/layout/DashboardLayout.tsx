@@ -1,8 +1,10 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import type { AuthSession } from "@/features/auth/types";
 import { cn } from "@/lib/cn";
 import type { PageKey } from "../config/pageMeta";
+import { getPathFromPageKey } from "../config/routes";
 import type { DatePreset } from "../lib/dates";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
@@ -13,11 +15,9 @@ export function DashboardLayout({
   datePreset,
   dateTo,
   onLogout,
-  page,
   setDateFrom,
   setDatePreset,
   setDateTo,
-  setPage,
   user
 }: {
   children: ReactNode;
@@ -25,13 +25,12 @@ export function DashboardLayout({
   datePreset: DatePreset;
   dateTo: string;
   onLogout: () => void;
-  page: PageKey;
   setDateFrom: (value: string) => void;
   setDatePreset: (value: DatePreset) => void;
   setDateTo: (value: string) => void;
-  setPage: (page: PageKey) => void;
   user: AuthSession;
 }) {
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -68,7 +67,7 @@ export function DashboardLayout({
   }, []);
 
   const selectPage = (nextPage: PageKey) => {
-    setPage(nextPage);
+    navigate(getPathFromPageKey(nextPage));
     setMobileNavOpen(false);
   };
 
@@ -98,7 +97,6 @@ export function DashboardLayout({
           onCloseMobileNav={() => setMobileNavOpen(false)}
           onLogout={onLogout}
           onSelectPage={selectPage}
-          page={page}
           user={user}
         />
       </aside>
@@ -113,7 +111,6 @@ export function DashboardLayout({
           onLogout={onLogout}
           onOpenMobileNav={() => setMobileNavOpen(true)}
           onToggleCollapsed={() => setCollapsed((value) => !value)}
-          page={page}
           ref={headerRef}
           setDateFrom={setDateFrom}
           setDatePreset={setDatePreset}

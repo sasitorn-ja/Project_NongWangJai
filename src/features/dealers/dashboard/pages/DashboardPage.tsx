@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
 import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
-import type { PageKey } from "../config/pageMeta";
+import { useDashboardOutletContext } from "../DealerDashboardApp";
 import { parseDateValue } from "../lib/dates";
 import { groupByRegion } from "../lib/regions";
 import type { DataColumn } from "../table/types";
@@ -23,14 +23,15 @@ type DashboardPageProps = {
   apiState: ApiState;
   filteredDealers: Dealer[];
   filteredOrders: OrderItem[];
+  fullLoopVolume: number;
+  notFullLoopVolume: number;
   region: string;
   regionRows: ReturnType<typeof groupByRegion>;
   regions: string[];
   search: string;
-  setPage: (page: PageKey) => void;
+  onSelectDealer: (dealerId: number) => void;
   setRegion: (value: string) => void;
   setSearch: (value: string) => void;
-  setSelectedDealerId: (id: number | null) => void;
   setStatus: (value: string) => void;
   status: string;
   topDealer?: Dealer;
@@ -41,20 +42,22 @@ type DashboardPageProps = {
 // Compact KPI strip — replaces 3 large MetricCards
 function KpiStrip({
   activeRate,
+  fullLoopVolume,
+  notFullLoopVolume,
   topRegion,
   topRegionColor,
   totalGroups,
-  totalVolume,
   unit
 }: {
   activeRate: number;
   activeDealersCount: number;
   totalDealersCount: number;
+  fullLoopVolume: number;
+  notFullLoopVolume: number;
   topRegion: string | null;
   topRegionColor?: string;
   topRegionShare: number;
   totalGroups: number;
-  totalVolume: number;
   unit: string;
 }) {
 	  const items: {
@@ -73,10 +76,23 @@ function KpiStrip({
       textColor: "text-sky-600 dark:text-sky-400",
       valueColor: "text-sky-600 dark:text-sky-300",
       icon: <PackageCheck size={22} />,
-      label: "Total Delivered Volume",
+      label: "Full Loop Volume",
       value: (
         <>
-          {compactNumber(totalVolume)}{" "}
+          {compactNumber(fullLoopVolume)}{" "}
+          <span className="text-sm font-semibold text-slate-400">{unit}</span>
+        </>
+      )
+    },
+    {
+      bgIcon: "bg-indigo-50 dark:bg-indigo-950/30",
+      textColor: "text-indigo-600 dark:text-indigo-400",
+      valueColor: "text-indigo-600 dark:text-indigo-300",
+      icon: <PackageCheck size={22} />,
+      label: "ไม่ Full Loop Volume",
+      value: (
+        <>
+          {compactNumber(notFullLoopVolume)}{" "}
           <span className="text-sm font-semibold text-slate-400">{unit}</span>
         </>
       )
@@ -120,7 +136,7 @@ function KpiStrip({
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
       {items.map((item) => (
         <div key={item.label} style={item.cardStyle} className="metric-card flex min-h-[88px] items-start justify-between gap-2 rounded-xl border border-[#e6edf4] bg-white px-4 py-3 shadow-sm transition-shadow hover:shadow-md dark:border-slate-800 dark:bg-slate-950">
           <div className="min-w-0 flex-1">
@@ -168,7 +184,7 @@ function DeliveryRateCell({ rate }: { rate: number }) {
   );
 }
 
-export function DashboardPage(props: DashboardPageProps) {
+function DashboardPageContent(props: DashboardPageProps) {
   const [chartRange, setChartRange] = useState<ChartRange>("all");
   const [monthFrom, setMonthFrom] = useState("");
   const [monthTo, setMonthTo] = useState("");
@@ -225,11 +241,16 @@ export function DashboardPage(props: DashboardPageProps) {
 
   const topDeliveredRegion = [...regionTotalVolumes.entries()].sort((a, b) => b[1] - a[1])[0];
   const orderTotalsByDealer = useMemo(() => {
-    const map = new Map<number, { delivered: number; ordered: number; unit: string }>();
+    const map = new Map<number, { delivered: number; ordered: number; fullLoopDelivered: number; notFullLoopDelivered: number; unit: string }>();
     props.filteredOrders.forEach((order) => {
-      const current = map.get(order.dealer_id) ?? { delivered: 0, ordered: 0, unit: "คิว" };
+      const current = map.get(order.dealer_id) ?? { delivered: 0, ordered: 0, fullLoopDelivered: 0, notFullLoopDelivered: 0, unit: "คิว" };
       current.ordered += order.quantity?.ordered ?? 0;
       current.delivered += order.quantity?.delivered ?? 0;
+      if (order.full_loop) {
+        current.fullLoopDelivered += order.quantity?.delivered ?? 0;
+      } else {
+        current.notFullLoopDelivered += order.quantity?.delivered ?? 0;
+      }
       map.set(order.dealer_id, current);
     });
     return map;
@@ -242,8 +263,7 @@ export function DashboardPage(props: DashboardPageProps) {
 
   const columns: DataColumn<Dealer>[] = [
     dealerColumn((dealer) => {
-      props.setSelectedDealerId(dealer.dealer_id);
-      props.setPage("details");
+      props.onSelectDealer(dealer.dealer_id);
     }),
     { title: "พื้นที่", dataIndex: "region", key: "region", width: 140, render: regionPill },
     {
@@ -275,6 +295,30 @@ export function DashboardPage(props: DashboardPageProps) {
       render: (_, record) => <span className="font-bold text-slate-950">{formatNumber(orderTotalsByDealer.get(record.dealer_id)?.delivered ?? 0)} <span className="text-[11px] font-medium text-slate-400">คิว</span></span>
     },
     {
+      title: `Full Loop (${volumeUnit})`,
+      key: "fullLoopDelivered",
+      align: "right",
+      width: 150,
+      sortAccessor: (record) => orderTotalsByDealer.get(record.dealer_id)?.fullLoopDelivered ?? 0,
+      render: (_, record) => (
+        <span className="font-semibold text-emerald-700">
+          {formatNumber(orderTotalsByDealer.get(record.dealer_id)?.fullLoopDelivered ?? 0)} <span className="text-[11px] font-medium text-slate-400">คิว</span>
+        </span>
+      )
+    },
+    {
+      title: `ไม่ Full Loop (${volumeUnit})`,
+      key: "notFullLoopDelivered",
+      align: "right",
+      width: 150,
+      sortAccessor: (record) => orderTotalsByDealer.get(record.dealer_id)?.notFullLoopDelivered ?? 0,
+      render: (_, record) => (
+        <span className="font-semibold text-rose-700">
+          {formatNumber(orderTotalsByDealer.get(record.dealer_id)?.notFullLoopDelivered ?? 0)} <span className="text-[11px] font-medium text-slate-400">คิว</span>
+        </span>
+      )
+    },
+    {
       title: "อัตราส่งจริงใน Orders (%)",
       key: "delivery_rate",
       width: 200,
@@ -298,12 +342,13 @@ export function DashboardPage(props: DashboardPageProps) {
       <KpiStrip
         activeDealersCount={activeDealersCount}
         activeRate={props.activeRate}
+        fullLoopVolume={props.fullLoopVolume}
+        notFullLoopVolume={props.notFullLoopVolume}
         topRegion={topDeliveredRegion?.[0] ?? null}
         topRegionColor={topDeliveredRegion?.[0] ? getRegionColor(topDeliveredRegion[0], allRegions) : undefined}
         topRegionShare={deliveredOrderTotal > 0 ? ((topDeliveredRegion?.[1] ?? 0) / deliveredOrderTotal) * 100 : 0}
         totalDealersCount={props.filteredDealers.length}
         totalGroups={props.totalGroups}
-        totalVolume={deliveredOrderTotal}
         unit={volumeUnit}
       />
 
@@ -469,5 +514,33 @@ export function DashboardPage(props: DashboardPageProps) {
         </Card>
       </section>
     </>
+  );
+}
+
+export function DashboardPage() {
+  const { data, filters, onSelectDealer } = useDashboardOutletContext();
+
+  return (
+    <DashboardPageContent
+      activeRate={data.activeRate}
+      apiMessage={data.apiMessage}
+      apiState={data.apiState}
+      filteredDealers={data.filteredDealers}
+      filteredOrders={data.ordersInDateRange}
+      onSelectDealer={onSelectDealer}
+      region={filters.region}
+      regionRows={data.regionRows}
+      regions={data.regions}
+      search={filters.search}
+      setRegion={filters.setRegion}
+      setSearch={filters.setSearch}
+      setStatus={filters.setStatus}
+      status={filters.status}
+      topDealer={data.topDealer}
+      totalGroups={data.totalGroups}
+      fullLoopVolume={data.fullLoopVolume}
+      notFullLoopVolume={data.notFullLoopVolume}
+      totalVolume={data.totalVolume}
+    />
   );
 }

@@ -66,14 +66,17 @@ export function useDealerDashboardData({
     setUsageRows(result.rows);
   }, []);
 
-  const loadOrders = useCallback(async () => {
-    setOrdersState("loading");
-    setOrdersMessage(undefined);
-    const result = await fetchOrders();
-    setOrders(result.rows);
-    setOrdersState(result.state);
-    setOrdersMessage(result.message);
-  }, []);
+  const loadOrders = useCallback(
+    async (dealersToMap: Dealer[], startDate: string, endDate: string) => {
+      setOrdersState("loading");
+      setOrdersMessage(undefined);
+      const result = await fetchOrders({ startDate, endDate, dealers: dealersToMap });
+      setOrders(result.rows);
+      setOrdersState(result.state);
+      setOrdersMessage(result.message);
+    },
+    []
+  );
 
   const loadDealerChildren = useCallback(async (dealer: Dealer) => {
     setGroupsState("loading");
@@ -105,11 +108,20 @@ export function useDealerDashboardData({
     const requestId = window.setTimeout(() => {
       void loadDealers();
       void loadUsage();
-      void loadOrders();
     }, 0);
 
     return () => window.clearTimeout(requestId);
-  }, [loadDealers, loadOrders, loadUsage]);
+  }, [loadDealers, loadUsage]);
+
+  useEffect(() => {
+    if (dealers.length === 0) return undefined;
+
+    const requestId = window.setTimeout(() => {
+      void loadOrders(dealers, dateFrom, dateTo);
+    }, 0);
+
+    return () => window.clearTimeout(requestId);
+  }, [dealers, dateFrom, dateTo, loadOrders]);
 
   useEffect(() => {
     if (!selectedDealerId) {
@@ -228,6 +240,16 @@ export function useDealerDashboardData({
     });
   }, [orderSearch, ordersInDateRange]);
 
+  const fullLoopVolume = useMemo(
+    () => ordersInDateRange.filter((order) => order.full_loop).reduce((sum, order) => sum + (order.quantity?.delivered ?? 0), 0),
+    [ordersInDateRange]
+  );
+
+  const notFullLoopVolume = useMemo(
+    () => ordersInDateRange.filter((order) => !order.full_loop).reduce((sum, order) => sum + (order.quantity?.delivered ?? 0), 0),
+    [ordersInDateRange]
+  );
+
   return {
     activeRate,
     apiMessage,
@@ -239,7 +261,9 @@ export function useDealerDashboardData({
     filteredOrders,
     filteredSites,
     filteredUsageRows,
+    fullLoopVolume,
     groupsState,
+    notFullLoopVolume,
     ordersInDateRange,
     ordersState,
     ordersMessage,

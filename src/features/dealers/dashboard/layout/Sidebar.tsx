@@ -1,7 +1,9 @@
+import { useLocation } from "react-router-dom";
 import { X } from "lucide-react";
 import type { AuthSession } from "@/features/auth/types";
 
 import type { PageKey } from "../config/pageMeta";
+import { getPageKeyFromPath } from "../config/routes";
 import { DASHBOARD_NAV_ITEMS } from "../config/navigation";
 import { SideNavItem } from "../ui/SideNavItem";
 import { WangjaiLogo } from "../ui/WangjaiLogo";
@@ -13,7 +15,6 @@ export function Sidebar({
   onCloseMobileNav,
   onLogout,
   onSelectPage,
-  page,
   user
 }: {
   collapsed: boolean;
@@ -21,9 +22,11 @@ export function Sidebar({
   onCloseMobileNav: () => void;
   onLogout: () => void;
   onSelectPage: (page: PageKey) => void;
-  page: PageKey;
   user: AuthSession;
 }) {
+  const location = useLocation();
+  const currentPage = getPageKeyFromPath(location.pathname);
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-[84px] items-center gap-2.5 px-3">
@@ -50,7 +53,7 @@ export function Sidebar({
               collapsed={collapsed && !mobileNavOpen}
               icon={<Icon size={15} />}
               label={item.label}
-              selected={page === item.key}
+              selected={currentPage === item.key}
               onClick={() => onSelectPage(item.key)}
             />
           );

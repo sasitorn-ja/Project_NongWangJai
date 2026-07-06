@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import productImage from "@/assets/top-products-cpac-truck-transparent.png";
 import { cn } from "@/lib/cn";
 import { compactNumber, formatNumber } from "@/lib/number";
-import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
+import { useDashboardOutletContext } from "../DealerDashboardApp";
 import { dateText, getMonthKey, getMonthLabel, parseDateValue } from "../lib/dates";
 import { FIXED_DIVISIONS } from "../lib/regions";
 import type { DataColumn } from "../table/types";
@@ -63,15 +63,9 @@ function ProductInsightBanner() {
   );
 }
 
-export function TopProductsPage({
-  dealers,
-  orders,
-  ordersState
-}: {
-  dealers: Dealer[];
-  orders: OrderItem[];
-  ordersState: ApiState;
-}) {
+export function TopProductsPage() {
+  const { data } = useDashboardOutletContext();
+  const { dealers, ordersInDateRange: orders, ordersState } = data;
   const [division, setDivision] = useState("all");
   const [province, setProvince] = useState("all");
   const [month, setMonth] = useState("all");
@@ -152,6 +146,8 @@ export function TopProductsPage({
           productCode: string;
           productName: string;
           delivered: number;
+          fullLoopDelivered: number;
+          notFullLoopDelivered: number;
         }
       >
     >((acc, order) => {
@@ -163,12 +159,19 @@ export function TopProductsPage({
           ordered: 0,
           productCode: order.productCode,
           productName: order.productName,
-          delivered: 0
+          delivered: 0,
+          fullLoopDelivered: 0,
+          notFullLoopDelivered: 0
         };
 
       current.orderCount += 1;
       current.ordered += order.ordered;
       current.delivered += order.delivered;
+      if (order.full_loop) {
+        current.fullLoopDelivered += order.delivered;
+      } else {
+        current.notFullLoopDelivered += order.delivered;
+      }
 
       const pourDate = parseDateValue(order.pour_datetime);
       const currentPourDate = parseDateValue(current.latestPour);
@@ -244,6 +247,8 @@ export function TopProductsPage({
   const totalProducts = productRows.length;
   const totalOrders = filteredOrders.length;
   const totalVolume = filteredOrders.reduce((sum, order) => sum + order.delivered, 0);
+  const fullLoopVolume = filteredOrders.filter((order) => order.full_loop).reduce((sum, order) => sum + order.delivered, 0);
+  const notFullLoopVolume = filteredOrders.filter((order) => !order.full_loop).reduce((sum, order) => sum + order.delivered, 0);
   const bestseller = productRows[0];
 
   const productColumns: DataColumn<(typeof productRows)[number]>[] = [
@@ -306,6 +311,30 @@ export function TopProductsPage({
       width: 150,
       render: (value) => (
         <span>
+          {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
+        </span>
+      )
+    },
+    {
+      title: `Full Loop (${volumeUnit})`,
+      key: "fullLoopDelivered",
+      dataIndex: "fullLoopDelivered",
+      align: "right",
+      width: 130,
+      render: (value) => (
+        <span className="text-emerald-700 font-semibold">
+          {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
+        </span>
+      )
+    },
+    {
+      title: `ไม่ Full Loop (${volumeUnit})`,
+      key: "notFullLoopDelivered",
+      dataIndex: "notFullLoopDelivered",
+      align: "right",
+      width: 130,
+      render: (value) => (
+        <span className="text-rose-700 font-semibold">
           {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
         </span>
       )
@@ -438,6 +467,30 @@ export function TopProductsPage({
               value: (
                 <>
                   {compactNumber(totalVolume)}{" "}
+                  <span className="text-xs font-semibold text-slate-400">{volumeUnit}</span>
+                </>
+              )
+            },
+            {
+              accent: "emerald",
+              detail: "ปริมาณ Full Loop ของสินค้าที่ถูกกรอง",
+              icon: <Truck size={18} />,
+              label: "Full Loop",
+              value: (
+                <>
+                  {compactNumber(fullLoopVolume)}{" "}
+                  <span className="text-xs font-semibold text-slate-400">{volumeUnit}</span>
+                </>
+              )
+            },
+            {
+              accent: "amber",
+              detail: "ปริมาณไม่ Full Loop ของสินค้าที่ถูกกรอง",
+              icon: <Truck size={18} />,
+              label: "ไม่ Full Loop",
+              value: (
+                <>
+                  {compactNumber(notFullLoopVolume)}{" "}
                   <span className="text-xs font-semibold text-slate-400">{volumeUnit}</span>
                 </>
               )

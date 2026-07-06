@@ -110,10 +110,12 @@ export type OrderItem = {
     product_name?: string;
   } | null;
   quantity?: {
+    initial_ordered?: number;
     ordered?: number;
     delivered?: number;
     unit?: string;
   } | null;
+  full_loop?: boolean;
   pour_datetime: string | null;
   status?: {
     order?: string;

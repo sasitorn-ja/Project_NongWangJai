@@ -6,7 +6,7 @@ import type {
   DealerUsage,
   OrderItem
 } from "@/features/dealers/types";
-import type { DealerApiResponse } from "./responses";
+import type { DealerApiResponse, SoOrderItem } from "./responses";
 
 const DEALER_CREATED_AT_CUTOFF = "2026-03-15";
 
@@ -26,7 +26,7 @@ export function toNumber(value: unknown): number {
   return 0;
 }
 
-export function normalizeDealer(row: Dealer): Dealer {
+export function normalizeDealer(row: Dealer & { api_created_at?: string | null; api_updated_at?: string | null }): Dealer {
   return {
     ...row,
     dealer_id: toNumber(row.dealer_id),
@@ -35,11 +35,13 @@ export function normalizeDealer(row: Dealer): Dealer {
     group_count: toNumber(row.group_count),
     volume: toNumber(row.volume),
     last_active_days: row.last_active_days == null ? null : toNumber(row.last_active_days),
-    unit: "คิว"
+    unit: "คิว",
+    created_at: row.created_at ?? row.api_created_at ?? null,
+    updated_at: row.updated_at ?? row.api_updated_at ?? null
   };
 }
 
-export function normalizeGroup(row: DealerGroup): DealerGroup {
+export function normalizeGroup(row: DealerGroup & { api_created_at?: string | null; api_updated_at?: string | null }): DealerGroup {
   return {
     ...row,
     group_id: toNumber(row.group_id),
@@ -47,11 +49,13 @@ export function normalizeGroup(row: DealerGroup): DealerGroup {
     booked_volume: toNumber(row.booked_volume),
     price_check_count: toNumber(row.price_check_count),
     booking_count: toNumber(row.booking_count),
-    unit: "คิว"
+    unit: "คิว",
+    created_at: row.created_at ?? row.api_created_at ?? null,
+    updated_at: row.updated_at ?? row.api_updated_at ?? null
   };
 }
 
-export function normalizeUsage(row: DealerUsage): DealerUsage {
+export function normalizeUsage(row: DealerUsage & { api_updated_at?: string | null }): DealerUsage {
   return {
     ...row,
     dealer_id: toNumber(row.dealer_id),
@@ -59,21 +63,23 @@ export function normalizeUsage(row: DealerUsage): DealerUsage {
     province_id: toNumber(row.province_id),
     price_concrete_count: toNumber(row.price_concrete_count),
     booking_create_count: toNumber(row.booking_create_count),
-    customer_create_count: toNumber(row.customer_create_count)
+    customer_create_count: toNumber(row.customer_create_count),
+    updated_at: row.updated_at ?? row.api_updated_at ?? null
   };
 }
 
-export function normalizeCustomer(row: CustomerUsage): CustomerUsage {
+export function normalizeCustomer(row: CustomerUsage & { api_updated_at?: string | null }): CustomerUsage {
   return {
     ...row,
     dealer_id: row.dealer_id == null ? undefined : toNumber(row.dealer_id),
     customer_id: toNumber(row.customer_id),
     price_concrete_count: toNumber(row.price_concrete_count),
-    booking_create_count: toNumber(row.booking_create_count)
+    booking_create_count: toNumber(row.booking_create_count),
+    updated_at: row.updated_at ?? row.api_updated_at ?? null
   };
 }
 
-export function normalizeSite(row: DealerSite): DealerSite {
+export function normalizeSite(row: DealerSite & { api_created_at?: string | null; api_updated_at?: string | null }): DealerSite {
   return {
     ...row,
     id: row.id == null ? undefined : toNumber(row.id),
@@ -83,7 +89,50 @@ export function normalizeSite(row: DealerSite): DealerSite {
     region_id: row.region_id == null ? undefined : toNumber(row.region_id),
     total_ordered: toNumber(row.total_ordered),
     total_delivered: toNumber(row.total_delivered),
-    unit: "คิว"
+    unit: "คิว",
+    created_at: row.created_at ?? row.api_created_at ?? null,
+    updated_at: row.updated_at ?? row.api_updated_at ?? null
+  };
+}
+
+export function normalizeSoOrder(row: SoOrderItem, dealerMap: Map<string, Dealer>): OrderItem {
+  const soldToCode = String(row.SoldToCode ?? "");
+  const dealer = dealerMap.get(soldToCode);
+  const initialQuantity = toNumber(row.InitialOrderQuantity);
+  const quantity = toNumber(row.CurrentOrderQuantity);
+  const currentStatus = String(row.CurrentStatus ?? "").trim();
+  const deliveredQuantity = currentStatus.toUpperCase() === "E" ? quantity : 0;
+
+  return {
+    dealer_id: dealer?.dealer_id ?? 0,
+    dealer_code: dealer?.dealer_code ?? soldToCode,
+    dealer_name: String(row.SoldToName ?? dealer?.dealer_name ?? ""),
+    customer: {
+      code: String(row.SubSoldToCode ?? row.ShipToCode ?? ""),
+      name: String(row.SubSoldToName ?? row.ShipToName ?? "")
+    },
+    site: {
+      site_code: String(row.ShipToCode ?? ""),
+      site_name: String(row.ShipToName ?? "")
+    },
+    order: {
+      order_no: String(row.so_id ?? ""),
+      product_sku: String(row.MaterialCode ?? ""),
+      product_name: String(row.MaterialDescription ?? "")
+    },
+    pour_datetime: row.DeliveryDateTime ?? row.DocumentDate ?? null,
+    quantity: {
+      initial_ordered: initialQuantity,
+      ordered: quantity,
+      delivered: deliveredQuantity,
+      unit: "คิว"
+    },
+    status: {
+      order: currentStatus
+    },
+    created_at: row.created_at ?? null,
+    updated_at: row.modify_at ?? null,
+    full_loop: row.create_form_wangjai === 1
   };
 }
 
@@ -110,11 +159,12 @@ export function normalizeOrder(row: OrderItem): OrderItem {
     quantity: row.quantity
       ? {
           ...row.quantity,
+          initial_ordered: toNumber(row.quantity.initial_ordered),
           ordered: toNumber(row.quantity.ordered),
           delivered: toNumber(row.quantity.delivered),
           unit: "คิว"
         }
-      : { ordered: 0, delivered: 0, unit: "คิว" },
+      : { initial_ordered: 0, ordered: 0, delivered: 0, unit: "คิว" },
     status: row.status
       ? {
           ...row.status

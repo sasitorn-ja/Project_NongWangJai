@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { compactNumber, formatNumber } from "@/lib/number";
 import { cn } from "@/lib/cn";
 import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUsage, OrderItem } from "@/features/dealers/types";
+import { useDashboardOutletContext } from "../DealerDashboardApp";
 import { dateText, parseDateValue } from "../lib/dates";
 import { getRegionColor } from "../lib/regions";
 import { getDealerStatusKey, getOrderStatusKey } from "../lib/status";
@@ -54,6 +55,12 @@ function formatPercent(value: number) {
   }).format(Number.isFinite(value) ? value : 0)}%`;
 }
 
+function formatExactVolume(value: number) {
+  return new Intl.NumberFormat("th-TH", {
+    maximumFractionDigits: 4
+  }).format(Number.isFinite(value) ? value : 0);
+}
+
 type DetailsPageProps = {
   customers: CustomerUsage[];
   customersState: ApiState;
@@ -81,18 +88,24 @@ const STATUS_META: Record<"active" | "idle" | "new", { label: string; dot: strin
 function AllDealersStatStrip({
   customerCount,
   delivered,
+  fullLoopVolume,
   groups,
+  notFullLoopVolume,
   priceChecks,
   unit
 }: {
   customerCount: number;
   delivered: number;
+  fullLoopVolume: number;
   groups: number;
+  notFullLoopVolume: number;
   priceChecks: number;
   unit: string;
 }) {
   const stats = [
     { label: "ส่งจริงรวม", value: compactNumber(delivered), suffix: unit },
+    { label: "Full Loop", value: compactNumber(fullLoopVolume), suffix: unit },
+    { label: "ไม่ Full Loop", value: compactNumber(notFullLoopVolume), suffix: unit },
     { label: "จำนวนกลุ่ม", value: formatNumber(groups) },
     { label: "เช็คราคา", value: formatNumber(priceChecks) },
     { label: "ลูกค้า", value: formatNumber(customerCount) }
@@ -121,6 +134,8 @@ function DealerProfileHero({
   orderCount,
   delivered,
   ordered,
+  fullLoopVolume,
+  notFullLoopVolume,
   unit
 }: {
   dealer: Dealer;
@@ -128,6 +143,8 @@ function DealerProfileHero({
   orderCount: number;
   delivered: number;
   ordered: number;
+  fullLoopVolume: number;
+  notFullLoopVolume: number;
   unit: string;
 }) {
   const statusKey = getDealerStatusKey(dealer.status);
@@ -141,7 +158,7 @@ function DealerProfileHero({
 
   return (
     <section className="overflow-hidden rounded-lg border border-sky-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
-      <div className="grid gap-3 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_132px_1px_160px_160px] xl:items-center">
+      <div className="grid gap-3 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_132px_1px_120px_120px_120px_120px] xl:items-center">
         <div className="flex items-start gap-3">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-300">
             <Store size={28} strokeWidth={2.2} />
@@ -205,7 +222,7 @@ function DealerProfileHero({
         <div>
           <div className="text-[12px] font-medium text-slate-500">Ordered Volume</div>
           <div className="mt-1.5 text-[24px] font-bold leading-none text-slate-950">
-            {compactNumber(ordered)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
+            {formatExactVolume(ordered)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
           </div>
           <div className="mt-1.5 text-[11px] font-medium text-slate-500">จำนวน {formatNumber(orderCount)} orders</div>
         </div>
@@ -213,9 +230,25 @@ function DealerProfileHero({
         <div>
           <div className="text-[12px] font-medium text-slate-500">Delivered Volume</div>
           <div className="mt-1.5 text-[24px] font-bold leading-none text-slate-950">
-            {compactNumber(delivered)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
+            {formatExactVolume(delivered)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
           </div>
           <div className="mt-1.5 text-[11px] font-medium text-slate-500">จาก {formatNumber(orderCount)} orders</div>
+        </div>
+
+        <div>
+          <div className="text-[12px] font-medium text-emerald-600">Full Loop Volume</div>
+          <div className="mt-1.5 text-[24px] font-bold leading-none text-emerald-700">
+            {formatExactVolume(fullLoopVolume)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
+          </div>
+          <div className="mt-1.5 text-[11px] font-medium text-slate-500">จาก orders ที่ส่งจริง</div>
+        </div>
+
+        <div>
+          <div className="text-[12px] font-medium text-rose-600">ไม่ Full Loop Volume</div>
+          <div className="mt-1.5 text-[24px] font-bold leading-none text-rose-700">
+            {formatExactVolume(notFullLoopVolume)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
+          </div>
+          <div className="mt-1.5 text-[11px] font-medium text-slate-500">จาก orders ที่ส่งจริง</div>
         </div>
       </div>
     </section>
@@ -811,7 +844,7 @@ function TopCustomersList({
   );
 }
 
-export function DetailsPage(props: DetailsPageProps) {
+function DetailsPageContent(props: DetailsPageProps) {
   const selectedUsage = props.usageRows.find((row) => row.dealer_id === props.selectedDealerId);
   const usageSummary = useMemo(() => {
     if (props.selectedDealerId != null) {
@@ -978,6 +1011,8 @@ export function DetailsPage(props: DetailsPageProps) {
           siteCode: string;
           siteName: string;
           source: string;
+          fullLoopDelivered: number;
+          notFullLoopDelivered: number;
         }
       >
     >((acc, row) => {
@@ -996,11 +1031,18 @@ export function DetailsPage(props: DetailsPageProps) {
           ordered: 0,
           siteCode,
           siteName,
-          source: "Order API"
+          source: "Order API",
+          fullLoopDelivered: 0,
+          notFullLoopDelivered: 0
         };
 
       current.ordered += row.quantity?.ordered ?? 0;
       current.delivered += row.quantity?.delivered ?? 0;
+      if (row.full_loop) {
+        current.fullLoopDelivered += row.quantity?.delivered ?? 0;
+      } else {
+        current.notFullLoopDelivered += row.quantity?.delivered ?? 0;
+      }
 
       const pourDate = parseDateValue(row.pour_datetime);
       const currentPourDate = parseDateValue(current.latestPour);
@@ -1041,7 +1083,9 @@ export function DetailsPage(props: DetailsPageProps) {
           ordered: site.total_ordered,
           siteCode,
           siteName,
-          source: "Sites API"
+          source: "Sites API",
+          fullLoopDelivered: existing?.fullLoopDelivered ?? 0,
+          notFullLoopDelivered: existing?.notFullLoopDelivered ?? 0
         });
       });
 
@@ -1054,6 +1098,8 @@ export function DetailsPage(props: DetailsPageProps) {
   const orderUnit = "คิว";
   const areaUnit = "คิว";
   const totalAreaDelivered = areaRows.reduce((sum, row) => sum + row.delivered, 0);
+  const fullLoopVolume = props.orders.filter((order) => order.full_loop).reduce((sum, order) => sum + (order.quantity?.delivered ?? 0), 0);
+  const notFullLoopVolume = props.orders.filter((order) => !order.full_loop).reduce((sum, order) => sum + (order.quantity?.delivered ?? 0), 0);
   const totalGroups = isAllDealers ? props.filteredDealers.reduce((sum, dealer) => sum + dealer.group_count, 0) : props.groups.length;
   const topDealerVolume = useMemo(() => {
     const totals = new Map<number, number>();
@@ -1068,6 +1114,8 @@ export function DetailsPage(props: DetailsPageProps) {
   // Single-dealer order totals (used for the profile hero + KPI grid)
   const dealerOrderedTotal = useMemo(() => dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0), [dealerOrders]);
   const dealerDeliveredTotal = useMemo(() => dealerOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0), [dealerOrders]);
+  const dealerFullLoopVolume = useMemo(() => dealerOrders.filter((order) => order.full_loop).reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0), [dealerOrders]);
+  const dealerNotFullLoopVolume = useMemo(() => dealerOrders.filter((order) => !order.full_loop).reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0), [dealerOrders]);
   const dealerFulfillmentRate = dealerOrderedTotal > 0 ? (dealerDeliveredTotal / dealerOrderedTotal) * 100 : 0;
 
   const siteColumns: DataColumn<(typeof siteRows)[number]>[] = [
@@ -1075,6 +1123,8 @@ export function DetailsPage(props: DetailsPageProps) {
     { title: "ไซต์", key: "site", sortAccessor: (record) => record.siteName, width: 260, render: (_, record) => <div className="min-w-0"><div className="truncate text-[13px] font-semibold text-slate-950">รหัส Site: {record.siteCode}</div><div className="line-clamp-2 text-[11px] font-medium leading-4 text-slate-500" title={record.siteName}>{record.siteName}</div><div className="truncate text-[11px] font-bold text-sky-700" title={record.dealerName}>Dealer: {record.dealerName}</div></div> },
     { title: `จำนวนที่สั่ง (${areaUnit})`, key: "ordered", dataIndex: "ordered", align: "right", width: 132, render: formatNumber },
     { title: `จำนวนส่งจริง (${areaUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
+    { title: `Full Loop (${areaUnit})`, key: "fullLoopDelivered", dataIndex: "fullLoopDelivered", align: "right", width: 120, render: (value) => <span className="font-semibold text-emerald-700">{formatNumber(Number(value ?? 0))}</span> },
+    { title: `ไม่ Full Loop (${areaUnit})`, key: "notFullLoopDelivered", dataIndex: "notFullLoopDelivered", align: "right", width: 120, render: (value) => <span className="font-semibold text-rose-700">{formatNumber(Number(value ?? 0))}</span> },
     { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
   ];
 
@@ -1107,6 +1157,8 @@ export function DetailsPage(props: DetailsPageProps) {
             stats={[
               { label: "Scope", value: "ทุก Dealer" },
               { label: "ส่งจริง", value: `${compactNumber(totalAreaDelivered)} ${areaUnit}` },
+              { label: "Full Loop", value: `${compactNumber(fullLoopVolume)} ${areaUnit}` },
+              { label: "ไม่ Full Loop", value: `${compactNumber(notFullLoopVolume)} ${areaUnit}` },
               { label: "Groups", value: formatNumber(totalGroups) }
             ]}
             title="เลือกมุมวิเคราะห์จากภาพรวม"
@@ -1115,7 +1167,9 @@ export function DetailsPage(props: DetailsPageProps) {
           <AllDealersStatStrip
             customerCount={orderCustomerRows.length || usageSummary.customerCreateCount}
             delivered={totalAreaDelivered}
+            fullLoopVolume={fullLoopVolume}
             groups={totalGroups}
+            notFullLoopVolume={notFullLoopVolume}
             priceChecks={usageSummary.priceConcreteCount}
             unit={areaUnit}
           />
@@ -1213,6 +1267,8 @@ export function DetailsPage(props: DetailsPageProps) {
               orderCount={dealerOrders.length}
               ordered={dealerOrderedTotal}
               fulfillmentRate={dealerFulfillmentRate}
+              fullLoopVolume={dealerFullLoopVolume}
+              notFullLoopVolume={dealerNotFullLoopVolume}
               unit={orderUnit}
             />
           ) : null}
@@ -1321,5 +1377,27 @@ export function DetailsPage(props: DetailsPageProps) {
         ]}
       />
     </>
+  );
+}
+export function DetailsPage() {
+  const { data } = useDashboardOutletContext();
+
+  return (
+    <DetailsPageContent
+      customers={data.filteredCustomers}
+      customersState={data.customersState}
+      dealers={data.dealers}
+      filteredDealers={data.filteredDealers}
+      groups={data.filteredGroups}
+      groupsState={data.groupsState}
+      orders={data.ordersInDateRange}
+      ordersState={data.ordersState}
+      selectedDealer={data.selectedDealer}
+      selectedDealerId={data.selectedDealerId}
+      setSelectedDealerId={data.setSelectedDealerId}
+      sites={data.filteredSites}
+      sitesState={data.sitesState}
+      usageRows={data.filteredUsageRows}
+    />
   );
 }

@@ -1,0 +1,24 @@
+- generic [ref=e3]:
+  - img
+  - generic [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - img "Nong Wang Jai" [ref=e10]
+        - text: Nong Wang Jai
+      - generic [ref=e11]:
+        - heading "Welcome back" [level=1] [ref=e12]
+        - paragraph [ref=e13]: เข้าสู่ระบบเพื่อใช้งานระบบ NONG WANG JAI
+      - img [ref=e17]
+      - link "SCG พนักงาน SCG เข้าสู่ระบบ" [ref=e22] [cursor=pointer]:
+        - /url: /nong-wang-jai/api/auth/login?returnTo=%2Fnong-wang-jai%2F
+        - generic [ref=e23]:
+          - img "SCG" [ref=e25]
+          - generic [ref=e26]: พนักงาน SCG เข้าสู่ระบบ
+        - img [ref=e27]
+      - generic [ref=e30]:
+        - img [ref=e32]
+        - generic [ref=e36]:
+          - paragraph [ref=e37]: ระบบล็อกอินแบบ Single Sign-On (SSO)
+          - paragraph [ref=e38]: ปลอดภัยด้วยมาตรฐานความปลอดภัยระดับองค์กร
+    - complementary [ref=e39]:
+      - img "Nong Wang Jai mascot" [ref=e48]

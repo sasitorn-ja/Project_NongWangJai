@@ -1,4 +1,4 @@
-import { proxyToCpac } from "../../_shared/cpac-proxy.js";
+import { findGroupsByDealerId } from "../../_shared/repositories/dealerGroups.js";
 
 function resolveDealerId(request: Request) {
   const url = new URL(request.url);
@@ -6,5 +6,31 @@ function resolveDealerId(request: Request) {
 }
 
 export async function GET(request: Request) {
-  return proxyToCpac(request, `/api/ai-wangjai/dealers/${resolveDealerId(request)}/groups`);
+  try {
+    const dealerId = Number(resolveDealerId(request));
+
+    if (!Number.isFinite(dealerId)) {
+      return Response.json(
+        { status: false, groups: [], message: "Invalid dealer id" },
+        { status: 400 }
+      );
+    }
+
+    const rows = await findGroupsByDealerId(dealerId);
+
+    return Response.json({
+      status: true,
+      groups: rows,
+      message: "success"
+    });
+  } catch (error) {
+    console.error("Failed to load dealer groups from database", { error });
+
+    const message = error instanceof Error ? error.message : "Unknown database error";
+
+    return Response.json(
+      { status: false, groups: [], message },
+      { status: 500 }
+    );
+  }
 }
