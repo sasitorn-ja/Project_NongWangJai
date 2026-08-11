@@ -2,6 +2,11 @@ import "dotenv/config";
 import process from "node:process";
 import mysql from "mysql2/promise";
 
+// Records already present before this point are the verified baseline.  The
+// CPAC API must be able to add new records, but it must never overwrite that
+// baseline during a later sync.
+const DEFAULT_SYNC_LOCK_BEFORE = "2026-07-24 09:44:00";
+
 function cleanEnv(value?: string) {
   if (!value) return "";
   const trimmed = value.trim();
@@ -15,6 +20,16 @@ function cleanEnv(value?: string) {
 
   return trimmed.replace(/\\\$/g, "$");
 }
+
+function getSyncLockBefore(): string {
+  const value = cleanEnv(process.env.SYNC_LOCK_BEFORE) || DEFAULT_SYNC_LOCK_BEFORE;
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) {
+    throw new Error("SYNC_LOCK_BEFORE must use MySQL DATETIME format: YYYY-MM-DD HH:MM:SS");
+  }
+  return value;
+}
+
+const SYNC_LOCK_BEFORE = getSyncLockBefore();
 
 function getEnv(name: string): string {
   const value = cleanEnv(process.env[name]);
@@ -105,6 +120,15 @@ function toStringOrNull(value: unknown): string | null {
   return String(value);
 }
 
+function lockExistingBeforeCutoff(timestampColumn: "row_created_at" | "created_at", columns: string[]): string {
+  return columns
+    .map(
+      (column) =>
+        `${column} = IF(${timestampColumn} < '${SYNC_LOCK_BEFORE}', ${column}, VALUES(${column}))`
+    )
+    .join(",\n        ");
+}
+
 // ---------------------------------------------------------------------------
 // Dealers
 // ---------------------------------------------------------------------------
@@ -122,20 +146,11 @@ async function syncDealers(pool: mysql.Pool) {
         last_active_days, api_created_at, api_updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
-        dealer_code = VALUES(dealer_code),
-        dealer_name = VALUES(dealer_name),
-        status = VALUES(status),
-        region_id = VALUES(region_id),
-        region = VALUES(region),
-        province_id = VALUES(province_id),
-        province = VALUES(province),
-        group_count = VALUES(group_count),
-        volume = VALUES(volume),
-        unit = VALUES(unit),
-        last_active_at = VALUES(last_active_at),
-        last_active_days = VALUES(last_active_days),
-        api_created_at = VALUES(api_created_at),
-        api_updated_at = VALUES(api_updated_at)
+        ${lockExistingBeforeCutoff("row_created_at", [
+          "dealer_code", "dealer_name", "status", "region_id", "region",
+          "province_id", "province", "group_count", "volume", "unit",
+          "last_active_at", "last_active_days", "api_created_at", "api_updated_at"
+        ])}
     `;
 
     for (const row of rows) {
@@ -182,16 +197,11 @@ async function syncDealerUsage(pool: mysql.Pool) {
         customer_create_count, api_updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
-        dealer_code = VALUES(dealer_code),
-        dealer_name = VALUES(dealer_name),
-        region_id = VALUES(region_id),
-        region = VALUES(region),
-        province_id = VALUES(province_id),
-        province = VALUES(province),
-        price_concrete_count = VALUES(price_concrete_count),
-        booking_create_count = VALUES(booking_create_count),
-        customer_create_count = VALUES(customer_create_count),
-        api_updated_at = VALUES(api_updated_at)
+        ${lockExistingBeforeCutoff("row_created_at", [
+          "dealer_code", "dealer_name", "region_id", "region", "province_id",
+          "province", "price_concrete_count", "booking_create_count",
+          "customer_create_count", "api_updated_at"
+        ])}
     `;
 
     for (const row of rows) {
@@ -234,16 +244,10 @@ async function syncDealerGroups(pool: mysql.Pool) {
         unit, price_check_count, booking_count, status, api_created_at, api_updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
-        group_name = VALUES(group_name),
-        group_type = VALUES(group_type),
-        delivered_volume = VALUES(delivered_volume),
-        booked_volume = VALUES(booked_volume),
-        unit = VALUES(unit),
-        price_check_count = VALUES(price_check_count),
-        booking_count = VALUES(booking_count),
-        status = VALUES(status),
-        api_created_at = VALUES(api_created_at),
-        api_updated_at = VALUES(api_updated_at)
+        ${lockExistingBeforeCutoff("row_created_at", [
+          "group_name", "group_type", "delivered_volume", "booked_volume", "unit",
+          "price_check_count", "booking_count", "status", "api_created_at", "api_updated_at"
+        ])}
     `;
 
     const memberSql = `
@@ -307,26 +311,12 @@ async function syncDealerSites(pool: mysql.Pool) {
         unit, last_pour_datetime, status, api_created_at, api_updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
-        dealer_id = VALUES(dealer_id),
-        dealer_code = VALUES(dealer_code),
-        dealer_name = VALUES(dealer_name),
-        site_code = VALUES(site_code),
-        site_name = VALUES(site_name),
-        province_id = VALUES(province_id),
-        province_bluenet_id = VALUES(province_bluenet_id),
-        province_name = VALUES(province_name),
-        region_id = VALUES(region_id),
-        region = VALUES(region),
-        customer_id = VALUES(customer_id),
-        customer_code = VALUES(customer_code),
-        customer_name = VALUES(customer_name),
-        total_ordered = VALUES(total_ordered),
-        total_delivered = VALUES(total_delivered),
-        unit = VALUES(unit),
-        last_pour_datetime = VALUES(last_pour_datetime),
-        status = VALUES(status),
-        api_created_at = VALUES(api_created_at),
-        api_updated_at = VALUES(api_updated_at)
+        ${lockExistingBeforeCutoff("row_created_at", [
+          "dealer_id", "dealer_code", "dealer_name", "site_code", "site_name",
+          "province_id", "province_bluenet_id", "province_name", "region_id", "region",
+          "customer_id", "customer_code", "customer_name", "total_ordered", "total_delivered",
+          "unit", "last_pour_datetime", "status", "api_created_at", "api_updated_at"
+        ])}
     `;
 
     let total = 0;
@@ -390,13 +380,10 @@ async function syncCustomerUsage(pool: mysql.Pool) {
         customer_name, price_concrete_count, booking_create_count, api_updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
-        dealer_code = VALUES(dealer_code),
-        dealer_name = VALUES(dealer_name),
-        customer_code = VALUES(customer_code),
-        customer_name = VALUES(customer_name),
-        price_concrete_count = VALUES(price_concrete_count),
-        booking_create_count = VALUES(booking_create_count),
-        api_updated_at = VALUES(api_updated_at)
+        ${lockExistingBeforeCutoff("row_created_at", [
+          "dealer_code", "dealer_name", "customer_code", "customer_name",
+          "price_concrete_count", "booking_create_count", "api_updated_at"
+        ])}
     `;
 
     let total = 0;
@@ -467,59 +454,21 @@ async function syncSoOrders(pool: mysql.Pool) {
         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
       ON DUPLICATE KEY UPDATE
-        project_id = VALUES(project_id),
-        qo_id = VALUES(qo_id),
-        truck_queue_id = VALUES(truck_queue_id),
-        sale_order_id = VALUES(sale_order_id),
-        temp_sale_order_id = VALUES(temp_sale_order_id),
-        sale_order_num = VALUES(sale_order_num),
-        dispatch_code = VALUES(dispatch_code),
-        ship_to_comp_code = VALUES(ship_to_comp_code),
-        ship_to_code = VALUES(ship_to_code),
-        ship_to_name = VALUES(ship_to_name),
-        ship_to_lat = VALUES(ship_to_lat),
-        ship_to_lng = VALUES(ship_to_lng),
-        sold_to_code = VALUES(sold_to_code),
-        sold_to_name = VALUES(sold_to_name),
-        sold_to_mobile = VALUES(sold_to_mobile),
-        sold_to_telephone = VALUES(sold_to_telephone),
-        sold_to_sale_type = VALUES(sold_to_sale_type),
-        sub_sold_to_code = VALUES(sub_sold_to_code),
-        sub_sold_to_name = VALUES(sub_sold_to_name),
-        sub_sold_to_mobile = VALUES(sub_sold_to_mobile),
-        sub_sold_to_telephone = VALUES(sub_sold_to_telephone),
-        initial_order_quantity = VALUES(initial_order_quantity),
-        current_order_quantity = VALUES(current_order_quantity),
-        approve_order_quantity = VALUES(approve_order_quantity),
-        current_status = VALUES(current_status),
-        book_by_name = VALUES(book_by_name),
-        book_by_phone_number = VALUES(book_by_phone_number),
-        document_date = VALUES(document_date),
-        delivery_date_time = VALUES(delivery_date_time),
-        truck_type = VALUES(truck_type),
-        truck_service = VALUES(truck_service),
-        unload_id = VALUES(unload_id),
-        unload_method = VALUES(unload_method),
-        unload_time_duration_per_truck = VALUES(unload_time_duration_per_truck),
-        memo = VALUES(memo),
-        internal_note = VALUES(internal_note),
-        transport_rate_quantity = VALUES(transport_rate_quantity),
-        transport_rate_time = VALUES(transport_rate_time),
-        request_qc_sampling_concrete = VALUES(request_qc_sampling_concrete),
-        request_qc_service_on_site = VALUES(request_qc_service_on_site),
-        qc_person_number = VALUES(qc_person_number),
-        franchisee_code = VALUES(franchisee_code),
-        material_code = VALUES(material_code),
-        material_description = VALUES(material_description),
-        comp_group = VALUES(comp_group),
-        sale_order_type = VALUES(sale_order_type),
-        structure_id = VALUES(structure_id),
-        structure_name = VALUES(structure_name),
-        groupline_id = VALUES(groupline_id),
-        create_form_wangjai = VALUES(create_form_wangjai),
-        create_form = VALUES(create_form),
-        api_created_at = VALUES(api_created_at),
-        api_modified_at = VALUES(api_modified_at)
+        ${lockExistingBeforeCutoff("row_created_at", [
+          "project_id", "qo_id", "truck_queue_id", "sale_order_id", "temp_sale_order_id",
+          "sale_order_num", "dispatch_code", "ship_to_comp_code", "ship_to_code", "ship_to_name",
+          "ship_to_lat", "ship_to_lng", "sold_to_code", "sold_to_name", "sold_to_mobile",
+          "sold_to_telephone", "sold_to_sale_type", "sub_sold_to_code", "sub_sold_to_name",
+          "sub_sold_to_mobile", "sub_sold_to_telephone", "initial_order_quantity",
+          "current_order_quantity", "approve_order_quantity", "current_status", "book_by_name",
+          "book_by_phone_number", "document_date", "delivery_date_time", "truck_type",
+          "truck_service", "unload_id", "unload_method", "unload_time_duration_per_truck", "memo",
+          "internal_note", "transport_rate_quantity", "transport_rate_time",
+          "request_qc_sampling_concrete", "request_qc_service_on_site", "qc_person_number",
+          "franchisee_code", "material_code", "material_description", "comp_group", "sale_order_type",
+          "structure_id", "structure_name", "groupline_id", "create_form_wangjai", "create_form",
+          "api_created_at", "api_modified_at"
+        ])}
     `;
 
     for (const row of rows) {
@@ -628,14 +577,16 @@ async function syncRegionsAndProvinces(pool: mysql.Pool) {
 
     for (const [regionId, regionName] of regionMap) {
       await connection.execute(
-        "INSERT INTO regions (region_id, region_name) VALUES (?, ?) ON DUPLICATE KEY UPDATE region_name = VALUES(region_name)",
+        `INSERT INTO regions (region_id, region_name) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE ${lockExistingBeforeCutoff("created_at", ["region_name"])}`,
         [regionId, regionName]
       );
     }
 
     for (const province of provinceMap.values()) {
       await connection.execute(
-        "INSERT INTO provinces (province_id, province_bluenet_id, province_name, region_id) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE province_bluenet_id = VALUES(province_bluenet_id), province_name = VALUES(province_name), region_id = VALUES(region_id)",
+        `INSERT INTO provinces (province_id, province_bluenet_id, province_name, region_id) VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE ${lockExistingBeforeCutoff("created_at", ["province_bluenet_id", "province_name", "region_id"])}`,
         [province.id, province.bluenetId, province.name, province.regionId]
       );
     }
@@ -653,6 +604,7 @@ async function main() {
   const pool = await createPool();
 
   try {
+    console.log(`Preserving existing records created before ${SYNC_LOCK_BEFORE}.`);
     await syncDealers(pool);
     await syncDealerUsage(pool);
     await syncDealerGroups(pool);

@@ -67,6 +67,12 @@ npm run start
 
 `npm run build` creates `dist/` and `dist-server/`. Those folders are build output, are ignored by git, and can be deleted safely.
 
+## CPAC Sync Data Baseline
+
+`npm run sync:db` can insert records returned by CPAC, but it preserves every existing record whose local `row_created_at` is before `2026-07-24 09:44:00` (reference tables use `created_at`). This protects the verified data baseline from being overwritten by a later CPAC API response. The cutoff defaults to that timestamp and is configured as `SYNC_LOCK_BEFORE` in `.env.example`.
+
+The `Sync CPAC Data` GitHub Actions workflow runs every hour at minute 5 (UTC) on the production self-hosted runner. It uses `DEPLOY_ENV_FILE`, shares no environment file with the app, and prevents overlapping syncs. It can also be run manually from the Actions tab.
+
 ## RMC SSO
 
 This project now uses the server-side OIDC Authorization Code Flow with PKCE described in [nong-wang-jai-sso-handoff.md](/Users/toonchaianan/git/Project_NongWangJai/nong-wang-jai-sso-handoff.md:1).
