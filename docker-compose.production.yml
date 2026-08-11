@@ -17,6 +17,29 @@ services:
     networks:
       - rmc-portal-network
 
+  nong-wang-jai-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nong-wang-jai-sync
+    restart: unless-stopped
+    env_file:
+      - /opt/rmc-deploy/nong-wang-jai/env/production.env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "rmc-sso.cipcloud.net:192.168.1.48"
+    networks:
+      - rmc-portal-network
+    command:
+      - sh
+      - -c
+      - |
+        while true; do
+          echo "Starting CPAC data sync"
+          node dist-server/scripts/sync-api-to-db.js || echo "CPAC data sync failed; retrying in one hour"
+          sleep 3600
+        done
+
 networks:
   rmc-portal-network:
     external: true

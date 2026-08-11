@@ -71,7 +71,7 @@ npm run start
 
 `npm run sync:db` can insert records returned by CPAC, but it preserves every existing record whose local `row_created_at` is before `2026-07-24 09:44:00` (reference tables use `created_at`). This protects the verified data baseline from being overwritten by a later CPAC API response. The cutoff defaults to that timestamp and is configured as `SYNC_LOCK_BEFORE` in `.env.example`.
 
-The `Sync CPAC Data` GitHub Actions workflow runs every hour at minute 5 (UTC) on the production self-hosted runner. It uses `DEPLOY_ENV_FILE`, shares no environment file with the app, and prevents overlapping syncs. It can also be run manually from the Actions tab.
+The production Docker stack runs a separate `nong-wang-jai-sync` service. It syncs once when the container starts, then waits one hour between completed runs. This service shares the production environment file with the app, so it uses the same CPAC and MySQL configuration without exposing those values in the image.
 
 ## RMC SSO
 
