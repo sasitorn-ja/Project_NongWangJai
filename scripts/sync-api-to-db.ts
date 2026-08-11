@@ -120,6 +120,21 @@ function toStringOrNull(value: unknown): string | null {
   return String(value);
 }
 
+function getThailandDate(): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "Asia/Bangkok",
+    year: "numeric"
+  }).formatToParts();
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value])
+  );
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
 function lockExistingBeforeCutoff(timestampColumn: "row_created_at" | "created_at", columns: string[]): string {
   return columns
     .map(
@@ -423,7 +438,7 @@ async function syncSoOrders(pool: mysql.Pool) {
   console.log("Syncing SO orders...");
 
   const startDate = process.env.SYNC_START_DATE ?? "2025-06-01";
-  const endDate = process.env.SYNC_END_DATE ?? "2026-07-03";
+  const endDate = getThailandDate();
 
   const payload = await fetchUpstream("/api/ai-wangjai/so-orders", {
     method: "POST",

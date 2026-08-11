@@ -73,6 +73,8 @@ npm run start
 
 The production Docker stack runs a separate `nong-wang-jai-sync` service. It syncs once when the container starts, then waits one hour between completed runs. This service shares the production environment file with the app, so it uses the same CPAC and MySQL configuration without exposing those values in the image.
 
+SO Orders are synced from `SYNC_START_DATE` (default `2025-06-01`) through the current date in Thailand (`Asia/Bangkok`) on every run. There is no fixed sync end date.
+
 ## RMC SSO
 
 This project now uses the server-side OIDC Authorization Code Flow with PKCE described in [nong-wang-jai-sso-handoff.md](/Users/toonchaianan/git/Project_NongWangJai/nong-wang-jai-sso-handoff.md:1).
