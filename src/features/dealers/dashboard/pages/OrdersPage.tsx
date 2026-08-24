@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, PackageCheck, Search, TrendingUp, Users } from "lucide-react";
+import { ChevronDown, ExternalLink, PackageCheck, Search, TrendingUp, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
@@ -9,7 +9,6 @@ import { useDashboardOutletContext } from "../DealerDashboardApp";
 import { dateText, parseDateValue } from "../lib/dates";
 import { getOrderStatusKey, orderStatusText } from "../lib/status";
 import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
-import { DealerPicker } from "../filters/DealerPicker";
 import { ShadcnPagination } from "../table/DataTable";
 import { WangjaiAdvisor } from "../ui/WangjaiAdvisor";
 
@@ -52,6 +51,13 @@ function getOrderCreatedDateText(order: OrderItem) {
   return order.created_at ?? null;
 }
 
+function getSiteLocationUrl(order: OrderItem) {
+  const latitude = order.site?.latitude;
+  const longitude = order.site?.longitude;
+  if (!latitude || !longitude) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${latitude},${longitude}`)}`;
+}
+
 function CompactDateTime({ value }: { value?: string | null }) {
   const text = dateText(value);
   const parts = text.split(" ");
@@ -82,6 +88,39 @@ function StatusBadge({ status }: { status?: string | null }) {
   );
 }
 
+function FlatOrderTable({ orders }: { orders: OrderItem[] }) {
+  return (
+    <div className="overflow-auto">
+      <table className="w-full min-w-[1700px] border-collapse text-sm">
+        <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500">
+          <tr>{["Order", "No. Dealer", "ชื่อลูกค้า / รหัส", "Product รหัส", "ชื่อ Site / code", "ยอดจอง (คิว)", "เวลาจอง", "ยอดเท (คิว)", "หมายเหตุ", "สร้าง / อัปเดต", "สถานะการเท", "รายละเอียด", "Location Site"].map((label) => <th key={label} className="sticky top-0 z-10 whitespace-nowrap border-b border-r border-slate-200 bg-slate-50 px-3 py-3 last:border-r-0 dark:bg-slate-950">{label}</th>)}</tr>
+        </thead>
+        <tbody>
+          {orders.map((order) => {
+            const location = getSiteLocationUrl(order);
+            const key = `${order.order?.order_no}-${order.site?.site_code}-${order.created_at}`;
+            return <tr key={key} className="border-b border-slate-100 align-top hover:bg-sky-50/40">
+              <td className="border-r border-slate-100 px-3 py-3 font-semibold">{order.order?.order_no ?? "-"}</td>
+              <td className="border-r border-slate-100 px-3 py-3"><div className="font-semibold">{order.dealer_code || "-"}</div><div className="max-w-[180px] truncate text-xs text-slate-500">{order.dealer_name || "-"}</div></td>
+              <td className="border-r border-slate-100 px-3 py-3"><div>{order.customer?.name ?? "-"}</div><div className="text-xs text-slate-500">{order.customer?.code ?? "-"}</div></td>
+              <td className="border-r border-slate-100 px-3 py-3"><div className="font-semibold">{order.order?.product_sku ?? "-"}</div><div className="max-w-[180px] truncate text-xs text-slate-500">{order.order?.product_name ?? "-"}</div></td>
+              <td className="border-r border-slate-100 px-3 py-3"><div className="max-w-[220px] truncate">{order.site?.site_name ?? "-"}</div><div className="text-xs text-slate-500">{order.site?.site_code ?? "-"}</div></td>
+              <td className="border-r border-slate-100 px-3 py-3 text-right font-semibold">{formatNumber(order.quantity?.ordered ?? 0)}</td>
+              <td className="border-r border-slate-100 px-3 py-3 text-xs"><CompactDateTime value={order.booked_at} /></td>
+              <td className="border-r border-slate-100 px-3 py-3 text-right font-semibold">{formatNumber(order.quantity?.delivered ?? 0)}</td>
+              <td className="max-w-[180px] border-r border-slate-100 px-3 py-3 text-xs">{order.memo || "-"}</td>
+              <td className="border-r border-slate-100 px-3 py-3 text-xs"><CompactDateTime value={order.created_at} /><span className="my-1 block border-t border-slate-100" /><CompactDateTime value={order.updated_at} /></td>
+              <td className="border-r border-slate-100 px-3 py-3"><StatusBadge status={order.status?.order} /></td>
+              <td className="max-w-[180px] border-r border-slate-100 px-3 py-3 text-xs">{order.details || "-"}</td>
+              <td className="px-3 py-3">{location ? <a className="inline-flex text-sky-600 hover:text-sky-800" href={location} target="_blank" rel="noreferrer" title="เปิดตำแหน่ง Site"><ExternalLink size={17} /></a> : "-"}</td>
+            </tr>;
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
   const map = new Map<string, CustomerGroup>();
   orders.forEach((order) => {
@@ -90,7 +129,7 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
     const customerName = order.customer?.name?.trim() || "ไม่ระบุลูกค้า";
     const dealerCode = order.dealer_code?.trim() || String(order.dealer_id);
     const dealerName = order.dealer_name?.trim() || "ไม่ระบุ Dealer";
-    const key = `${order.dealer_id}::${customerCode}::${customerName}`;
+    const key = `${customerCode}::${customerName}`;
     let group = map.get(key);
     if (!group) {
       group = {
@@ -475,22 +514,15 @@ function MobileCustomerCard({
 export function OrdersPage() {
   const { data, filters } = useDashboardOutletContext();
   const {
-    dealers,
     filteredOrders: orders,
-    ordersState,
-    selectedDealer,
-    selectedDealerId,
-    setSelectedDealerId
+    ordersState
   } = data;
   const { orderSearch, setOrderSearch } = filters;
   const [mobilePage, setMobilePage] = useState(1);
   const [desktopPage, setDesktopPage] = useState(1);
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
 
-  const dealerOrders = useMemo(
-    () => orders.filter((row) => selectedDealerId == null || row.dealer_id === selectedDealerId),
-    [orders, selectedDealerId]
-  );
+  const dealerOrders = orders;
 
   const customerGroups = useMemo(() => buildCustomerGroups(dealerOrders), [dealerOrders]);
 
@@ -500,7 +532,7 @@ export function OrdersPage() {
   const fullLoopVolume = dealerOrders.filter((row) => row.full_loop).reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
   const notFullLoopVolume = dealerOrders.filter((row) => !row.full_loop).reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
   const orderUnit = "คิว";
-  const orderListTitle = selectedDealer ? `Order List ของ ${selectedDealer.dealer_name}` : "Order List แยกตาม Dealer";
+  const orderListTitle = "Order List ทั้งหมด";
 
   const toggleCustomer = (key: string) => {
     setExpandedCustomers((prev) => {
@@ -521,20 +553,12 @@ export function OrdersPage() {
 
   return (
     <>
-      <DealerPicker
-        dealers={dealers}
-        includeAll
-        selectedDealerId={selectedDealerId}
-        setSelectedDealerId={setSelectedDealerId}
-        title="เลือก Dealer หรือดูรายการ Order ทั้งหมด"
-      />
-
       <WangjaiAdvisor
         accent="slate"
         compact
         message="ผมอยู่เป็นตัวช่วยตรวจรายการ order: ค้นหาลูกค้า ไซต์ หรือสินค้า แล้วกางแถวเพื่อดูรายละเอียดงานเท"
         stats={[
-          { label: "Scope", value: selectedDealer?.dealer_name ?? "ทุก Dealer" },
+          { label: "Scope", value: "ทุก Dealer" },
           { label: "ออเดอร์", value: formatNumber(dealerOrders.length) },
           { label: "Full Loop", value: `${compactNumber(fullLoopVolume)} ${orderUnit}` },
           { label: "ไม่ Full Loop", value: `${compactNumber(notFullLoopVolume)} ${orderUnit}` }
@@ -546,7 +570,7 @@ export function OrdersPage() {
         <SummaryKpiStrip
           items={[
             {
-              detail: selectedDealer?.dealer_name ?? "ลูกค้าทั้งหมดที่กรองอยู่",
+              detail: "ลูกค้าทั้งหมดที่กรองอยู่",
               icon: <Users size={14} />,
               label: "จำนวนลูกค้า",
               value: formatNumber(customerGroups.length)
@@ -691,7 +715,7 @@ export function OrdersPage() {
         </CardHeader>
 
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/40 px-5 py-2.5 text-[11px]">
+        <div className="hidden flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/40 px-5 py-2.5 text-[11px]">
           <span className="font-semibold text-slate-500">
             <strong className="text-slate-900">{formatNumber(customerGroups.length)}</strong> ลูกค้า · <strong className="text-slate-900">{formatNumber(dealerOrders.length)}</strong> ออเดอร์
             {expandedCustomers.size > 0 && (
@@ -718,7 +742,7 @@ export function OrdersPage() {
         </div>
 
         {/* Column header */}
-        <div className="grid grid-cols-[36px_minmax(0,2.4fr)_140px_140px_140px_140px_140px_140px] border-b border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+        <div className="hidden grid-cols-[36px_minmax(0,2.4fr)_140px_140px_140px_140px_140px_140px] border-b border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
           <span></span>
           <span className="whitespace-nowrap px-3">ลูกค้า</span>
           <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right">จำนวนออเดอร์ (ครั้ง)</span>
@@ -733,18 +757,10 @@ export function OrdersPage() {
           {ordersState === "loading" && (
             <div className="px-5 py-12 text-center text-sm font-semibold text-slate-500">กำลังโหลดข้อมูล...</div>
           )}
-          {ordersState !== "loading" && customerGroups.length === 0 && (
+          {ordersState !== "loading" && dealerOrders.length === 0 && (
             <div className="px-5 py-12 text-center text-sm font-semibold text-slate-500">ไม่มีข้อมูล</div>
           )}
-          {ordersState !== "loading" &&
-            desktopRows.map((group) => (
-              <CustomerAccordionRow
-                key={group.customerKey}
-                expanded={expandedCustomers.has(group.customerKey)}
-                group={group}
-                onToggle={() => toggleCustomer(group.customerKey)}
-              />
-            ))}
+          {ordersState !== "loading" && dealerOrders.length > 0 && <FlatOrderTable orders={dealerOrders} />}
         </CardContent>
 
         {customerGroups.length > 0 && (

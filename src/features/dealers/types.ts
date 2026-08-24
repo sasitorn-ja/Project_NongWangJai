@@ -3,6 +3,8 @@ export type Dealer = {
   dealer_id: number;
   dealer_code: string;
   dealer_name: string;
+  osr_dealer: number;
+  osr_dealer_code: string | null;
   region_id: number;
   region: string;
   province_id: number;
@@ -103,6 +105,8 @@ export type OrderItem = {
     site_id?: number | string;
     site_code?: string;
     site_name?: string;
+    latitude?: string | null;
+    longitude?: string | null;
   } | null;
   order?: {
     order_no?: string;
@@ -116,6 +120,9 @@ export type OrderItem = {
     unit?: string;
   } | null;
   full_loop?: boolean;
+  booked_at?: string | null;
+  memo?: string | null;
+  details?: string | null;
   pour_datetime: string | null;
   status?: {
     order?: string;

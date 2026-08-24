@@ -6,6 +6,7 @@ import type { AuthSession } from "@/features/auth/types";
 import { DateRangeToolbar } from "../filters/DateRangeToolbar";
 import { DropdownSelect } from "../filters/DropdownSelect";
 import { type PageKey, getPageTitle } from "../config/pageMeta";
+import type { DealerMode } from "../config/dealerMode";
 import { getPageKeyFromPath } from "../config/routes";
 import type { DatePreset } from "../lib/dates";
 
@@ -22,6 +23,7 @@ type HeaderProps = {
   dateFrom: string;
   datePreset: DatePreset;
   dateTo: string;
+  dealerMode: DealerMode;
   mobileNavOpen: boolean;
   onLogout: () => void;
   onOpenMobileNav: () => void;
@@ -37,6 +39,7 @@ export const Header = forwardRef<HTMLElement, HeaderProps>(function Header({
   dateFrom,
   datePreset,
   dateTo,
+  dealerMode,
   mobileNavOpen,
   onLogout,
   onOpenMobileNav,
@@ -70,7 +73,7 @@ export const Header = forwardRef<HTMLElement, HeaderProps>(function Header({
           {/* Title */}
           <div className="min-w-0 self-center sm:flex-1">
             <h1 className="truncate text-sm font-semibold text-slate-950 dark:text-slate-100 sm:text-base">
-              {getPageTitle(page)}
+              {getPageTitle(page, dealerMode)}
             </h1>
           </div>
 
@@ -132,7 +135,7 @@ export const Header = forwardRef<HTMLElement, HeaderProps>(function Header({
           </button>
           <div className="min-w-0">
             <h1 className="truncate text-[24px] font-bold leading-tight text-slate-950 dark:text-slate-100">
-              {getPageTitle(page)}
+              {getPageTitle(page, dealerMode)}
             </h1>
           </div>
         </div>

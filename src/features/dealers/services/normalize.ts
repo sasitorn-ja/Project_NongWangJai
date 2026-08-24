@@ -30,6 +30,8 @@ export function normalizeDealer(row: Dealer & { api_created_at?: string | null; 
   return {
     ...row,
     dealer_id: toNumber(row.dealer_id),
+    osr_dealer: toNumber(row.osr_dealer),
+    osr_dealer_code: row.osr_dealer_code ?? null,
     region_id: toNumber(row.region_id),
     province_id: toNumber(row.province_id),
     group_count: toNumber(row.group_count),
@@ -113,7 +115,9 @@ export function normalizeSoOrder(row: SoOrderItem, dealerMap: Map<string, Dealer
     },
     site: {
       site_code: String(row.ShipToCode ?? ""),
-      site_name: String(row.ShipToName ?? "")
+      site_name: String(row.ShipToName ?? ""),
+      latitude: row.ShipToLat == null ? null : String(row.ShipToLat),
+      longitude: row.ShipToLng == null ? null : String(row.ShipToLng)
     },
     order: {
       order_no: String(row.so_id ?? ""),
@@ -121,6 +125,9 @@ export function normalizeSoOrder(row: SoOrderItem, dealerMap: Map<string, Dealer
       product_name: String(row.MaterialDescription ?? "")
     },
     pour_datetime: row.DeliveryDateTime ?? row.DocumentDate ?? null,
+    booked_at: row.DocumentDate ?? null,
+    memo: row.Memo ?? null,
+    details: row.InternalNote ?? null,
     quantity: {
       initial_ordered: initialQuantity,
       ordered: quantity,

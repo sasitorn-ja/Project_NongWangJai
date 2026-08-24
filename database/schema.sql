@@ -48,6 +48,8 @@ CREATE TABLE IF NOT EXISTS dealers (
   dealer_id         BIGINT PRIMARY KEY,
   dealer_code       VARCHAR(32)  NOT NULL,
   dealer_name       VARCHAR(255) NOT NULL,
+  osr_dealer        TINYINT(1)   NOT NULL DEFAULT 0,
+  osr_dealer_code   VARCHAR(32)  NULL,
   status            VARCHAR(16)  NULL,
   region_id         INT          NULL,
   region            VARCHAR(64)  NULL,

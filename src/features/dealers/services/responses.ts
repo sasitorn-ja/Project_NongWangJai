@@ -48,6 +48,8 @@ export type SoOrderItem = {
   CurrentOrderQuantity?: number | string;
   ShipToCode?: string;
   ShipToName?: string;
+  ShipToLat?: string | null;
+  ShipToLng?: string | null;
   SoldToCode?: string;
   SoldToName?: string;
   DocumentDate?: string;
@@ -55,6 +57,8 @@ export type SoOrderItem = {
   MaterialCode?: string;
   MaterialDescription?: string;
   CurrentStatus?: string;
+  Memo?: string | null;
+  InternalNote?: string | null;
   created_at?: string | null;
   modify_at?: string | null;
   [key: string]: unknown;

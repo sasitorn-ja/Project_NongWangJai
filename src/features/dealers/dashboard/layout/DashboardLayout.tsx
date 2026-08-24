@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import type { AuthSession } from "@/features/auth/types";
 import { cn } from "@/lib/cn";
 import type { PageKey } from "../config/pageMeta";
+import type { DealerMode } from "../config/dealerMode";
 import { getPathFromPageKey } from "../config/routes";
 import type { DatePreset } from "../lib/dates";
 import { Header } from "./Header";
@@ -14,7 +15,9 @@ export function DashboardLayout({
   dateFrom,
   datePreset,
   dateTo,
+  dealerMode,
   onLogout,
+  onSetDealerMode,
   setDateFrom,
   setDatePreset,
   setDateTo,
@@ -24,7 +27,9 @@ export function DashboardLayout({
   dateFrom: string;
   datePreset: DatePreset;
   dateTo: string;
+  dealerMode: DealerMode;
   onLogout: () => void;
+  onSetDealerMode: (mode: DealerMode) => void;
   setDateFrom: (value: string) => void;
   setDatePreset: (value: DatePreset) => void;
   setDateTo: (value: string) => void;
@@ -93,10 +98,12 @@ export function DashboardLayout({
       >
         <Sidebar
           collapsed={collapsed}
+          dealerMode={dealerMode}
           mobileNavOpen={mobileNavOpen}
           onCloseMobileNav={() => setMobileNavOpen(false)}
           onLogout={onLogout}
           onSelectPage={selectPage}
+          onSetDealerMode={onSetDealerMode}
           user={user}
         />
       </aside>
@@ -107,6 +114,7 @@ export function DashboardLayout({
           dateFrom={dateFrom}
           datePreset={datePreset}
           dateTo={dateTo}
+          dealerMode={dealerMode}
           mobileNavOpen={mobileNavOpen}
           onLogout={onLogout}
           onOpenMobileNav={() => setMobileNavOpen(true)}

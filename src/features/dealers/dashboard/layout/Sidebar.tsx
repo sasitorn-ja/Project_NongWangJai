@@ -4,28 +4,35 @@ import type { AuthSession } from "@/features/auth/types";
 
 import type { PageKey } from "../config/pageMeta";
 import { getPageKeyFromPath } from "../config/routes";
-import { DASHBOARD_NAV_ITEMS } from "../config/navigation";
+import type { DealerMode } from "../config/dealerMode";
+import { getDashboardNavItems } from "../config/navigation";
 import { SideNavItem } from "../ui/SideNavItem";
 import { WangjaiLogo } from "../ui/WangjaiLogo";
 import cpacSidebarLogo from "../../../../assets/C-pac.jpg";
 
 export function Sidebar({
   collapsed,
+  dealerMode,
   mobileNavOpen,
   onCloseMobileNav,
   onLogout,
   onSelectPage,
+  onSetDealerMode,
   user
 }: {
   collapsed: boolean;
+  dealerMode: DealerMode;
   mobileNavOpen: boolean;
   onCloseMobileNav: () => void;
   onLogout: () => void;
   onSelectPage: (page: PageKey) => void;
+  onSetDealerMode: (mode: DealerMode) => void;
   user: AuthSession;
 }) {
   const location = useLocation();
   const currentPage = getPageKeyFromPath(location.pathname);
+  const compact = collapsed && !mobileNavOpen;
+  const navItems = getDashboardNavItems(dealerMode);
 
   return (
     <div className="flex h-full flex-col">
@@ -43,8 +50,33 @@ export function Sidebar({
         ) : null}
       </div>
 
+      <div className="px-3 pb-2">
+        <div role="group" aria-label="เลือกกลุ่มข้อมูล Dealer">
+          <div className="flex rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
+            <button
+              aria-pressed={dealerMode === "dealer"}
+              className={`min-w-0 flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition ${dealerMode === "dealer" ? "bg-white text-sky-700 shadow-sm dark:bg-slate-950 dark:text-sky-300" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}
+              onClick={() => onSetDealerMode("dealer")}
+              title="Dealer ปกติ"
+              type="button"
+            >
+              {compact ? "D" : "Dealer"}
+            </button>
+            <button
+              aria-pressed={dealerMode === "osr"}
+              className={`min-w-0 flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition ${dealerMode === "osr" ? "bg-white text-sky-700 shadow-sm dark:bg-slate-950 dark:text-sky-300" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}
+              onClick={() => onSetDealerMode("osr")}
+              title="Dealer OSR"
+              type="button"
+            >
+              OSR
+            </button>
+          </div>
+        </div>
+      </div>
+
       <nav className="space-y-1.5 px-2 py-2.5">
-        {DASHBOARD_NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
 
           return (

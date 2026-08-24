@@ -8,12 +8,13 @@ export type PageKey =
   | "customerInsights"
   | "orders";
 
-export function getPageTitle(page: PageKey) {
+export function getPageTitle(page: PageKey, dealerMode: "dealer" | "osr" = "dealer") {
   if (page === "dashboard") return "Dashboard";
-  if (page === "network") return "Dealer Network";
-  if (page === "groups") return "Dealer Groups";
-  if (page === "details") return "Dealer Analysis";
-  if (page === "topCustomers") return "Top N Dealers";
+  const entity = dealerMode === "osr" ? "OSR" : "Dealer";
+  if (page === "network") return `${entity} Network`;
+  if (page === "groups") return `${entity} Groups`;
+  if (page === "details") return `${entity} Analysis`;
+  if (page === "topCustomers") return `Top N ${entity}s`;
   if (page === "topProducts") return "Top N Products";
   if (page === "customerInsights") return "Dealer Insights";
   return "Orders";

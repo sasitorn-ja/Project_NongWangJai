@@ -21,10 +21,12 @@ import { isWithinDateRange } from "../lib/dates";
 import { groupByRegion } from "../lib/regions";
 import { normalizeSearch } from "../lib/search";
 import { getDealerStatusKey, isDealerActive } from "../lib/status";
+import type { DealerMode } from "../config/dealerMode";
 
 export function useDealerDashboardData({
   dateFrom,
   dateTo,
+  dealerMode,
   orderSearch,
   region,
   search,
@@ -32,6 +34,7 @@ export function useDealerDashboardData({
 }: {
   dateFrom: string;
   dateTo: string;
+  dealerMode: DealerMode;
   orderSearch: string;
   region: string;
   search: string;
@@ -51,6 +54,10 @@ export function useDealerDashboardData({
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [ordersState, setOrdersState] = useState<ApiState>("loading");
   const [ordersMessage, setOrdersMessage] = useState<string | undefined>();
+  const scopedDealers = useMemo(
+    () => dealers.filter((dealer) => (dealerMode === "osr" ? dealer.osr_dealer === 1 : dealer.osr_dealer !== 1)),
+    [dealerMode, dealers]
+  );
 
   const loadDealers = useCallback(async () => {
     setApiState("loading");
@@ -114,14 +121,18 @@ export function useDealerDashboardData({
   }, [loadDealers, loadUsage]);
 
   useEffect(() => {
-    if (dealers.length === 0) return undefined;
+    setSelectedDealerId(null);
+  }, [dealerMode]);
+
+  useEffect(() => {
+    if (scopedDealers.length === 0) return undefined;
 
     const requestId = window.setTimeout(() => {
-      void loadOrders(dealers, dateFrom, dateTo);
+      void loadOrders(scopedDealers, dateFrom, dateTo);
     }, 0);
 
     return () => window.clearTimeout(requestId);
-  }, [dealers, dateFrom, dateTo, loadOrders]);
+  }, [dateFrom, dateTo, loadOrders, scopedDealers]);
 
   useEffect(() => {
     if (!selectedDealerId) {
@@ -130,16 +141,16 @@ export function useDealerDashboardData({
         setSites([]);
         setCustomersState("live");
         setSitesState("live");
-        if (dealers.length === 0) {
+        if (scopedDealers.length === 0) {
           setGroups([]);
           setGroupsState("live");
         } else {
-          void loadAllGroups(dealers);
+          void loadAllGroups(scopedDealers);
         }
       }, 0);
       return () => window.clearTimeout(requestId);
     }
-    const dealer = dealers.find((item) => item.dealer_id === selectedDealerId);
+    const dealer = scopedDealers.find((item) => item.dealer_id === selectedDealerId);
     if (!dealer) return undefined;
 
     const requestId = window.setTimeout(() => {
@@ -147,23 +158,23 @@ export function useDealerDashboardData({
     }, 0);
 
     return () => window.clearTimeout(requestId);
-  }, [dealers, loadAllGroups, loadDealerChildren, selectedDealerId]);
+  }, [loadAllGroups, loadDealerChildren, scopedDealers, selectedDealerId]);
 
   const selectedDealer = useMemo(
-    () => (selectedDealerId == null ? undefined : dealers.find((dealer) => dealer.dealer_id === selectedDealerId)),
-    [dealers, selectedDealerId]
+    () => (selectedDealerId == null ? undefined : scopedDealers.find((dealer) => dealer.dealer_id === selectedDealerId)),
+    [scopedDealers, selectedDealerId]
   );
 
   const allowedDealerIds = useMemo(
-    () => new Set(dealers.map((dealer) => dealer.dealer_id)),
-    [dealers]
+    () => new Set(scopedDealers.map((dealer) => dealer.dealer_id)),
+    [scopedDealers]
   );
 
-  const regions = useMemo(() => Array.from(new Set(dealers.map((dealer) => dealer.region))).sort(), [dealers]);
+  const regions = useMemo(() => Array.from(new Set(scopedDealers.map((dealer) => dealer.region))).sort(), [scopedDealers]);
 
   const filteredDealers = useMemo(() => {
     const q = normalizeSearch(search);
-    return dealers.filter((dealer) => {
+    return scopedDealers.filter((dealer) => {
       const matchRegion = region === "all" || dealer.region === region;
       const matchStatus =
         status === "all" ||
@@ -174,7 +185,7 @@ export function useDealerDashboardData({
       const matchDate = isWithinDateRange(dealer.last_active_at, dateFrom, dateTo);
       return matchRegion && matchStatus && matchDate && (!q || haystack.includes(q));
     });
-  }, [dateFrom, dateTo, dealers, region, search, status]);
+  }, [dateFrom, dateTo, region, scopedDealers, search, status]);
 
   const totalVolume = filteredDealers.reduce((sum, dealer) => sum + dealer.volume, 0);
   const totalGroups = filteredDealers.reduce((sum, dealer) => sum + dealer.group_count, 0);
@@ -254,7 +265,7 @@ export function useDealerDashboardData({
     activeRate,
     apiMessage,
     apiState,
-    dealers,
+    dealers: scopedDealers,
     filteredCustomers,
     filteredDealers,
     filteredGroups,

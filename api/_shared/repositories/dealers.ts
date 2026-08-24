@@ -5,6 +5,8 @@ export type DbDealer = {
   dealer_id: number;
   dealer_code: string;
   dealer_name: string;
+  osr_dealer: number;
+  osr_dealer_code: string | null;
   status: string | null;
   region_id: number | null;
   region: string | null;
@@ -29,6 +31,8 @@ export async function findAllDealers(): Promise<DbDealer[]> {
       dealer_id,
       dealer_code,
       dealer_name,
+      osr_dealer,
+      osr_dealer_code,
       status,
       region_id,
       region,
@@ -57,6 +61,8 @@ export async function findDealerById(dealerId: number): Promise<DbDealer | null>
       dealer_id,
       dealer_code,
       dealer_name,
+      osr_dealer,
+      osr_dealer_code,
       status,
       region_id,
       region,

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import type { PageKey } from "./pageMeta";
+import type { DealerMode } from "./dealerMode";
 
 export type DashboardNavItem = {
   icon: LucideIcon;
@@ -16,7 +17,7 @@ export type DashboardNavItem = {
   label: string;
 };
 
-export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
+const DEALER_NAV_ITEMS: DashboardNavItem[] = [
   { icon: LayoutDashboard, key: "dashboard", label: "Dashboard" },
   { icon: Layers3, key: "network", label: "Dealer Network" },
   { icon: BarChart3, key: "details", label: "Dealer Analysis" },
@@ -24,3 +25,8 @@ export const DASHBOARD_NAV_ITEMS: DashboardNavItem[] = [
   { icon: PackageCheck, key: "topProducts", label: "Top N Products" },
   { icon: ClipboardList, key: "orders", label: "Orders" }
 ];
+
+export function getDashboardNavItems(mode: DealerMode): DashboardNavItem[] {
+  if (mode === "dealer") return DEALER_NAV_ITEMS;
+  return DEALER_NAV_ITEMS.map((item) => ({ ...item, label: item.label.replaceAll("Dealer", "OSR") }));
+}

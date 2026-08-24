@@ -156,11 +156,13 @@ async function syncDealers(pool: mysql.Pool) {
   try {
     const sql = `
       INSERT INTO dealers (
-        dealer_id, dealer_code, dealer_name, status, region_id, region,
+        dealer_id, dealer_code, dealer_name, osr_dealer, osr_dealer_code, status, region_id, region,
         province_id, province, group_count, volume, unit, last_active_at,
         last_active_days, api_created_at, api_updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
+        osr_dealer = VALUES(osr_dealer),
+        osr_dealer_code = VALUES(osr_dealer_code),
         ${lockExistingBeforeCutoff("row_created_at", [
           "dealer_code", "dealer_name", "status", "region_id", "region",
           "province_id", "province", "group_count", "volume", "unit",
@@ -174,6 +176,8 @@ async function syncDealers(pool: mysql.Pool) {
         toNumber(r.dealer_id),
         String(r.dealer_code ?? ""),
         String(r.dealer_name ?? ""),
+        toNumber(r.osr_dealer),
+        toStringOrNull(r.osr_dealer_code),
         toStringOrNull(r.status),
         toNumber(r.region_id),
         toStringOrNull(r.region),
@@ -617,16 +621,23 @@ async function syncRegionsAndProvinces(pool: mysql.Pool) {
 // ---------------------------------------------------------------------------
 async function main() {
   const pool = await createPool();
+  const selectedResources = new Set(
+    (process.env.SYNC_RESOURCES ?? "")
+      .split(",")
+      .map((resource) => resource.trim().toLowerCase())
+      .filter(Boolean)
+  );
+  const shouldSync = (resource: string) => selectedResources.size === 0 || selectedResources.has(resource);
 
   try {
     console.log(`Preserving existing records created before ${SYNC_LOCK_BEFORE}.`);
-    await syncDealers(pool);
-    await syncDealerUsage(pool);
-    await syncDealerGroups(pool);
-    await syncDealerSites(pool);
-    await syncCustomerUsage(pool);
-    await syncSoOrders(pool);
-    await syncRegionsAndProvinces(pool);
+    if (shouldSync("dealers")) await syncDealers(pool);
+    if (shouldSync("dealer-usage")) await syncDealerUsage(pool);
+    if (shouldSync("dealer-groups")) await syncDealerGroups(pool);
+    if (shouldSync("dealer-sites")) await syncDealerSites(pool);
+    if (shouldSync("customer-usage")) await syncCustomerUsage(pool);
+    if (shouldSync("so-orders")) await syncSoOrders(pool);
+    if (shouldSync("regions-provinces")) await syncRegionsAndProvinces(pool);
 
     console.log("\nSync completed successfully");
   } catch (error) {

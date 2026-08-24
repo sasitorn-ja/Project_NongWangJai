@@ -30,6 +30,22 @@ async function main() {
       await conn.query("ALTER TABLE dealers DROP FOREIGN KEY fk_dealers_province");
     }
 
+    const [dealerColumnRows] = await conn.query<mysql.RowDataPacket[]>(`
+      SELECT COLUMN_NAME
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND COLUMN_NAME IN ('osr_dealer', 'osr_dealer_code')
+    `, ["dealers"]);
+    const dealerColumns = new Set(dealerColumnRows.map((row) => String(row.COLUMN_NAME)));
+
+    if (!dealerColumns.has("osr_dealer")) {
+      await conn.query("ALTER TABLE dealers ADD COLUMN osr_dealer TINYINT(1) NOT NULL DEFAULT 0 AFTER dealer_name");
+    }
+    if (!dealerColumns.has("osr_dealer_code")) {
+      await conn.query("ALTER TABLE dealers ADD COLUMN osr_dealer_code VARCHAR(32) NULL AFTER osr_dealer");
+    }
+
     const [siteRows] = await conn.query<mysql.RowDataPacket[]>(`
       SELECT CONSTRAINT_NAME
       FROM information_schema.TABLE_CONSTRAINTS
