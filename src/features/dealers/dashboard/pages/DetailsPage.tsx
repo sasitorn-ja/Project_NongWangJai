@@ -72,31 +72,25 @@ const STATUS_META: Record<"active" | "idle" | "new", { label: string; dot: strin
 function AllDealersStatStrip({
   customerCount,
   delivered,
-  fullLoopVolume,
   groups,
-  notFullLoopVolume,
   priceChecks,
   unit
 }: {
   customerCount: number;
   delivered: number;
-  fullLoopVolume: number;
   groups: number;
-  notFullLoopVolume: number;
   priceChecks: number;
   unit: string;
 }) {
   const stats = [
     { label: "ส่งจริงรวม", value: compactNumber(delivered), suffix: unit },
-    { label: "Full Loop", value: compactNumber(fullLoopVolume), suffix: unit },
-    { label: "ไม่ Full Loop", value: compactNumber(notFullLoopVolume), suffix: unit },
     { label: "จำนวนกลุ่ม", value: formatNumber(groups) },
     { label: "เช็คราคา", value: formatNumber(priceChecks) },
     { label: "ลูกค้า", value: formatNumber(customerCount) }
   ];
 
   return (
-    <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+    <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
       {stats.map((item) => (
         <div
           key={item.label}
@@ -1386,9 +1380,7 @@ function DetailsPageContent(props: DetailsPageProps) {
           <AllDealersStatStrip
             customerCount={orderCustomerRows.length || usageSummary.customerCreateCount}
             delivered={totalAreaDelivered}
-            fullLoopVolume={fullLoopVolume}
             groups={totalGroups}
-            notFullLoopVolume={notFullLoopVolume}
             priceChecks={usageSummary.priceConcreteCount}
             unit={areaUnit}
           />
