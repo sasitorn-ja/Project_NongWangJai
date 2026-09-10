@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Activity, BarChart3, Boxes, CalendarCheck, ChevronDown, Clock3, ListChecks, MapPin, ShoppingCart, Store, Trophy, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,7 @@ import { DealerPicker } from "../filters/DealerPicker";
 import { ShadcnTabs } from "../ui/ShadcnTabs";
 import { DualBarChart } from "../charts/DualBarChart";
 import { ProgressList } from "../charts/ProgressList";
+import { ShadcnPagination } from "../table/DataTable";
 import { WangjaiAdvisor } from "../ui/WangjaiAdvisor";
 
 type AreaRow = {
@@ -28,6 +29,7 @@ type AreaRow = {
 
 const AREA_CHART_LIMIT = 8;
 const OTHER_AREAS_KEY = "__other_areas";
+const ANALYSIS_PAGE_SIZE = 10;
 
 function getOrderUpdateDateText(order: OrderItem) {
   return order.updated_at ?? null;
@@ -962,9 +964,23 @@ function CustomerAnalysisTable({
     return [...customerMap.values()].sort((a, b) => b.delivered - a.delivered || b.wangjaiOrdered + b.otherOrdered - (a.wangjaiOrdered + a.otherOrdered));
   }, [customers, orders, selectedDealer, selectedDealerId]);
 
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(Math.ceil(rows.length / ANALYSIS_PAGE_SIZE), 1);
+  const currentPage = Math.min(page, totalPages);
+  const visibleRows = useMemo(
+    () => rows.slice((currentPage - 1) * ANALYSIS_PAGE_SIZE, currentPage * ANALYSIS_PAGE_SIZE),
+    [currentPage, rows]
+  );
+
+  useEffect(() => {
+    const resetId = window.setTimeout(() => setPage(1), 0);
+    return () => window.clearTimeout(resetId);
+  }, [rows]);
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[1220px] border-separate border-spacing-0 text-[13px]" aria-label="Customer analysis">
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[1220px] border-separate border-spacing-0 text-[13px]" aria-label="Customer analysis">
         <thead>
           <tr className="text-center text-[15px] font-bold text-slate-900 dark:text-slate-100">
             <th className="w-[170px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>Dealer</th>
@@ -987,7 +1003,7 @@ function CustomerAnalysisTable({
           {customersState !== "loading" && rows.length === 0 && (
             <tr><td className="px-4 py-10 text-center font-semibold text-slate-500" colSpan={8}>ไม่มีข้อมูลลูกค้า</td></tr>
           )}
-          {customersState !== "loading" && rows.map((row) => (
+          {customersState !== "loading" && visibleRows.map((row) => (
             <tr key={row.key} className="border-b border-[#cbd5e1] bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900">
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 align-top font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">{row.dealerName}</td>
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
@@ -1008,8 +1024,18 @@ function CustomerAnalysisTable({
             </tr>
           ))}
         </tbody>
-      </table>
-    </div>
+        </table>
+      </div>
+      {customersState !== "loading" && rows.length > 0 && (
+        <ShadcnPagination
+          currentPage={currentPage}
+          pageSize={ANALYSIS_PAGE_SIZE}
+          totalItems={rows.length}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
+      )}
+    </>
   );
 }
 
@@ -1028,9 +1054,23 @@ function SiteAnalysisTable({
     [rows]
   );
 
+  const [page, setPage] = useState(1);
+  const totalPages = Math.max(Math.ceil(statusRows.length / ANALYSIS_PAGE_SIZE), 1);
+  const currentPage = Math.min(page, totalPages);
+  const visibleRows = useMemo(
+    () => statusRows.slice((currentPage - 1) * ANALYSIS_PAGE_SIZE, currentPage * ANALYSIS_PAGE_SIZE),
+    [currentPage, statusRows]
+  );
+
+  useEffect(() => {
+    const resetId = window.setTimeout(() => setPage(1), 0);
+    return () => window.clearTimeout(resetId);
+  }, [statusRows]);
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[1040px] border-separate border-spacing-0 text-[13px]" aria-label="Site by customer analysis">
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[1040px] border-separate border-spacing-0 text-[13px]" aria-label="Site by customer analysis">
         <thead>
           <tr className="text-center text-[15px] font-bold text-slate-900 dark:text-slate-100">
             <th className="w-[300px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>ชื่อกลุ่ม / ชื่อลูกค้า</th>
@@ -1051,7 +1091,7 @@ function SiteAnalysisTable({
           {!loading && statusRows.length === 0 && (
             <tr><td className="px-4 py-10 text-center font-semibold text-slate-500" colSpan={6}>ไม่มีข้อมูล Site</td></tr>
           )}
-          {!loading && statusRows.map((row) => (
+          {!loading && visibleRows.map((row) => (
             <tr key={row.key} className="border-b border-[#cbd5e1] bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900">
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
                 <div className="font-semibold text-slate-900 dark:text-slate-100">{row.customerName}</div>
@@ -1072,8 +1112,18 @@ function SiteAnalysisTable({
             </tr>
           ))}
         </tbody>
-      </table>
-    </div>
+        </table>
+      </div>
+      {!loading && statusRows.length > 0 && (
+        <ShadcnPagination
+          currentPage={currentPage}
+          pageSize={ANALYSIS_PAGE_SIZE}
+          totalItems={statusRows.length}
+          totalPages={totalPages}
+          onPageChange={setPage}
+        />
+      )}
+    </>
   );
 }
 
