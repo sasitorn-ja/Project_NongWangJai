@@ -1056,7 +1056,7 @@ function SiteAnalysisTable({
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
                 <div className="font-semibold text-slate-900 dark:text-slate-100">{row.customerName}</div>
               </td>
-              <td className="border-r border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
                 <div className="font-semibold text-slate-900 dark:text-slate-100">{row.siteCode}</div>
                 <div className="mt-0.5 line-clamp-2 text-xs font-medium text-slate-500" title={row.siteName}>{row.siteName}</div>
               </td>
