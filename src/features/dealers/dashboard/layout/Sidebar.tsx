@@ -36,7 +36,7 @@ export function Sidebar({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-[84px] items-center gap-2.5 px-3">
+      <div className={`flex h-[84px] items-center gap-2.5 ${compact ? "justify-center px-0" : "px-3"}`}>
         <WangjaiLogo showText={!collapsed || mobileNavOpen} />
         {mobileNavOpen ? (
           <button
@@ -50,12 +50,12 @@ export function Sidebar({
         ) : null}
       </div>
 
-      <div className="px-3 pb-2">
+      <div className={compact ? "px-1.5 pb-2" : "px-3 pb-2"}>
         <div role="group" aria-label="เลือกกลุ่มข้อมูล Dealer">
-          <div className="flex rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
+          <div className={`flex min-w-0 rounded-lg bg-slate-100 ${compact ? "gap-0.5 p-0.5" : "p-1"} dark:bg-slate-800`}>
             <button
               aria-pressed={dealerMode === "dealer"}
-              className={`min-w-0 flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition ${dealerMode === "dealer" ? "bg-white text-sky-700 shadow-sm dark:bg-slate-950 dark:text-sky-300" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}
+              className={`min-w-0 flex-1 rounded-md py-1.5 font-semibold transition ${compact ? "px-0 text-[9px]" : "px-2 text-xs"} ${dealerMode === "dealer" ? "bg-white text-sky-700 shadow-sm dark:bg-slate-950 dark:text-sky-300" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}
               onClick={() => onSetDealerMode("dealer")}
               title="Dealer ปกติ"
               type="button"
@@ -64,7 +64,7 @@ export function Sidebar({
             </button>
             <button
               aria-pressed={dealerMode === "osr"}
-              className={`min-w-0 flex-1 rounded-md px-2 py-1.5 text-xs font-semibold transition ${dealerMode === "osr" ? "bg-white text-sky-700 shadow-sm dark:bg-slate-950 dark:text-sky-300" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}
+              className={`min-w-0 flex-1 rounded-md py-1.5 font-semibold transition ${compact ? "px-0 text-[9px]" : "px-2 text-xs"} ${dealerMode === "osr" ? "bg-white text-sky-700 shadow-sm dark:bg-slate-950 dark:text-sky-300" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"}`}
               onClick={() => onSetDealerMode("osr")}
               title="Dealer OSR"
               type="button"

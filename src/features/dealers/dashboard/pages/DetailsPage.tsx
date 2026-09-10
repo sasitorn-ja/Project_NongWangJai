@@ -10,12 +10,9 @@ import { dateText, parseDateValue } from "../lib/dates";
 import { getRegionColor } from "../lib/regions";
 import { getDealerStatusKey, getOrderStatusKey } from "../lib/status";
 import { DealerPicker } from "../filters/DealerPicker";
-import type { DataColumn } from "../table/types";
 import { ShadcnTabs } from "../ui/ShadcnTabs";
-import { DataTable } from "../table/DataTable";
 import { DualBarChart } from "../charts/DualBarChart";
 import { ProgressList } from "../charts/ProgressList";
-import { statusColumn } from "../table/columns";
 import { WangjaiAdvisor } from "../ui/WangjaiAdvisor";
 
 type AreaRow = {
@@ -34,19 +31,6 @@ const OTHER_AREAS_KEY = "__other_areas";
 
 function getOrderUpdateDateText(order: OrderItem) {
   return order.updated_at ?? null;
-}
-
-function CompactDateTime({ value }: { value?: string | null }) {
-  const text = dateText(value);
-  const parts = text.split(" ");
-  if (parts.length < 3) return <span>{text}</span>;
-
-  return (
-    <span className="block text-[11px] leading-4">
-      <span className="block whitespace-nowrap">{parts.slice(0, 3).join(" ")}</span>
-      <span className="block whitespace-nowrap">{parts.slice(3).join(" ")}</span>
-    </span>
-  );
 }
 
 function formatPercent(value: number) {
@@ -112,17 +96,18 @@ function AllDealersStatStrip({
   ];
 
   return (
-    <section className="rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-      <div className="grid grid-cols-2 divide-y divide-[#eef0f4] rounded-xl border border-[#eef0f4] dark:divide-slate-800 dark:border-slate-800 sm:grid-cols-4 sm:divide-x sm:divide-y-0">
-        {stats.map((item) => (
-          <div key={item.label} className="px-4 py-3">
-            <div className="text-[11px] font-semibold text-slate-500">{item.label}</div>
-            <div className="mt-1 text-2xl font-bold leading-none text-slate-950 dark:text-slate-100">
-              {item.value} {item.suffix && <span className="text-xs font-semibold text-slate-400">{item.suffix}</span>}
-            </div>
+    <section className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      {stats.map((item) => (
+        <div
+          key={item.label}
+          className="rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+        >
+          <div className="text-[11px] font-semibold text-slate-500">{item.label}</div>
+          <div className="mt-1 text-2xl font-bold leading-none text-slate-950 dark:text-slate-100">
+            {item.value} {item.suffix && <span className="text-xs font-semibold text-slate-400">{item.suffix}</span>}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </section>
   );
 }
@@ -844,6 +829,260 @@ function TopCustomersList({
   );
 }
 
+type CustomerAnalysisRow = {
+  key: string;
+  dealerName: string;
+  customerName: string;
+  customerCode: string;
+  priceChecks: number;
+  siteClosures: number;
+  wangjaiOrdered: number;
+  otherOrdered: number;
+  delivered: number;
+  status: "active" | "inactive";
+  statusDetail: string;
+};
+
+type SiteAnalysisTableRow = {
+  key: string;
+  customerName: string;
+  siteCode: string;
+  siteName: string;
+  ordered: number;
+  delivered: number;
+  latestPour: string | null;
+};
+
+function getCustomerActivityDate(customer: CustomerUsage | undefined, orders: OrderItem[]) {
+  const orderDates = orders
+    .flatMap((order) => [order.pour_datetime, order.updated_at, order.created_at])
+    .map(parseDateValue)
+    .filter((date): date is Date => Boolean(date));
+  const customerDate = parseDateValue(customer?.updated_at);
+  const latestOrderDate = orderDates.sort((a, b) => b.getTime() - a.getTime())[0];
+
+  if (!latestOrderDate) return customerDate;
+  if (!customerDate) return latestOrderDate;
+  return latestOrderDate > customerDate ? latestOrderDate : customerDate;
+}
+
+function getActivityStatus(activityDate: Date | null) {
+  if (!activityDate) return { status: "active" as const, statusDetail: "วันที่สร้างกลุ่ม" };
+
+  const daysSinceActivity = Math.max(0, (Date.now() - activityDate.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysSinceActivity > 30) {
+    return { status: "inactive" as const, statusDetail: "ไม่เคลื่อนไหว >30วัน" };
+  }
+
+  return { status: "active" as const, statusDetail: "Active ล่าสุด" };
+}
+
+function getCustomerStatus(customer: CustomerUsage | undefined, orders: OrderItem[]) {
+  return getActivityStatus(getCustomerActivityDate(customer, orders));
+}
+
+function CustomerAnalysisTable({
+  customers,
+  customersState,
+  orders,
+  selectedDealerId,
+  selectedDealer
+}: {
+  customers: CustomerUsage[];
+  customersState: ApiState;
+  orders: OrderItem[];
+  selectedDealerId: number | null;
+  selectedDealer?: Dealer;
+}) {
+  const rows = useMemo<CustomerAnalysisRow[]>(() => {
+    const customerMap = new Map<string, CustomerAnalysisRow>();
+    const usageByKey = new Map<string, CustomerUsage>();
+
+    customers.forEach((customer) => {
+      const customerCode = customer.customer_code?.trim() || customer.customer_id.toString();
+      const customerName = customer.customer_name?.trim() || "ไม่ระบุลูกค้า";
+      const dealerKey = selectedDealerId != null ? "selected" : customer.dealer_code?.trim() || customer.dealer_id?.toString() || "selected";
+      usageByKey.set(`${dealerKey}::${customerCode}::${customerName}`, customer);
+    });
+
+    const getRowKey = (order: OrderItem) => {
+      const customerCode = order.customer?.code?.trim() || order.customer?.id?.toString() || "-";
+      const customerName = order.customer?.name?.trim() || "ไม่ระบุลูกค้า";
+      const dealerKey = selectedDealerId == null ? order.dealer_code?.trim() || order.dealer_id.toString() : "selected";
+      return `${dealerKey}::${customerCode}::${customerName}`;
+    };
+
+    const getOrCreateRow = (key: string, customer: CustomerUsage | undefined, order?: OrderItem) => {
+      const customerCode = customer?.customer_code?.trim() || order?.customer?.code?.trim() || order?.customer?.id?.toString() || "-";
+      const customerName = customer?.customer_name?.trim() || order?.customer?.name?.trim() || "ไม่ระบุลูกค้า";
+      const dealerName = customer?.dealer_name?.trim() || order?.dealer_name?.trim() || selectedDealer?.dealer_name || "ไม่ระบุ Dealer";
+      const current = customerMap.get(key) ?? {
+        key,
+        dealerName,
+        customerName,
+        customerCode,
+        priceChecks: customer?.price_concrete_count ?? 0,
+        siteClosures: customer?.booking_create_count ?? 0,
+        wangjaiOrdered: 0,
+        otherOrdered: 0,
+        delivered: 0,
+        status: "active",
+        statusDetail: "วันที่สร้างกลุ่ม"
+      };
+
+      if (order) {
+        const ordered = order.quantity?.ordered ?? 0;
+        const delivered = order.quantity?.delivered ?? 0;
+        if (order.full_loop) current.wangjaiOrdered += ordered;
+        else current.otherOrdered += ordered;
+        current.delivered += delivered;
+      }
+
+      const status = getCustomerStatus(customer, order ? [order] : []);
+      if (status.status === "inactive" || status.statusDetail === "Active ล่าสุด") {
+        current.status = status.status;
+        current.statusDetail = status.statusDetail;
+      }
+
+      customerMap.set(key, current);
+      return current;
+    };
+
+    customers.forEach((customer) => {
+      const customerCode = customer.customer_code?.trim() || customer.customer_id.toString();
+      const customerName = customer.customer_name?.trim() || "ไม่ระบุลูกค้า";
+      const dealerKey = selectedDealerId != null ? "selected" : customer.dealer_code?.trim() || customer.dealer_id?.toString() || "selected";
+      getOrCreateRow(`${dealerKey}::${customerCode}::${customerName}`, customer);
+    });
+
+    orders.forEach((order) => {
+      const key = getRowKey(order);
+      const usage = usageByKey.get(key) ?? (selectedDealerId != null ? customers.find((customer) => {
+        const code = customer.customer_code?.trim() || customer.customer_id.toString();
+        const name = customer.customer_name?.trim() || "ไม่ระบุลูกค้า";
+        return code === (order.customer?.code?.trim() || order.customer?.id?.toString() || "-") && name === (order.customer?.name?.trim() || "ไม่ระบุลูกค้า");
+      }) : undefined);
+      getOrCreateRow(key, usage, order);
+    });
+
+    return [...customerMap.values()].sort((a, b) => b.delivered - a.delivered || b.wangjaiOrdered + b.otherOrdered - (a.wangjaiOrdered + a.otherOrdered));
+  }, [customers, orders, selectedDealer, selectedDealerId]);
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[1220px] border-separate border-spacing-0 text-[13px]" aria-label="Customer analysis">
+        <thead>
+          <tr className="text-center text-[15px] font-bold text-slate-900 dark:text-slate-100">
+            <th className="w-[170px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>Dealer</th>
+            <th className="w-[285px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>ชื่อกลุ่ม / ชื่อลูกค้า</th>
+            <th className="w-[175px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>เช็คราคา (ครั้ง)</th>
+            <th className="w-[190px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>ปิด Sitecode (ครั้ง)</th>
+            <th className="border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-3 dark:border-slate-700 dark:bg-slate-900" colSpan={2}>สั่งคอนกรีต (คิว)</th>
+            <th className="w-[170px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>ส่งจริง (คิว)</th>
+            <th className="w-[250px] border-b border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>สถานะ</th>
+          </tr>
+          <tr className="text-center text-[15px] font-bold text-slate-900 dark:text-slate-100">
+            <th className="w-[145px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900">Wangjai</th>
+            <th className="w-[145px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900">ช่องทางอื่น</th>
+          </tr>
+        </thead>
+        <tbody>
+          {customersState === "loading" && (
+            <tr><td className="px-4 py-10 text-center font-semibold text-slate-500" colSpan={8}>กำลังโหลดข้อมูลลูกค้า...</td></tr>
+          )}
+          {customersState !== "loading" && rows.length === 0 && (
+            <tr><td className="px-4 py-10 text-center font-semibold text-slate-500" colSpan={8}>ไม่มีข้อมูลลูกค้า</td></tr>
+          )}
+          {customersState !== "loading" && rows.map((row) => (
+            <tr key={row.key} className="border-b border-[#cbd5e1] bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900">
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 align-top font-semibold text-slate-900 dark:border-slate-800 dark:text-slate-100">{row.dealerName}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
+                <div className="font-semibold text-slate-900 dark:text-slate-100">{row.customerName}</div>
+                <div className="mt-0.5 text-xs font-medium text-slate-500">{row.customerCode}</div>
+              </td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top dark:border-slate-800">{formatNumber(row.priceChecks)}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top dark:border-slate-800">{formatNumber(row.siteClosures)}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-semibold text-emerald-700 dark:border-slate-800 dark:text-emerald-300">{formatNumber(row.wangjaiOrdered)}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-semibold text-sky-700 dark:border-slate-800 dark:text-sky-300">{formatNumber(row.otherOrdered)}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-bold text-slate-950 dark:border-slate-800 dark:text-slate-100">{formatNumber(row.delivered)}</td>
+              <td className="border-b border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
+                <span className={cn("inline-flex rounded-md px-2.5 py-1 text-xs font-bold ring-1", row.status === "active" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-600 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700")}>
+                  {row.status === "active" ? "Active" : "No Active"}
+                </span>
+                <div className="mt-1 text-xs font-medium text-slate-500">{row.statusDetail}</div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SiteAnalysisTable({
+  loading,
+  rows
+}: {
+  loading: boolean;
+  rows: SiteAnalysisTableRow[];
+}) {
+  const statusRows = useMemo(
+    () =>
+      rows.map((row) => {
+        return { ...row, ...getActivityStatus(parseDateValue(row.latestPour)) };
+      }),
+    [rows]
+  );
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[1040px] border-separate border-spacing-0 text-[13px]" aria-label="Site by customer analysis">
+        <thead>
+          <tr className="text-center text-[15px] font-bold text-slate-900 dark:text-slate-100">
+            <th className="w-[300px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>ชื่อกลุ่ม / ชื่อลูกค้า</th>
+            <th className="w-[250px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>Sitecode</th>
+            <th className="w-[190px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>สั่งคอนกรีต (คิว)</th>
+            <th className="w-[190px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>ส่งจริง (คิว)</th>
+            <th className="w-[210px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-3 dark:border-slate-700 dark:bg-slate-900">เทคอนกรีตล่าสุด</th>
+            <th className="w-[250px] border-b border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>สถานะ</th>
+          </tr>
+          <tr className="text-center text-[15px] font-bold text-slate-900 dark:text-slate-100">
+            <th className="border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900">วันที่/เวลา</th>
+          </tr>
+        </thead>
+        <tbody>
+          {loading && (
+            <tr><td className="px-4 py-10 text-center font-semibold text-slate-500" colSpan={6}>กำลังโหลดข้อมูล Site...</td></tr>
+          )}
+          {!loading && statusRows.length === 0 && (
+            <tr><td className="px-4 py-10 text-center font-semibold text-slate-500" colSpan={6}>ไม่มีข้อมูล Site</td></tr>
+          )}
+          {!loading && statusRows.map((row) => (
+            <tr key={row.key} className="border-b border-[#cbd5e1] bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900">
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
+                <div className="font-semibold text-slate-900 dark:text-slate-100">{row.customerName}</div>
+              </td>
+              <td className="border-r border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
+                <div className="font-semibold text-slate-900 dark:text-slate-100">{row.siteCode}</div>
+                <div className="mt-0.5 line-clamp-2 text-xs font-medium text-slate-500" title={row.siteName}>{row.siteName}</div>
+              </td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-semibold text-slate-800 dark:border-slate-800 dark:text-slate-200">{formatNumber(row.ordered)}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-bold text-slate-950 dark:border-slate-800 dark:text-slate-100">{formatNumber(row.delivered)}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 align-top text-slate-800 dark:border-slate-800 dark:text-slate-200">{dateText(row.latestPour)}</td>
+              <td className="border-b border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
+                <span className={cn("inline-flex rounded-md px-2.5 py-1 text-xs font-bold ring-1", row.status === "active" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-600 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700")}>
+                  {row.status === "active" ? "Active" : "No Active"}
+                </span>
+                <div className="mt-1 text-xs font-medium text-slate-500">{row.statusDetail}</div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function DetailsPageContent(props: DetailsPageProps) {
   const selectedUsage = props.usageRows.find((row) => row.dealer_id === props.selectedDealerId);
   const usageSummary = useMemo(() => {
@@ -1118,26 +1357,6 @@ function DetailsPageContent(props: DetailsPageProps) {
   const dealerNotFullLoopVolume = useMemo(() => dealerOrders.filter((order) => !order.full_loop).reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0), [dealerOrders]);
   const dealerFulfillmentRate = dealerOrderedTotal > 0 ? (dealerDeliveredTotal / dealerOrderedTotal) * 100 : 0;
 
-  const siteColumns: DataColumn<(typeof siteRows)[number]>[] = [
-    { title: "ชื่อลูกค้า", key: "customerName", dataIndex: "customerName", width: 160, render: (value) => <span className="line-clamp-2 text-[13px] leading-5" title={String(value ?? "-")}>{String(value ?? "-")}</span> },
-    { title: "ไซต์", key: "site", sortAccessor: (record) => record.siteName, width: 260, render: (_, record) => <div className="min-w-0"><div className="truncate text-[13px] font-semibold text-slate-950">รหัส Site: {record.siteCode}</div><div className="line-clamp-2 text-[11px] font-medium leading-4 text-slate-500" title={record.siteName}>{record.siteName}</div><div className="truncate text-[11px] font-bold text-sky-700" title={record.dealerName}>Dealer: {record.dealerName}</div></div> },
-    { title: `จำนวนที่สั่ง (${areaUnit})`, key: "ordered", dataIndex: "ordered", align: "right", width: 132, render: formatNumber },
-    { title: `จำนวนส่งจริง (${areaUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 140, render: formatNumber },
-    { title: `Full Loop (${areaUnit})`, key: "fullLoopDelivered", dataIndex: "fullLoopDelivered", align: "right", width: 120, render: (value) => <span className="font-semibold text-emerald-700">{formatNumber(Number(value ?? 0))}</span> },
-    { title: `ไม่ Full Loop (${areaUnit})`, key: "notFullLoopDelivered", dataIndex: "notFullLoopDelivered", align: "right", width: 120, render: (value) => <span className="font-semibold text-rose-700">{formatNumber(Number(value ?? 0))}</span> },
-    { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 118, render: (value) => <CompactDateTime value={String(value ?? "")} /> }
-  ];
-
-  const groupColumns: DataColumn<DealerGroup>[] = [
-    { title: "ชื่อ Group", dataIndex: "group_name", key: "group_name", width: 320, render: (_, record) => <div><div className="font-semibold text-slate-950">{record.group_name}</div><div className="text-xs font-medium text-slate-500">ID: {record.group_id} | Type: {record.group_type ?? "-"}</div></div> },
-    { title: "จำนวนเช็คราคา (ครั้ง)", dataIndex: "price_check_count", key: "price_check_count", align: "right", width: 140, render: formatNumber },
-    { title: "จำนวนการเปิด Site (ครั้ง)", dataIndex: "booking_count", key: "booking_count", align: "right", width: 190, render: formatNumber },
-    { title: "จำนวนที่จอง (คิว)", dataIndex: "booked_volume", key: "booked_volume", align: "right", width: 180, render: formatNumber },
-    { title: "จำนวนที่ส่งจริง (คิว)", dataIndex: "delivered_volume", key: "delivered_volume", align: "right", width: 190, render: formatNumber },
-    { title: "วันที่สร้างกลุ่ม", dataIndex: "created_at", key: "created_at", width: 190, render: dateText },
-    statusColumn<DealerGroup>()
-  ];
-
   return (
     <>
       <DealerPicker
@@ -1353,12 +1572,18 @@ function DetailsPageContent(props: DetailsPageProps) {
       <ShadcnTabs
         items={[
           {
-            key: "groups",
+            key: "customers",
             label: "Customer",
             content: (
               <Card className="dashboard-card overflow-hidden">
-                <CardContent className="p-0">
-                  <DataTable columns={groupColumns} data={props.groups} loading={props.groupsState === "loading"} rowKey={(record) => `${record.group_id}-${record.group_name}`} minWidth={1180} pageSize={10} />
+                <CardContent className="!p-0">
+                  <CustomerAnalysisTable
+                    customers={props.customers}
+                    customersState={props.customersState}
+                    orders={dealerOrders}
+                    selectedDealer={props.selectedDealer}
+                    selectedDealerId={props.selectedDealerId}
+                  />
                 </CardContent>
               </Card>
             )
@@ -1368,8 +1593,11 @@ function DetailsPageContent(props: DetailsPageProps) {
             label: "Site by customer",
             content: (
               <Card className="dashboard-card overflow-hidden">
-                <CardContent className="p-0">
-                  <DataTable columns={siteColumns} data={siteRows} loading={isAllDealers ? props.ordersState === "loading" : props.sitesState === "loading"} rowKey="key" minWidth={963} pageSize={10} />
+                <CardContent className="!p-0">
+                  <SiteAnalysisTable
+                    loading={isAllDealers ? props.ordersState === "loading" : props.sitesState === "loading"}
+                    rows={siteRows}
+                  />
                 </CardContent>
               </Card>
             )

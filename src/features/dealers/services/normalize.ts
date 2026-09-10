@@ -125,7 +125,9 @@ export function normalizeSoOrder(row: SoOrderItem, dealerMap: Map<string, Dealer
       product_name: String(row.MaterialDescription ?? "")
     },
     pour_datetime: row.DeliveryDateTime ?? row.DocumentDate ?? null,
-    booked_at: row.DocumentDate ?? null,
+    // DocumentDate is the document's business date and is often normalized to 00:00.
+    // Use the upstream created_at timestamp for the actual booking time when available.
+    booked_at: row.created_at ?? row.DocumentDate ?? null,
     memo: row.Memo ?? null,
     details: row.InternalNote ?? null,
     quantity: {
