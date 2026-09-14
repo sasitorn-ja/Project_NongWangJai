@@ -812,7 +812,7 @@ type CustomerAnalysisRow = {
   customerName: string;
   customerCode: string;
   priceChecks: number;
-  siteClosures: number;
+  siteCount: number;
   ordered: number;
   delivered: number;
   status: "active" | "inactive";
@@ -873,18 +873,20 @@ function CustomerAnalysisTable({
   const rows = useMemo<CustomerAnalysisRow[]>(() => {
     const customerMap = new Map<string, CustomerAnalysisRow>();
     const usageByKey = new Map<string, CustomerUsage>();
+    // Sitecode in SO is normalized from so_orders.ship_to_code; count unique codes per customer.
+    const siteCodesByKey = new Map<string, Set<string>>();
 
     customers.forEach((customer) => {
       const customerCode = customer.customer_code?.trim() || customer.customer_id.toString();
       const customerName = customer.customer_name?.trim() || "ไม่ระบุลูกค้า";
-      const dealerKey = selectedDealerId != null ? "selected" : customer.dealer_code?.trim() || customer.dealer_id?.toString() || "selected";
+      const dealerKey = selectedDealerId != null ? "selected" : customer.dealer_id?.toString() || "selected";
       usageByKey.set(`${dealerKey}::${customerCode}::${customerName}`, customer);
     });
 
     const getRowKey = (order: OrderItem) => {
       const customerCode = order.customer?.code?.trim() || order.customer?.id?.toString() || "-";
       const customerName = order.customer?.name?.trim() || "ไม่ระบุลูกค้า";
-      const dealerKey = selectedDealerId == null ? order.dealer_code?.trim() || order.dealer_id.toString() : "selected";
+      const dealerKey = selectedDealerId == null ? order.dealer_id.toString() : "selected";
       return `${dealerKey}::${customerCode}::${customerName}`;
     };
 
@@ -898,7 +900,7 @@ function CustomerAnalysisTable({
         customerName,
         customerCode,
         priceChecks: customer?.price_concrete_count ?? 0,
-        siteClosures: customer?.booking_create_count ?? 0,
+        siteCount: 0,
         ordered: 0,
         delivered: 0,
         status: "active",
@@ -910,6 +912,13 @@ function CustomerAnalysisTable({
         const delivered = order.quantity?.delivered ?? 0;
         current.ordered += ordered;
         current.delivered += delivered;
+        const siteCode = order.site?.site_code?.trim();
+        if (siteCode) {
+          const siteCodes = siteCodesByKey.get(key) ?? new Set<string>();
+          siteCodes.add(siteCode);
+          siteCodesByKey.set(key, siteCodes);
+          current.siteCount = siteCodes.size;
+        }
       }
 
       const status = getCustomerStatus(customer, order ? [order] : []);
@@ -925,7 +934,7 @@ function CustomerAnalysisTable({
     customers.forEach((customer) => {
       const customerCode = customer.customer_code?.trim() || customer.customer_id.toString();
       const customerName = customer.customer_name?.trim() || "ไม่ระบุลูกค้า";
-      const dealerKey = selectedDealerId != null ? "selected" : customer.dealer_code?.trim() || customer.dealer_id?.toString() || "selected";
+      const dealerKey = selectedDealerId != null ? "selected" : customer.dealer_id?.toString() || "selected";
       getOrCreateRow(`${dealerKey}::${customerCode}::${customerName}`, customer);
     });
 
@@ -964,7 +973,7 @@ function CustomerAnalysisTable({
             <th className="w-[170px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>Dealer</th>
             <th className="w-[285px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>ชื่อกลุ่ม / ชื่อลูกค้า</th>
             <th className="w-[175px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>เช็คราคา (ครั้ง)</th>
-            <th className="w-[190px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>ปิด Sitecode (ครั้ง)</th>
+            <th className="w-[190px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>เปิด Sitecode (ครั้ง)</th>
             <th className="w-[170px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>สั่งคอนกรีต (คิว)</th>
             <th className="w-[170px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>ส่งจริง (คิว)</th>
             <th className="w-[250px] border-b border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>สถานะ</th>
@@ -985,7 +994,7 @@ function CustomerAnalysisTable({
                 <div className="mt-0.5 text-xs font-medium text-slate-500">{row.customerCode}</div>
               </td>
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top dark:border-slate-800">{formatNumber(row.priceChecks)}</td>
-              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top dark:border-slate-800">{formatNumber(row.siteClosures)}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top dark:border-slate-800">{formatNumber(row.siteCount)}</td>
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-semibold text-sky-700 dark:border-slate-800 dark:text-sky-300">{formatNumber(row.ordered)}</td>
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-bold text-slate-950 dark:border-slate-800 dark:text-slate-100">{formatNumber(row.delivered)}</td>
               <td className="border-b border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
