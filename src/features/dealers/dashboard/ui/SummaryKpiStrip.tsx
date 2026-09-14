@@ -25,7 +25,7 @@ const ACCENT_CLASS: Record<KpiAccent, string> = {
 
 export function SummaryKpiStrip({ items }: SummaryKpiStripProps) {
   return (
-    <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-6">
+    <div className={cn("grid grid-cols-2 gap-2.5 md:grid-cols-3", items.length >= 6 ? "xl:grid-cols-6" : "xl:grid-cols-4")}>
       {items.map((item) => (
         <div
           key={item.label}

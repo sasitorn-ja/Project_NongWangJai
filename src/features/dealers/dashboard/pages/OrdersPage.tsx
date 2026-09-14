@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, ExternalLink, PackageCheck, Search, TrendingUp, Users } from "lucide-react";
+import { ClipboardList, ChevronDown, PackageCheck, Search, TrendingUp, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
@@ -10,10 +10,105 @@ import { dateText, parseDateValue } from "../lib/dates";
 import { getOrderStatusKey, orderStatusText } from "../lib/status";
 import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
 import { ShadcnPagination } from "../table/DataTable";
-import { WangjaiAdvisor } from "../ui/WangjaiAdvisor";
+import type { DataColumn } from "../table/types";
 
 const MOBILE_PAGE_SIZE = 8;
 const DESKTOP_PAGE_SIZE = 15;
+type OrderListView = "dealer" | "customer";
+type QuantityFilter = "all" | "zero" | "positive" | "under10" | "10to50" | "50to100" | "100plus";
+type OrderStatusFilter = "all" | "__empty__" | string;
+
+const QUANTITY_FILTER_OPTIONS: Array<{ label: string; value: QuantityFilter }> = [
+  { label: "ทั้งหมด", value: "all" },
+  { label: "0 คิว", value: "zero" },
+  { label: "> 0 คิว", value: "positive" },
+  { label: "1–10 คิว", value: "under10" },
+  { label: "11–50 คิว", value: "10to50" },
+  { label: "51–100 คิว", value: "50to100" },
+  { label: "101+ คิว", value: "100plus" }
+];
+
+function matchesQuantityFilter(value: number, filter: QuantityFilter) {
+  switch (filter) {
+    case "zero":
+      return value === 0;
+    case "positive":
+      return value > 0;
+    case "under10":
+      return value > 0 && value <= 10;
+    case "10to50":
+      return value > 10 && value <= 50;
+    case "50to100":
+      return value > 50 && value <= 100;
+    case "100plus":
+      return value > 100;
+    default:
+      return true;
+  }
+}
+
+function matchesOrderStatusFilter(value: string | null | undefined, filter: OrderStatusFilter) {
+  const normalized = String(value ?? "").trim();
+  if (filter === "all") return true;
+  if (filter === "__empty__") return !normalized;
+  return normalized === filter;
+}
+
+function QuantityFilterSelect({
+  label,
+  value,
+  onChange
+}: {
+  label: string;
+  value: QuantityFilter;
+  onChange: (value: QuantityFilter) => void;
+}) {
+  return (
+    <label className="flex h-10 min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 transition-colors focus-within:border-sky-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-sky-100">
+      <span className="shrink-0 text-[11px] font-bold text-slate-500">{label}</span>
+      <select
+        aria-label={label}
+        className="min-w-0 flex-1 cursor-pointer bg-transparent text-xs font-semibold text-slate-700 outline-none"
+        value={value}
+        onChange={(event) => onChange(event.target.value as QuantityFilter)}
+      >
+        {QUANTITY_FILTER_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function OrderStatusFilterSelect({
+  value,
+  options,
+  onChange
+}: {
+  value: OrderStatusFilter;
+  options: string[];
+  onChange: (value: OrderStatusFilter) => void;
+}) {
+  return (
+    <label className="flex h-10 min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 transition-colors focus-within:border-sky-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-sky-100">
+      <span className="shrink-0 text-[11px] font-bold text-slate-500">สถานะการเท</span>
+      <select
+        aria-label="สถานะการเท"
+        className="min-w-0 flex-1 cursor-pointer bg-transparent text-xs font-semibold text-slate-700 outline-none"
+        value={value}
+        onChange={(event) => onChange(event.target.value as OrderStatusFilter)}
+      >
+        <option value="all">ทั้งหมด</option>
+        {options.map((option) => (
+          <option key={option} value={option}>{option}</option>
+        ))}
+        <option value="__empty__">ไม่มีสถานะ</option>
+      </select>
+    </label>
+  );
+}
 
 type CustomerGroup = {
   customerCode: string;
@@ -28,10 +123,24 @@ type CustomerGroup = {
   orders: OrderItem[];
   totalDelivered: number;
   totalOrdered: number;
-  fullLoopDelivered: number;
-  notFullLoopDelivered: number;
   unit: string;
+  wangjaiBooked: number;
+  otherBooked: number;
   uniqueSiteCount: number;
+};
+
+type CustomerSiteRow = {
+  key: string;
+  customerCode: string;
+  customerName: string;
+  dealerCode: string;
+  dealerName: string;
+  siteCode: string;
+  siteName: string;
+  orderCount: number;
+  totalDelivered: number;
+  totalOrdered: number;
+  latestPour: string | null;
 };
 
 function getOrderDateValue(order: OrderItem) {
@@ -51,13 +160,6 @@ function getOrderCreatedDateText(order: OrderItem) {
   return order.created_at ?? null;
 }
 
-function getSiteLocationUrl(order: OrderItem) {
-  const latitude = order.site?.latitude;
-  const longitude = order.site?.longitude;
-  if (!latitude || !longitude) return null;
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${latitude},${longitude}`)}`;
-}
-
 function CompactDateTime({ value }: { value?: string | null }) {
   const text = dateText(value);
   const parts = text.split(" ");
@@ -68,6 +170,15 @@ function CompactDateTime({ value }: { value?: string | null }) {
       <span className="block whitespace-nowrap">{parts.slice(0, 3).join(" ")}</span>
       <span className="block whitespace-nowrap">{parts.slice(3).join(" ")}</span>
     </span>
+  );
+}
+
+function CompactLabeledDateTime({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <div className="whitespace-nowrap text-[11px] leading-4">
+      <span className="mr-1 text-slate-500">{label}</span>
+      <span>{dateText(value)}</span>
+    </div>
   );
 }
 
@@ -88,35 +199,78 @@ function StatusBadge({ status }: { status?: string | null }) {
   );
 }
 
-function FlatOrderTable({ orders }: { orders: OrderItem[] }) {
+function OrderListTabs({ value, onChange }: { value: OrderListView; onChange: (value: OrderListView) => void }) {
   return (
-    <div className="overflow-auto">
-      <table className="w-full min-w-[1700px] border-collapse text-sm">
-        <thead className="bg-slate-50 text-left text-xs font-semibold text-slate-500">
-          <tr>{["Order", "No. Dealer", "ชื่อลูกค้า / รหัส", "Product รหัส", "ชื่อ Site / code", "ยอดจอง (คิว)", "เวลาจอง", "ยอดเท (คิว)", "หมายเหตุ", "สร้าง / อัปเดต", "สถานะการเท", "รายละเอียด", "Location Site"].map((label) => <th key={label} className="sticky top-0 z-10 whitespace-nowrap border-b border-r border-slate-200 bg-slate-50 px-3 py-3 last:border-r-0 dark:bg-slate-950">{label}</th>)}</tr>
+    <div className="grid w-full grid-cols-2 gap-1 rounded-xl bg-slate-100/90 p-1">
+      {(["dealer", "customer"] as const).map((mode) => (
+        <button
+          key={mode}
+          type="button"
+          onClick={() => onChange(mode)}
+          className={cn(
+            "min-h-10 rounded-lg px-3 py-1.5 text-left text-xs font-bold transition-all sm:px-3",
+            value === mode
+              ? "bg-white text-sky-700 shadow-[0_2px_8px_rgba(15,23,42,0.08)] ring-1 ring-slate-200"
+              : "text-slate-500 hover:bg-white/70 hover:text-slate-800"
+          )}
+        >
+          <span className="block text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">มุมมอง {mode === "dealer" ? "01" : "02"}</span>
+          <span className="block truncate">{mode === "dealer" ? "แยกตาม Dealer" : "แยกตามรายลูกค้า"}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function CustomerSiteTable({ rows }: { rows: CustomerSiteRow[] }) {
+  return (
+    <div className="overflow-auto [&_th]:px-4 [&_th]:py-4 [&_td]:px-4 [&_td]:py-4">
+      <table className="dealer-analysis-table w-full min-w-[980px] border-collapse text-sm leading-5">
+        <thead className="bg-slate-50 text-left text-xs font-bold text-slate-500">
+          <tr>
+            {['ชื่อลูกค้า', 'ไซต์', 'จำนวนออเดอร์', 'สั่ง (คิว)', 'ส่งจริง (คิว)', 'Dealer', 'ข้อมูลล่าสุด'].map((label) => (
+              <th key={label} className="whitespace-nowrap border-b border-r border-slate-200 bg-slate-50 px-4 py-4 font-bold last:border-r-0">{label}</th>
+            ))}
+          </tr>
         </thead>
         <tbody>
-          {orders.map((order) => {
-            const location = getSiteLocationUrl(order);
-            const key = `${order.order?.order_no}-${order.site?.site_code}-${order.created_at}`;
-            return <tr key={key} className="border-b border-slate-100 align-top hover:bg-sky-50/40">
-              <td className="border-r border-slate-100 px-3 py-3 font-semibold">{order.order?.order_no ?? "-"}</td>
-              <td className="border-r border-slate-100 px-3 py-3"><div className="font-semibold">{order.dealer_code || "-"}</div><div className="max-w-[180px] truncate text-xs text-slate-500">{order.dealer_name || "-"}</div></td>
-              <td className="border-r border-slate-100 px-3 py-3"><div>{order.customer?.name ?? "-"}</div><div className="text-xs text-slate-500">{order.customer?.code ?? "-"}</div></td>
-              <td className="border-r border-slate-100 px-3 py-3"><div className="font-semibold">{order.order?.product_sku ?? "-"}</div><div className="max-w-[180px] truncate text-xs text-slate-500">{order.order?.product_name ?? "-"}</div></td>
-              <td className="border-r border-slate-100 px-3 py-3"><div className="max-w-[220px] truncate">{order.site?.site_name ?? "-"}</div><div className="text-xs text-slate-500">{order.site?.site_code ?? "-"}</div></td>
-              <td className="border-r border-slate-100 px-3 py-3 text-right font-semibold">{formatNumber(order.quantity?.ordered ?? 0)}</td>
-              <td className="border-r border-slate-100 px-3 py-3 text-xs"><CompactDateTime value={order.booked_at} /></td>
-              <td className="border-r border-slate-100 px-3 py-3 text-right font-semibold">{formatNumber(order.quantity?.delivered ?? 0)}</td>
-              <td className="max-w-[180px] border-r border-slate-100 px-3 py-3 text-xs">{order.memo || "-"}</td>
-              <td className="border-r border-slate-100 px-3 py-3 text-xs"><CompactDateTime value={order.created_at} /><span className="my-1 block border-t border-slate-100" /><CompactDateTime value={order.updated_at} /></td>
-              <td className="border-r border-slate-100 px-3 py-3"><StatusBadge status={order.status?.order} /></td>
-              <td className="max-w-[180px] border-r border-slate-100 px-3 py-3 text-xs">{order.details || "-"}</td>
-              <td className="px-3 py-3">{location ? <a className="inline-flex text-sky-600 hover:text-sky-800" href={location} target="_blank" rel="noreferrer" title="เปิดตำแหน่ง Site"><ExternalLink size={17} /></a> : "-"}</td>
-            </tr>;
-          })}
+          {rows.map((row) => (
+            <tr key={row.key} className="border-b border-slate-100 align-top hover:bg-sky-50/40">
+              <td className="border-r border-slate-100 px-4 py-4"><div className="font-semibold">{row.customerName}</div><div className="text-xs text-slate-500">รหัสลูกค้า {row.customerCode}</div></td>
+              <td className="border-r border-slate-100 px-4 py-4"><div className="font-semibold">รหัส Site: {row.siteCode}</div><div className="max-w-[300px] truncate text-xs text-slate-500">{row.siteName}</div></td>
+              <td className="border-r border-slate-100 px-4 py-4 text-right font-semibold">{formatNumber(row.orderCount)}</td>
+              <td className="border-r border-slate-100 px-4 py-4 text-right font-semibold">{formatNumber(row.totalOrdered)}</td>
+              <td className="border-r border-slate-100 px-4 py-4 text-right font-semibold">{formatNumber(row.totalDelivered)}</td>
+              <td className="border-r border-slate-100 px-4 py-4"><div className="font-semibold">{row.dealerName}</div><div className="text-xs text-slate-500">{row.dealerCode}</div></td>
+              <td className="px-4 py-4 text-xs"><CompactDateTime value={row.latestPour} /></td>
+            </tr>
+          ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function CustomerSiteCard({ row }: { row: CustomerSiteRow }) {
+  return (
+    <div className="border-b border-[#edf1f2] px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-bold text-slate-950">{row.customerName}</div>
+          <div className="text-[11px] font-medium text-slate-500">รหัสลูกค้า {row.customerCode}</div>
+        </div>
+        <div className="shrink-0 text-right text-[11px] font-semibold text-slate-500">{formatNumber(row.orderCount)} ออเดอร์</div>
+      </div>
+      <div className="mt-2 rounded-md bg-sky-50 px-2 py-1.5 text-xs">
+        <div className="font-bold text-sky-700">รหัส Site: {row.siteCode}</div>
+        <div className="truncate text-slate-600">{row.siteName}</div>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+        <div><div className="text-slate-400">Dealer</div><div className="truncate font-semibold text-slate-700">{row.dealerName}</div></div>
+        <div><div className="text-slate-400">ข้อมูลล่าสุด</div><div className="font-medium text-slate-700"><CompactDateTime value={row.latestPour} /></div></div>
+        <div><div className="text-slate-400">สั่ง (คิว)</div><div className="font-bold text-slate-800">{formatNumber(row.totalOrdered)}</div></div>
+        <div><div className="text-slate-400">ส่งจริง (คิว)</div><div className="font-bold text-slate-800">{formatNumber(row.totalDelivered)}</div></div>
+      </div>
     </div>
   );
 }
@@ -129,7 +283,7 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
     const customerName = order.customer?.name?.trim() || "ไม่ระบุลูกค้า";
     const dealerCode = order.dealer_code?.trim() || String(order.dealer_id);
     const dealerName = order.dealer_name?.trim() || "ไม่ระบุ Dealer";
-    const key = `${customerCode}::${customerName}`;
+    const key = `${order.dealer_id}::${customerCode}::${customerName}`;
     let group = map.get(key);
     if (!group) {
       group = {
@@ -145,22 +299,20 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
         orders: [],
         totalDelivered: 0,
         totalOrdered: 0,
-        fullLoopDelivered: 0,
-        notFullLoopDelivered: 0,
         unit: "คิว",
+        wangjaiBooked: 0,
+        otherBooked: 0,
         uniqueSiteCount: 0
       };
       map.set(key, group);
     }
     group.orders.push(order);
     group.orderCount += 1;
-    group.totalOrdered += order.quantity?.ordered ?? 0;
+    const ordered = order.quantity?.ordered ?? 0;
+    group.totalOrdered += ordered;
+    if (order.booking_channel === "wangjai") group.wangjaiBooked += ordered;
+    else group.otherBooked += ordered;
     group.totalDelivered += order.quantity?.delivered ?? 0;
-    if (order.full_loop) {
-      group.fullLoopDelivered += order.quantity?.delivered ?? 0;
-    } else {
-      group.notFullLoopDelivered += order.quantity?.delivered ?? 0;
-    }
     const statusKey = getOrderStatusKey(order.status?.order);
     if (statusKey === "confirmed" || statusKey === "pending") group.openOrderCount += 1;
 
@@ -176,7 +328,9 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
   groups.forEach((group) => {
     const sites = new Set<string>();
     group.orders.forEach((order) => {
-      if (order.site?.site_code) sites.add(order.site.site_code);
+      const siteKey = order.site?.site_code?.trim() || order.site?.site_id?.toString();
+      if (!siteKey) return;
+      sites.add(siteKey);
     });
     group.uniqueSiteCount = sites.size;
     group.orders.sort((a, b) => {
@@ -195,197 +349,131 @@ function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
   });
 }
 
-function CustomerAccordionRow({
-  expanded,
-  group,
-  onToggle
-}: {
-  expanded: boolean;
-  group: CustomerGroup;
-  onToggle: () => void;
-}) {
-  return (
-    <div className={cn("border-b border-[#edf1f2] last:border-b-0", expanded && "bg-[#f4f8fb]/40")}>
-      {/* Summary row */}
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        className={cn(
-          "grid w-full grid-cols-[36px_minmax(0,2.4fr)_140px_140px_140px_140px_140px_140px] items-center px-5 py-3.5 text-left transition-colors",
-          expanded ? "bg-sky-50/60 hover:bg-sky-50" : "hover:bg-slate-50"
-        )}
-      >
-        <span className={cn("flex h-7 w-7 items-center justify-center rounded-lg transition-colors", expanded ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-500")}>
-          <ChevronDown size={16} className={cn("transition-transform", expanded ? "rotate-0" : "-rotate-90")} />
-        </span>
-        <div className="min-w-0 px-3">
-          <div className="truncate text-sm font-bold text-slate-950" title={group.customerName}>
-            {group.customerName}
-          </div>
-          <div className="mt-0.5 flex items-center gap-2 text-[11px] font-medium text-slate-500">
-            <span className="max-w-[220px] truncate rounded-full bg-sky-50 px-2 py-0.5 font-bold text-sky-700" title={`${group.dealerName} (${group.dealerCode})`}>
-              Dealer: {group.dealerName}
-            </span>
-            <span>{group.customerCodeLabel} {group.customerCode}</span>
-            <span className="text-slate-300">·</span>
-            <span>{formatNumber(group.uniqueSiteCount)} ไซต์</span>
-            {group.openOrderCount > 0 && (
-              <>
-                <span className="text-slate-300">·</span>
-                <span
-                  className="rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700"
-                  title="นับเฉพาะ order ที่สถานะรอยืนยันหรือยืนยันแล้ว"
-                >
-                  {group.openOrderCount} รอ/ยืนยัน
-                </span>
-              </>
-            )}
-          </div>
-        </div>
-        <div className="flex h-full items-center justify-end border-l border-[#e3e9ed] px-3 text-right font-bold text-slate-900">{formatNumber(group.orderCount)}</div>
-        <div className="flex h-full items-center justify-end border-l border-[#e3e9ed] px-3 text-right font-bold text-slate-900">
-          {compactNumber(group.totalOrdered)} <span className="ml-1 text-[10px] font-semibold text-slate-400">{group.unit}</span>
-        </div>
-        <div className={cn("flex h-full items-center justify-end border-l border-[#e3e9ed] px-3 text-right font-bold", group.totalDelivered > 0 ? "text-slate-900" : "text-slate-400")}>
-          {compactNumber(group.totalDelivered)} <span className="ml-1 text-[10px] font-semibold text-slate-400">{group.unit}</span>
-        </div>
-        <div className="flex h-full items-center justify-end border-l border-[#e3e9ed] px-3 text-right font-bold text-emerald-700">
-          {compactNumber(group.fullLoopDelivered)} <span className="ml-1 text-[10px] font-semibold text-slate-400">{group.unit}</span>
-        </div>
-        <div className="flex h-full items-center justify-end border-l border-[#e3e9ed] px-3 text-right font-bold text-rose-700">
-          {compactNumber(group.notFullLoopDelivered)} <span className="ml-1 text-[10px] font-semibold text-slate-400">{group.unit}</span>
-        </div>
-        <div className="flex h-full items-center truncate border-l border-[#e3e9ed] px-3 text-xs font-medium text-slate-600">{dateText(group.latestPour)}</div>
-      </button>
+function buildCustomerSiteRows(orders: OrderItem[]): CustomerSiteRow[] {
+  const map = new Map<string, CustomerSiteRow>();
 
-      {/* Expanded order list */}
-      {expanded && (
-        <div className="border-t border-slate-100 bg-white px-5 py-3">
-          <div className="max-h-[420px] overflow-auto rounded-lg border border-[#d9e3e6]">
-            <table className="w-full min-w-[1280px] table-fixed border-collapse text-[14px]">
-              <colgroup>
-                <col className="w-[24%]" />
-                <col className="w-[20%]" />
-                <col className="w-[11%]" />
-                <col className="w-[12%]" />
-                <col className="w-[10%]" />
-                <col className="w-[9%]" />
-                <col className="w-[9%]" />
-                <col className="w-[5%]" />
-              </colgroup>
-              <thead className="sticky top-0 z-10">
-                <tr className="border-b border-[#d9e3e6] bg-[#f6f8f9]">
-                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
-                    Order No. (Product)
-                  </th>
-                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
-                    Site
-                  </th>
-                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
-                    สั่ง ({group.unit})
-                  </th>
-                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-right text-[12px] font-semibold text-slate-500">
-                    ส่งจริง ({group.unit})
-                  </th>
-                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
-                    เวลาเท
-                  </th>
-                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
-                    สร้างออเดอร์
-                  </th>
-                  <th className="whitespace-nowrap border-r border-[#e5e9ec] px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
-                    อัปเดตรายการ ↓
-                  </th>
-                  <th className="whitespace-nowrap px-2.5 py-2 text-left text-[12px] font-semibold text-slate-500">
-                    สถานะ
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {group.orders.map((order) => {
-                  const rowKey = [
-                    order.order?.order_no,
-                    order.site?.site_code,
-                    order.created_at ?? order.updated_at ?? order.pour_datetime
-                  ]
-                    .filter(Boolean)
-                    .join("-");
-                  return (
-                    <tr
-                      key={rowKey}
-                      className="border-b border-[#edf1f2] transition-colors last:border-b-0 hover:bg-[#f3faf8]"
-                    >
-                      <td className="border-r border-[#edf1f2] px-2.5 py-2 align-middle">
-                        <div className="min-w-0">
-                          <div className="truncate text-[13px] font-semibold text-slate-950" title={order.order?.product_sku ?? "-"}>
-                            {order.order?.product_sku ?? "-"}
-                          </div>
-                          <div className="mt-0.5 line-clamp-2 text-[11px] font-medium leading-4 text-slate-500" title={order.order?.product_name ?? "-"}>
-                            {order.order?.product_name ?? "-"}
-                          </div>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            <span className="truncate text-[10px] font-bold text-sky-700" title={`${order.dealer_name} (${order.dealer_code})`}>
-                              Dealer: {order.dealer_name || "-"}
-                            </span>
-                            <span className={cn(
-                              "inline-flex items-center rounded-full px-1.5 py-0.2 text-[8px] font-bold ring-1 shrink-0",
-                              order.full_loop 
-                                ? "bg-emerald-50 text-emerald-700 ring-emerald-200" 
-                                : "bg-amber-50 text-amber-700 ring-amber-200"
-                            )}>
-                              {order.full_loop ? "Full Loop" : "ไม่ Full Loop"}
-                            </span>
-                          </div>
-                          <div className="mt-0.5 truncate text-[10px] font-medium text-slate-400" title={order.order?.order_no ?? "-"}>
-                            Order No: {order.order?.order_no ?? "-"}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="border-r border-[#edf1f2] px-2.5 py-2 align-middle">
-                        <div className="min-w-0">
-                          <div className="truncate text-xs font-semibold text-slate-600" title={order.site?.site_code ?? "-"}>
-                            {order.site?.site_code ?? "-"}
-                          </div>
-                          <div className="mt-0.5 line-clamp-2 text-[12px] font-medium leading-4 text-slate-800" title={order.site?.site_name ?? "-"}>
-                            {order.site?.site_name ?? "-"}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="border-r border-[#edf1f2] px-2.5 py-2 text-right align-middle font-semibold text-slate-800">
-                        {formatNumber(order.quantity?.ordered ?? 0)}
-                        <span className="ml-1 text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span>
-                      </td>
-                      <td
-                        className={cn(
-                          "border-r border-[#edf1f2] px-2.5 py-2 text-right align-middle font-semibold",
-                          (order.quantity?.delivered ?? 0) > 0 ? "text-slate-800" : "text-slate-400"
-                        )}
-                      >
-                        {formatNumber(order.quantity?.delivered ?? 0)}
-                        <span className="ml-1 text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span>
-                      </td>
-                      <td className="border-r border-[#edf1f2] px-2.5 py-2 align-middle text-[11px] font-medium text-slate-600">
-                        <CompactDateTime value={getPourDateText(order)} />
-                      </td>
-                      <td className="border-r border-[#edf1f2] px-2.5 py-2 align-middle text-[11px] font-medium text-slate-600">
-                        <CompactDateTime value={getOrderCreatedDateText(order)} />
-                      </td>
-                      <td className="border-r border-[#edf1f2] px-2.5 py-2 align-middle text-[11px] font-medium text-slate-600">
-                        <CompactDateTime value={getOrderUpdateDateText(order)} />
-                      </td>
-                      <td className="px-2.5 py-2 align-middle">
-                        <StatusBadge status={order.status?.order} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+  orders.forEach((order) => {
+    const customerCode = order.customer?.code?.trim() || order.customer?.id?.toString() || "-";
+    const customerName = order.customer?.name?.trim() || "ไม่ระบุลูกค้า";
+    const dealerCode = order.dealer_code?.trim() || String(order.dealer_id);
+    const dealerName = order.dealer_name?.trim() || "ไม่ระบุ Dealer";
+    const siteCode = order.site?.site_code?.trim() || "-";
+    const siteName = order.site?.site_name?.trim() || "ไม่ระบุ Site";
+    const key = `${order.dealer_id}::${customerCode}::${siteCode}::${siteName}`;
+    const current = map.get(key) ?? {
+      key,
+      customerCode,
+      customerName,
+      dealerCode,
+      dealerName,
+      siteCode,
+      siteName,
+      orderCount: 0,
+      totalDelivered: 0,
+      totalOrdered: 0,
+      latestPour: null
+    };
+
+    current.orderCount += 1;
+    current.totalOrdered += order.quantity?.ordered ?? 0;
+    current.totalDelivered += order.quantity?.delivered ?? 0;
+    const candidate = parseDateValue(getPourDateText(order));
+    const latest = parseDateValue(current.latestPour);
+    if (candidate && (!latest || candidate > latest)) current.latestPour = getPourDateText(order);
+    map.set(key, current);
+  });
+
+  return [...map.values()].sort((a, b) => {
+    const customerDiff = a.customerName.localeCompare(b.customerName, "th");
+    if (customerDiff !== 0) return customerDiff;
+    const siteDiff = a.siteName.localeCompare(b.siteName, "th");
+    if (siteDiff !== 0) return siteDiff;
+    return (parseDateValue(b.latestPour)?.getTime() ?? 0) - (parseDateValue(a.latestPour)?.getTime() ?? 0);
+  });
+}
+
+
+function SiteLocation({ order }: { order: OrderItem }) {
+  const rawLat = order.site?.latitude;
+  const rawLng = order.site?.longitude;
+  const lat = Number(rawLat);
+  const lng = Number(rawLng);
+  if (!rawLat?.trim() || !rawLng?.trim() || !Number.isFinite(lat) || !Number.isFinite(lng) ||
+      Math.abs(lat) > 90 || Math.abs(lng) > 180) return <span className="text-slate-400">ไม่มีพิกัด</span>;
+  return (
+    <a href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`} target="_blank" rel="noopener noreferrer"
+      className="inline-block text-sky-700 underline underline-offset-4">
+      เปิดแผนที่
+      <span className="mt-1 block text-xs text-slate-500">{lat}, {lng}</span>
+    </a>
+  );
+}
+
+function OrderDetailsTable({ orders }: { orders: OrderItem[] }) {
+  const columns: DataColumn<OrderItem>[] = [
+    { key: "orderNo", title: "Order No.", width: 110, render: (_, row) => <strong>{row.order?.order_no || "-"}</strong> },
+    { key: "product", title: "Product รหัส / ชื่อ", width: 200, render: (_, row) => <><div className="font-semibold">{row.order?.product_sku || "-"}</div><div className="mt-1 text-slate-500">{row.order?.product_name || "-"}</div></> },
+    { key: "site", title: "Site ชื่อ / code", width: 220, render: (_, row) => <><div>{row.site?.site_name || "-"}</div><div className="mt-1 text-xs text-slate-500">{row.site?.site_code || "-"}</div></> },
+    { key: "ordered", title: "ยอดจอง (คิว)", width: 100, align: "right", render: (_, row) => formatNumber(row.quantity?.ordered ?? 0) },
+    { key: "booked", title: "เวลาจอง", width: 140, render: (_, row) => <CompactDateTime value={row.booked_at} /> },
+    { key: "delivered", title: "ยอดเท (คิว)", width: 100, align: "right", render: (_, row) => formatNumber(row.quantity?.delivered ?? 0) },
+    { key: "memo", title: "หมายเหตุ", width: 190, render: (_, row) => <span className="whitespace-pre-wrap break-words">{row.memo || "-"}</span> },
+    { key: "timestamps", title: "สร้าง / อัปเดต", width: 155, render: (_, row) => <div className="space-y-1"><CompactLabeledDateTime label="สร้าง" value={getOrderCreatedDateText(row)} /><CompactLabeledDateTime label="อัปเดต" value={getOrderUpdateDateText(row)} /></div> },
+    { key: "status", title: "สถานะการเท", width: 105, render: (_, row) => <StatusBadge status={row.status?.order} /> },
+    { key: "location", title: "Location Site", width: 165, render: (_, row) => <SiteLocation order={row} /> },
+    { key: "pour", title: "เวลาเท", width: 145, render: (_, row) => <CompactDateTime value={getPourDateText(row)} /> }
+  ];
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = Math.max(1, Math.ceil(orders.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const rows = orders.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  return (
+    <div className="min-w-0 rounded-xl border border-slate-200 bg-white">
+      <p className="border-b border-slate-100 px-4 py-3 text-xs text-slate-500">รายละเอียดออเดอร์ · เลื่อนตารางแนวนอนเพื่อดูทุกคอลัมน์</p>
+      <div className="hidden overflow-x-auto xl:block" tabIndex={0} role="region" aria-label="รายละเอียดออเดอร์ เลื่อนดูทุกคอลัมน์">
+        <table className="dealer-analysis-table w-full table-fixed border-collapse text-sm leading-6" style={{ minWidth: columns.reduce((sum, column) => sum + (column.width ?? 0), 0) }}>
+          <colgroup>{columns.map((column) => <col key={column.key} style={{ width: column.width }} />)}</colgroup>
+          <thead><tr>{columns.map((column) => <th key={column.key} scope="col" className={cn("whitespace-nowrap border-b border-slate-200 bg-slate-50 px-2.5 py-2.5 font-bold text-slate-600", column.align === "right" ? "text-right" : "text-left")}>{column.title}</th>)}</tr></thead>
+          <tbody>{rows.map((row, index) => <tr key={`${row.order?.order_no}-${index}`} className="border-b border-slate-100 last:border-0 hover:bg-sky-50/40">{columns.map((column) => <td key={column.key} className={cn("break-words px-2.5 py-2.5 align-top", column.align === "right" && "text-right tabular-nums")}>{column.render?.(undefined as never, row)}</td>)}</tr>)}</tbody>
+        </table>
+      </div>
+      <div className="divide-y divide-slate-200 xl:hidden">
+        {rows.map((row, index) => <dl key={`${row.order?.order_no}-${index}`} className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">{columns.map((column) => <div key={column.key} className="min-w-0"><dt className="mb-1 text-xs text-slate-500">{column.title}</dt><dd className="break-words text-sm leading-6 text-slate-800">{column.render?.(undefined as never, row)}</dd></div>)}</dl>)}
+      </div>
+      <ShadcnPagination currentPage={currentPage} pageSize={pageSize} totalItems={orders.length} totalPages={totalPages} onPageChange={setPage} />
     </div>
+  );
+}
+
+function CustomerAccordionRow({ expanded, group, onToggle }: { expanded: boolean; group: CustomerGroup; onToggle: () => void }) {
+  return (
+    <>
+      <tr className={cn("hover:bg-slate-50", expanded && "bg-sky-50/60")}>
+        <td className="px-4 py-4 align-middle">
+          <button type="button" onClick={onToggle} aria-expanded={expanded} className="flex w-full items-center gap-3 text-left">
+            <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-lg", expanded ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-500")}>
+              <ChevronDown size={16} className={expanded ? "" : "-rotate-90"} />
+            </span>
+            <span className="min-w-0">
+              <span className="block font-semibold text-slate-950">{group.customerName}</span>
+              <span className="mt-1 block text-xs text-sky-700">Dealer: {group.dealerName}</span>
+              <span className="mt-1 block text-xs text-slate-500">{group.customerCodeLabel} {group.customerCode} · {formatNumber(group.uniqueSiteCount)} ไซต์</span>
+            </span>
+          </button>
+        </td>
+        <td className="px-4 py-4 text-right align-middle font-semibold">{formatNumber(group.orderCount)}</td>
+        <td className="px-4 py-4 text-right align-middle font-semibold"><span className="text-sky-700">{compactNumber(group.wangjaiBooked)}</span></td>
+        <td className="px-4 py-4 text-right align-middle font-semibold">{compactNumber(group.otherBooked)}</td>
+        <td className="px-4 py-4 text-right align-middle font-semibold">{compactNumber(group.totalDelivered)}</td>
+        <td className="px-4 py-4 align-middle"><CompactDateTime value={group.latestPour} /></td>
+      </tr>
+      {expanded && (
+        <tr><td colSpan={6} className="bg-slate-50/40 p-4">
+          <div className="min-w-0 overflow-hidden"><OrderDetailsTable orders={group.orders} /></div>
+        </td></tr>
+      )}
+    </>
   );
 }
 
@@ -412,10 +500,18 @@ function MobileCustomerCard({
           <div className="mt-1 truncate text-[11px] font-bold text-sky-700" title={`${group.dealerName} (${group.dealerCode})`}>
             Dealer: {group.dealerName}
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-2 text-xs border-t border-slate-100 pt-2">
+          <div className="mt-2 grid grid-cols-2 gap-2 border-t border-slate-100 pt-2 text-xs">
             <div>
               <div className="text-[10px] font-semibold text-slate-400">จำนวนออเดอร์ (ครั้ง)</div>
               <div className="font-bold text-slate-800">{formatNumber(group.orderCount)}</div>
+            </div>
+            <div>
+              <div className="text-[10px] font-semibold text-slate-400">จองผ่านน้องวางใจ</div>
+              <div className="font-bold text-sky-700">{compactNumber(group.wangjaiBooked)} <span className="text-[9px] text-slate-400">{group.unit}</span></div>
+            </div>
+            <div>
+              <div className="text-[10px] font-semibold text-slate-400">จองผ่านช่องทางอื่น</div>
+              <div className="font-bold text-slate-800">{compactNumber(group.otherBooked)} <span className="text-[9px] text-slate-400">{group.unit}</span></div>
             </div>
             <div>
               <div className="text-[10px] font-semibold text-slate-400">สั่งใน Orders ({group.unit})</div>
@@ -427,84 +523,12 @@ function MobileCustomerCard({
                 {compactNumber(group.totalDelivered)} <span className="text-[9px] text-slate-400">{group.unit}</span>
               </div>
             </div>
-            <div>
-              <div className="text-[10px] font-semibold text-emerald-600">Full Loop ({group.unit})</div>
-              <div className="font-bold text-emerald-700">
-                {compactNumber(group.fullLoopDelivered)} <span className="text-[9px] text-slate-400">{group.unit}</span>
-              </div>
-            </div>
-            <div>
-              <div className="text-[10px] font-semibold text-rose-600">ไม่ Full Loop ({group.unit})</div>
-              <div className="font-bold text-rose-700">
-                {compactNumber(group.notFullLoopDelivered)} <span className="text-[9px] text-slate-400">{group.unit}</span>
-              </div>
-            </div>
           </div>
         </div>
       </button>
       {expanded && (
-        <div className="bg-slate-50/40 px-4 pb-3 pt-1">
-          {group.orders.map((order) => {
-            const rowKey = [
-              order.order?.order_no,
-              order.site?.site_code,
-              order.created_at ?? order.updated_at ?? order.pour_datetime
-            ]
-              .filter(Boolean)
-              .join("-");
-            return (
-              <div key={rowKey} className="my-2 rounded-lg border border-slate-200 bg-white p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-semibold text-slate-950">{order.order?.product_sku ?? "-"}</div>
-                    <div className="mt-0.5 text-[11px] font-medium text-slate-500">{order.order?.product_name ?? "-"}</div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                      <span className="truncate text-[10px] font-medium text-slate-400">Order No: {order.order?.order_no ?? "-"}</span>
-                      <span className={cn(
-                        "inline-flex items-center rounded-full px-1.5 py-0.2 text-[8px] font-bold ring-1 shrink-0",
-                        order.full_loop 
-                          ? "bg-emerald-50 text-emerald-700 ring-emerald-200" 
-                          : "bg-amber-50 text-amber-700 ring-amber-200"
-                      )}>
-                        {order.full_loop ? "Full Loop" : "ไม่ Full Loop"}
-                      </span>
-                    </div>
-                  </div>
-                  <StatusBadge status={order.status?.order} />
-                </div>
-                <div className="mt-2 rounded-md bg-sky-50 px-2 py-1 text-[11px] font-bold text-sky-700">
-                  Dealer: {order.dealer_name || "-"} ({order.dealer_code || order.dealer_id})
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
-                  <div>
-                    <div className="text-slate-400">Site</div>
-                    <div className="truncate font-semibold text-slate-700">{order.site?.site_code ?? "-"}</div>
-                    <div className="truncate font-medium text-slate-500">{order.site?.site_name ?? "-"}</div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400">เวลาเท</div>
-                    <div className="font-medium text-slate-700">{dateText(getPourDateText(order))}</div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400">วันที่สร้างออเดอร์</div>
-                    <div className="font-medium text-slate-700">{dateText(getOrderCreatedDateText(order))}</div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400">วันที่อัปเดตรายการ</div>
-                    <div className="font-medium text-slate-700">{dateText(getOrderUpdateDateText(order))}</div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400">สั่งใน Order ({order.quantity?.unit ?? "-"})</div>
-                    <div className="font-bold text-slate-800">{formatNumber(order.quantity?.ordered ?? 0)} <span className="text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span></div>
-                  </div>
-                  <div>
-                    <div className="text-slate-400">ส่งจริงใน Order ({order.quantity?.unit ?? "-"})</div>
-                    <div className="font-bold text-slate-800">{formatNumber(order.quantity?.delivered ?? 0)} <span className="text-[10px] text-slate-400">{order.quantity?.unit ?? "-"}</span></div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="bg-slate-50/40 p-3">
+          <OrderDetailsTable orders={group.orders} />
         </div>
       )}
     </div>
@@ -518,21 +542,61 @@ export function OrdersPage() {
     ordersState
   } = data;
   const { orderSearch, setOrderSearch } = filters;
-  const [mobilePage, setMobilePage] = useState(1);
-  const [desktopPage, setDesktopPage] = useState(1);
+  const [orderedFilter, setOrderedFilter] = useState<QuantityFilter>("positive");
+  const [deliveredFilter, setDeliveredFilter] = useState<QuantityFilter>("positive");
+  const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>("all");
+  const [viewMode, setViewMode] = useState<OrderListView>("dealer");
+  const [dealerMobilePage, setDealerMobilePage] = useState(1);
+  const [dealerDesktopPage, setDealerDesktopPage] = useState(1);
+  const [customerMobilePage, setCustomerMobilePage] = useState(1);
+  const [customerDesktopPage, setCustomerDesktopPage] = useState(1);
   const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
 
-  const dealerOrders = orders;
+  const dealerOrders = useMemo(
+    () =>
+      orders.filter((order) =>
+        matchesQuantityFilter(order.quantity?.ordered ?? 0, orderedFilter) &&
+        matchesQuantityFilter(order.quantity?.delivered ?? 0, deliveredFilter) &&
+        matchesOrderStatusFilter(order.status?.order, statusFilter)
+      ),
+    [deliveredFilter, orderedFilter, orders, statusFilter]
+  );
+
+  const statusOptions = useMemo(
+    () => [...new Set(orders.map((order) => String(order.status?.order ?? "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)),
+    [orders]
+  );
 
   const customerGroups = useMemo(() => buildCustomerGroups(dealerOrders), [dealerOrders]);
+  const customerSiteRows = useMemo(() => buildCustomerSiteRows(dealerOrders), [dealerOrders]);
 
   const totalOrdered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0);
   const deliveredOrders = dealerOrders.filter((row) => (row.quantity?.delivered ?? 0) > 0);
   const totalDelivered = deliveredOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
-  const fullLoopVolume = dealerOrders.filter((row) => row.full_loop).reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
-  const notFullLoopVolume = dealerOrders.filter((row) => !row.full_loop).reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0);
   const orderUnit = "คิว";
-  const orderListTitle = "Order List ทั้งหมด";
+  const orderListTitle = viewMode === "dealer" ? "Order List แยกตาม Dealer" : "Order List แยกตามรายลูกค้า";
+
+  const handleOrderSearchChange = (value: string) => {
+    setOrderSearch(value);
+    resetPagination();
+  };
+
+  const handleQuantityFilterChange = (setter: (value: QuantityFilter) => void, value: QuantityFilter) => {
+    setter(value);
+    resetPagination();
+  };
+
+  const handleStatusFilterChange = (value: OrderStatusFilter) => {
+    setStatusFilter(value);
+    resetPagination();
+  };
+
+  function resetPagination() {
+    setDealerMobilePage(1);
+    setDealerDesktopPage(1);
+    setCustomerMobilePage(1);
+    setCustomerDesktopPage(1);
+  }
 
   const toggleCustomer = (key: string) => {
     setExpandedCustomers((prev) => {
@@ -545,234 +609,199 @@ export function OrdersPage() {
   const expandAll = () => setExpandedCustomers(new Set(customerGroups.map((g) => g.customerKey)));
   const collapseAll = () => setExpandedCustomers(new Set());
 
-  // Desktop pagination
-  const desktopRows = customerGroups.slice((desktopPage - 1) * DESKTOP_PAGE_SIZE, desktopPage * DESKTOP_PAGE_SIZE);
+  const dealerDesktopTotalPages = Math.max(Math.ceil(customerGroups.length / DESKTOP_PAGE_SIZE), 1);
+  const dealerMobileTotalPages = Math.max(Math.ceil(customerGroups.length / MOBILE_PAGE_SIZE), 1);
+  const customerDesktopTotalPages = Math.max(Math.ceil(customerSiteRows.length / DESKTOP_PAGE_SIZE), 1);
+  const customerMobileTotalPages = Math.max(Math.ceil(customerSiteRows.length / MOBILE_PAGE_SIZE), 1);
+  const currentDealerDesktopPage = Math.min(dealerDesktopPage, dealerDesktopTotalPages);
+  const currentDealerMobilePage = Math.min(dealerMobilePage, dealerMobileTotalPages);
+  const currentCustomerDesktopPage = Math.min(customerDesktopPage, customerDesktopTotalPages);
+  const currentCustomerMobilePage = Math.min(customerMobilePage, customerMobileTotalPages);
 
-  // Mobile pagination
-  const mobileRows = customerGroups.slice((mobilePage - 1) * MOBILE_PAGE_SIZE, mobilePage * MOBILE_PAGE_SIZE);
+  const dealerDesktopRows = customerGroups.slice((currentDealerDesktopPage - 1) * DESKTOP_PAGE_SIZE, currentDealerDesktopPage * DESKTOP_PAGE_SIZE);
+  const dealerMobileRows = customerGroups.slice((currentDealerMobilePage - 1) * MOBILE_PAGE_SIZE, currentDealerMobilePage * MOBILE_PAGE_SIZE);
+  const customerDesktopRows = customerSiteRows.slice((currentCustomerDesktopPage - 1) * DESKTOP_PAGE_SIZE, currentCustomerDesktopPage * DESKTOP_PAGE_SIZE);
+  const customerMobileRows = customerSiteRows.slice((currentCustomerMobilePage - 1) * MOBILE_PAGE_SIZE, currentCustomerMobilePage * MOBILE_PAGE_SIZE);
+  const activeListTotal = viewMode === "dealer" ? customerGroups.length : customerSiteRows.length;
+  const activeListLabel = viewMode === "dealer" ? "ลูกค้า" : "รายการลูกค้า / ไซต์";
 
   return (
-    <>
-      <WangjaiAdvisor
-        accent="slate"
-        compact
-        message="ผมอยู่เป็นตัวช่วยตรวจรายการ order: ค้นหาลูกค้า ไซต์ หรือสินค้า แล้วกางแถวเพื่อดูรายละเอียดงานเท"
-        stats={[
-          { label: "Scope", value: "ทุก Dealer" },
-          { label: "ออเดอร์", value: formatNumber(dealerOrders.length) },
-          { label: "Full Loop", value: `${compactNumber(fullLoopVolume)} ${orderUnit}` },
-          { label: "ไม่ Full Loop", value: `${compactNumber(notFullLoopVolume)} ${orderUnit}` }
-        ]}
-        title="เช็กรายการ Order แบบเร็ว"
-      />
-
-      <section className="grid grid-cols-1">
-        <SummaryKpiStrip
-          items={[
-            {
-              detail: "ลูกค้าทั้งหมดที่กรองอยู่",
-              icon: <Users size={14} />,
-              label: "จำนวนลูกค้า",
-              value: formatNumber(customerGroups.length)
-            },
-            {
-              detail: "จำนวนออเดอร์รวมจากทุกลูกค้า",
-              icon: <PackageCheck size={14} />,
-              label: "จำนวนออเดอร์",
-              value: formatNumber(dealerOrders.length)
-            },
-            {
-              detail: "รวม quantity.ordered จากรายการ Order",
-              icon: <TrendingUp size={14} />,
-              label: "ปริมาณที่สั่ง",
-              value: (
-                <>
-                  {compactNumber(totalOrdered)}{" "}
-                  <span className="text-xs font-semibold text-slate-400">{orderUnit}</span>
-                </>
-              )
-            },
-            {
-              detail: `ปริมาณส่งจริงรวมจาก ${formatNumber(deliveredOrders.length)} order ที่มีการส่งจริง`,
-              icon: <PackageCheck size={14} />,
-              label: "ปริมาณส่งจริง",
-              value: (
-                <>
-                  {compactNumber(totalDelivered)}{" "}
-                  <span className="text-xs font-semibold text-slate-400">{orderUnit}</span>
-                </>
-              )
-            },
-            {
-              detail: "ปริมาณคิวจาก SO ที่เป็น Full Loop (create_form_wangjai = 1)",
-              icon: <PackageCheck size={14} />,
-              label: "Full Loop",
-              value: (
-                <>
-                  {compactNumber(fullLoopVolume)}{" "}
-                  <span className="text-xs font-semibold text-slate-400">{orderUnit}</span>
-                </>
-              )
-            },
-            {
-              detail: "ปริมาณคิวจาก SO ที่ไม่เป็น Full Loop",
-              icon: <PackageCheck size={14} />,
-              label: "ไม่ Full Loop",
-              value: (
-                <>
-                  {compactNumber(notFullLoopVolume)}{" "}
-                  <span className="text-xs font-semibold text-slate-400">{orderUnit}</span>
-                </>
-              )
-            }
-          ]}
-        />
+    <div className="space-y-4">
+      <section className="relative overflow-hidden rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50 via-white to-indigo-50 px-4 py-5 shadow-sm sm:px-6">
+        <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-sky-200/30 blur-3xl" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-600 text-white shadow-lg shadow-sky-600/20">
+              <ClipboardList size={24} strokeWidth={2.2} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-600">ORDER OPERATIONS</p>
+              <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-950 sm:text-[28px]">Order List</h1>
+              <p className="mt-1 max-w-2xl text-xs font-medium leading-5 text-slate-500 sm:text-sm">
+                ตรวจสอบรายการสั่งซื้อ ค้นหาลูกค้า ไซต์ หรือสินค้า และเปิดดูรายละเอียดงานเทได้ในที่เดียว
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-3">
+            <div className="rounded-xl border border-white/80 bg-white/80 px-4 py-2.5 shadow-sm">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ออเดอร์ทั้งหมด</div>
+              <div className="mt-1 text-xl font-extrabold text-slate-900">{formatNumber(dealerOrders.length)}</div>
+            </div>
+            <div className="rounded-xl border border-white/80 bg-white/80 px-4 py-2.5 shadow-sm">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">ส่งจริงแล้ว</div>
+              <div className="mt-1 text-xl font-extrabold text-emerald-600">{formatNumber(deliveredOrders.length)}</div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      {/* ─── Mobile customer accordion (hidden on xl+) ─── */}
-      <Card className="dashboard-card overflow-hidden xl:hidden">
-        <CardHeader className="border-b border-[#d9e3e6] bg-white">
-          <div className="space-y-2">
-            <div>
-              <CardTitle className="text-base">{orderListTitle}</CardTitle>
-              <p className="mt-0.5 text-xs font-medium text-slate-500">
-                แสดงข้อมูลจาก Order API · ยอดต่อรายการอาจต่างจากยอดรวมระดับไซต์ใน Dealer Analysis
-              </p>
-            </div>
-            <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
-              <Search size={15} className="shrink-0 text-slate-500" />
-              <input
-                className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
-                placeholder="ค้นหา customer (site) (product)"
-                value={orderSearch}
-                onChange={(event) => {
-                  setOrderSearch(event.target.value);
-                  setMobilePage(1);
-                }}
-              />
-            </label>
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-slate-500">{formatNumber(customerGroups.length)} ลูกค้า · {formatNumber(dealerOrders.length)} ออเดอร์</span>
-              <div className="flex gap-1.5">
-                <button type="button" onClick={expandAll} className="rounded-md border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-600">กางทั้งหมด</button>
-                <button type="button" onClick={collapseAll} className="rounded-md border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-600">ย่อทั้งหมด</button>
+      <SummaryKpiStrip
+        items={[
+          {
+            accent: "violet",
+            detail: "ลูกค้าทั้งหมดที่กรองอยู่",
+            icon: <Users size={15} />,
+            label: "จำนวนลูกค้า",
+            value: formatNumber(customerGroups.length)
+          },
+          {
+            accent: "sky",
+            detail: "จำนวนออเดอร์รวมจากทุกลูกค้า",
+            icon: <PackageCheck size={15} />,
+            label: "จำนวนออเดอร์",
+            value: formatNumber(dealerOrders.length)
+          },
+          {
+            accent: "amber",
+            detail: "รวม quantity.ordered จากรายการ Order",
+            icon: <TrendingUp size={15} />,
+            label: "ปริมาณที่สั่ง",
+            value: <>{compactNumber(totalOrdered)} <span className="text-xs font-semibold text-slate-400">{orderUnit}</span></>
+          },
+          {
+            accent: "emerald",
+            detail: `จาก ${formatNumber(deliveredOrders.length)} order ที่มีการส่งจริง`,
+            icon: <PackageCheck size={15} />,
+            label: "ปริมาณส่งจริง",
+            value: <>{compactNumber(totalDelivered)} <span className="text-xs font-semibold text-slate-400">{orderUnit}</span></>
+          }
+        ]}
+      />
+
+      <Card className="dashboard-card overflow-hidden rounded-2xl border-slate-200/80 shadow-sm">
+        <CardHeader className="border-b border-slate-100 bg-white px-4 py-3 sm:px-5">
+          <div className="flex flex-col gap-3 2xl:flex-row 2xl:items-center 2xl:justify-between">
+            <div className="flex min-w-0 flex-1 items-center justify-between gap-4">
+              <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-sky-600">รายการที่แสดง</p>
+              <CardTitle className="mt-0.5 text-lg font-extrabold text-slate-950">{orderListTitle}</CardTitle>
+              <p className="mt-0.5 text-[11px] font-medium text-slate-500">ข้อมูลจาก Order API · เลือกมุมมองเพื่อดูรายละเอียด</p>
+              </div>
+              <div className="shrink-0 text-right">
+              <div className="text-xl font-extrabold text-slate-900">{formatNumber(activeListTotal)}</div>
+              <div className="text-[11px] font-semibold text-slate-400">{activeListLabel}ในมุมมองนี้</div>
               </div>
             </div>
-          </div>
-        </CardHeader>
 
-        <CardContent className="p-0">
-          {ordersState === "loading" && (
-            <div className="px-4 py-10 text-center text-sm font-semibold text-slate-500">กำลังโหลดข้อมูล...</div>
-          )}
-          {ordersState !== "loading" && customerGroups.length === 0 && (
-            <div className="px-4 py-10 text-center text-sm font-semibold text-slate-500">ไม่มีข้อมูล</div>
-          )}
-          {ordersState !== "loading" && mobileRows.map((group) => (
-            <MobileCustomerCard
-              key={group.customerKey}
-              expanded={expandedCustomers.has(group.customerKey)}
-              group={group}
-              onToggle={() => toggleCustomer(group.customerKey)}
-            />
-          ))}
-        </CardContent>
-
-        {customerGroups.length > 0 && (
-          <ShadcnPagination
-            currentPage={mobilePage}
-            pageSize={MOBILE_PAGE_SIZE}
-            totalItems={customerGroups.length}
-            totalPages={Math.max(Math.ceil(customerGroups.length / MOBILE_PAGE_SIZE), 1)}
-            onPageChange={setMobilePage}
-          />
-        )}
-      </Card>
-
-      {/* ─── Desktop customer accordion (hidden below xl) ─── */}
-      <Card className="dashboard-card hidden overflow-hidden xl:block">
-        <CardHeader className="border-b border-[#d9e3e6] bg-white">
-          <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(360px,440px)] xl:items-center">
-            <div>
-              <CardTitle className="text-lg">{orderListTitle}</CardTitle>
-              <p className="mt-1 text-xs font-medium text-slate-500">
-                แสดงข้อมูลจาก Order API · ยอดต่อรายการอาจต่างจากยอดรวมระดับไซต์ใน Dealer Analysis
-              </p>
+          <div className="grid gap-2 lg:grid-cols-[minmax(220px,1fr)_minmax(200px,280px)_150px_150px_160px] lg:items-center 2xl:flex 2xl:shrink-0 2xl:items-center">
+            <div className="2xl:w-[300px]">
+              <OrderListTabs value={viewMode} onChange={setViewMode} />
             </div>
-            <label className="flex h-9 items-center gap-2 rounded-md border border-[#d5e0e3] bg-white px-3 shadow-sm focus-within:border-slate-400 focus-within:ring-2 focus-within:ring-slate-200">
-              <Search size={15} className="shrink-0 text-slate-500" />
+            <label className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 transition-colors focus-within:border-sky-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-sky-100 2xl:w-[280px]">
+              <Search size={16} className="shrink-0 text-slate-400" />
               <input
                 className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
-                placeholder="ค้นหา customer (site) (product)"
+                placeholder="ค้นหา customer, site หรือ product"
                 value={orderSearch}
-                onChange={(event) => {
-                  setOrderSearch(event.target.value);
-                  setDesktopPage(1);
-                }}
+                onChange={(event) => handleOrderSearchChange(event.target.value)}
               />
             </label>
+            <QuantityFilterSelect
+              label="ยอดจอง"
+              value={orderedFilter}
+              onChange={(value) => handleQuantityFilterChange(setOrderedFilter, value)}
+            />
+            <QuantityFilterSelect
+              label="ยอดเท"
+              value={deliveredFilter}
+              onChange={(value) => handleQuantityFilterChange(setDeliveredFilter, value)}
+            />
+            <div className="2xl:w-[160px]"><OrderStatusFilterSelect value={statusFilter} options={statusOptions} onChange={handleStatusFilterChange} /></div>
+          </div>
           </div>
         </CardHeader>
 
-        {/* Toolbar */}
-        <div className="hidden flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/40 px-5 py-2.5 text-[11px]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/60 px-4 py-3 text-xs sm:px-6">
           <span className="font-semibold text-slate-500">
-            <strong className="text-slate-900">{formatNumber(customerGroups.length)}</strong> ลูกค้า · <strong className="text-slate-900">{formatNumber(dealerOrders.length)}</strong> ออเดอร์
-            {expandedCustomers.size > 0 && (
-              <span className="ml-2 text-sky-700">· เปิด {expandedCustomers.size} ราย</span>
-            )}
+            แสดง <strong className="text-slate-900">{formatNumber(activeListTotal)}</strong> {activeListLabel} · <strong className="text-slate-900">{formatNumber(dealerOrders.length)}</strong> ออเดอร์
+            {viewMode === "dealer" && expandedCustomers.size > 0 && <span className="ml-2 text-sky-700">· เปิด {expandedCustomers.size} ราย</span>}
           </span>
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              onClick={expandAll}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-semibold text-slate-600 transition-colors hover:bg-slate-50"
-            >
-              กางทั้งหมด
-            </button>
-            <button
-              type="button"
-              onClick={collapseAll}
-              disabled={expandedCustomers.size === 0}
-              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40"
-            >
-              ย่อทั้งหมด
-            </button>
-          </div>
-        </div>
-
-        {/* Column header */}
-        <div className="hidden grid-cols-[36px_minmax(0,2.4fr)_140px_140px_140px_140px_140px_140px] border-b border-slate-100 bg-slate-50 px-5 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-          <span></span>
-          <span className="whitespace-nowrap px-3">ลูกค้า</span>
-          <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right">จำนวนออเดอร์ (ครั้ง)</span>
-          <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right">สั่งใน Orders ({orderUnit})</span>
-          <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right">ส่งจริงใน Orders ({orderUnit})</span>
-          <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right text-emerald-600">Full Loop ({orderUnit})</span>
-          <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3 text-right text-rose-600">ไม่ Full Loop ({orderUnit})</span>
-          <span className="whitespace-nowrap border-l border-[#e3e9ed] px-3">ข้อมูลล่าสุด ↓</span>
+          {viewMode === "dealer" && (
+            <div className="flex gap-2">
+              <button type="button" onClick={expandAll} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 shadow-sm transition-colors hover:border-sky-300 hover:text-sky-700">กางทั้งหมด</button>
+              <button type="button" onClick={collapseAll} disabled={expandedCustomers.size === 0} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 shadow-sm transition-colors hover:border-sky-300 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-40">ย่อทั้งหมด</button>
+            </div>
+          )}
         </div>
 
         <CardContent className="p-0">
-          {ordersState === "loading" && (
-            <div className="px-5 py-12 text-center text-sm font-semibold text-slate-500">กำลังโหลดข้อมูล...</div>
-          )}
-          {ordersState !== "loading" && dealerOrders.length === 0 && (
-            <div className="px-5 py-12 text-center text-sm font-semibold text-slate-500">ไม่มีข้อมูล</div>
-          )}
-          {ordersState !== "loading" && dealerOrders.length > 0 && <FlatOrderTable orders={dealerOrders} />}
+          <div className="xl:hidden">
+            {ordersState === "loading" && <div className="px-4 py-12 text-center text-sm font-semibold text-slate-500">กำลังโหลดข้อมูล...</div>}
+            {ordersState !== "loading" && activeListTotal === 0 && <div className="px-4 py-12 text-center text-sm font-semibold text-slate-500">ไม่มีข้อมูล</div>}
+            {ordersState !== "loading" && viewMode === "dealer" && dealerMobileRows.map((group) => <MobileCustomerCard key={group.customerKey} expanded={expandedCustomers.has(group.customerKey)} group={group} onToggle={() => toggleCustomer(group.customerKey)} />)}
+            {ordersState !== "loading" && viewMode === "customer" && customerMobileRows.map((row) => <CustomerSiteCard key={row.key} row={row} />)}
+          </div>
+          <div className="hidden xl:block">
+            {ordersState === "loading" && <div className="px-5 py-14 text-center text-sm font-semibold text-slate-500">กำลังโหลดข้อมูล...</div>}
+            {ordersState !== "loading" && activeListTotal === 0 && <div className="px-5 py-14 text-center text-sm font-semibold text-slate-500">ไม่มีข้อมูล</div>}
+            {viewMode === "dealer" && (
+              <div className="overflow-x-auto">
+                <table className="dealer-analysis-table w-full min-w-[1100px] table-fixed text-sm leading-5" aria-label="Order List แยกตาม Dealer">
+                  <colgroup><col style={{ width: "36%" }} /><col style={{ width: "12%" }} /><col style={{ width: "13%" }} /><col style={{ width: "13%" }} /><col style={{ width: "12%" }} /><col style={{ width: "14%" }} /></colgroup>
+                  <thead>
+                    <tr>
+                      <th rowSpan={2} className="px-4 py-4 text-center font-bold">ลูกค้า</th>
+                      <th rowSpan={2} className="px-4 py-4 text-center font-bold">จำนวนออเดอร์</th>
+                      <th colSpan={2} className="px-4 py-3 text-center font-bold">จำนวนที่จอง ({orderUnit})</th>
+                      <th rowSpan={2} className="px-4 py-4 text-center font-bold">ส่งจริง ({orderUnit})</th>
+                      <th rowSpan={2} className="px-4 py-4 text-center font-bold">ข้อมูลล่าสุด</th>
+                    </tr>
+                    <tr>
+                      <th className="px-4 py-3 text-center font-bold">จองผ่านน้องวางใจ</th>
+                      <th className="px-4 py-3 text-center font-bold">จองผ่านช่องทางอื่น</th>
+                    </tr>
+                  </thead>
+                  <tbody>{ordersState !== "loading" && dealerDesktopRows.map((group) => <CustomerAccordionRow key={group.customerKey} expanded={expandedCustomers.has(group.customerKey)} group={group} onToggle={() => toggleCustomer(group.customerKey)} />)}</tbody>
+                </table>
+              </div>
+            )}
+            {ordersState !== "loading" && viewMode === "customer" && customerDesktopRows.length > 0 && <CustomerSiteTable rows={customerDesktopRows} />}
+          </div>
         </CardContent>
 
-        {customerGroups.length > 0 && (
-          <ShadcnPagination
-            currentPage={desktopPage}
-            pageSize={DESKTOP_PAGE_SIZE}
-            totalItems={customerGroups.length}
-            totalPages={Math.max(Math.ceil(customerGroups.length / DESKTOP_PAGE_SIZE), 1)}
-            onPageChange={setDesktopPage}
-          />
+        {activeListTotal > 0 && (
+          <>
+            <div className="xl:hidden">
+              <ShadcnPagination
+                currentPage={viewMode === "dealer" ? currentDealerMobilePage : currentCustomerMobilePage}
+                pageSize={MOBILE_PAGE_SIZE}
+                totalItems={activeListTotal}
+                totalPages={viewMode === "dealer" ? dealerMobileTotalPages : customerMobileTotalPages}
+                onPageChange={viewMode === "dealer" ? setDealerMobilePage : setCustomerMobilePage}
+              />
+            </div>
+            <div className="hidden xl:block">
+              <ShadcnPagination
+                currentPage={viewMode === "dealer" ? currentDealerDesktopPage : currentCustomerDesktopPage}
+                pageSize={DESKTOP_PAGE_SIZE}
+                totalItems={activeListTotal}
+                totalPages={viewMode === "dealer" ? dealerDesktopTotalPages : customerDesktopTotalPages}
+                onPageChange={viewMode === "dealer" ? setDealerDesktopPage : setCustomerDesktopPage}
+              />
+            </div>
+          </>
         )}
       </Card>
-    </>
+    </div>
   );
 }

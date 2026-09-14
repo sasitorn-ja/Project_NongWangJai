@@ -26,6 +26,23 @@ export function toNumber(value: unknown): number {
   return 0;
 }
 
+function toBangkokTimestamp(value?: string | null) {
+  if (!value) return null;
+
+  // The API DB connection returns DATETIME strings without a timezone. Those
+  // values are stored as UTC, so make that explicit before applying +07:00.
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value);
+  const utcValue = hasTimezone ? value : `${value.replace(" ", "T")}Z`;
+  const date = new Date(utcValue);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const bangkokDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+  const pad = (part: number, length = 2) => String(part).padStart(length, "0");
+
+  // Return a timezone-less business timestamp so dateText preserves the adjusted clock value.
+  return `${bangkokDate.getUTCFullYear()}-${pad(bangkokDate.getUTCMonth() + 1)}-${pad(bangkokDate.getUTCDate())}T${pad(bangkokDate.getUTCHours())}:${pad(bangkokDate.getUTCMinutes())}:${pad(bangkokDate.getUTCSeconds())}.${pad(bangkokDate.getUTCMilliseconds(), 3)}`;
+}
+
 export function normalizeDealer(row: Dealer & { api_created_at?: string | null; api_updated_at?: string | null }): Dealer {
   return {
     ...row,
@@ -125,11 +142,9 @@ export function normalizeSoOrder(row: SoOrderItem, dealerMap: Map<string, Dealer
       product_name: String(row.MaterialDescription ?? "")
     },
     pour_datetime: row.DeliveryDateTime ?? row.DocumentDate ?? null,
-    // DocumentDate is the document's business date and is often normalized to 00:00.
-    // Use the upstream created_at timestamp for the actual booking time when available.
-    booked_at: row.created_at ?? row.DocumentDate ?? null,
+    // created_at is the actual booking timestamp; the DB stores it as UTC.
+    booked_at: row.created_at ? toBangkokTimestamp(row.created_at) : row.DocumentDate ?? null,
     memo: row.Memo ?? null,
-    details: row.InternalNote ?? null,
     quantity: {
       initial_ordered: initialQuantity,
       ordered: quantity,
@@ -141,7 +156,7 @@ export function normalizeSoOrder(row: SoOrderItem, dealerMap: Map<string, Dealer
     },
     created_at: row.created_at ?? null,
     updated_at: row.modify_at ?? null,
-    full_loop: row.create_form_wangjai === 1
+    booking_channel: row.create_form_wangjai === 1 ? "wangjai" : "other"
   };
 }
 

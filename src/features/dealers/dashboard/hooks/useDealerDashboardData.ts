@@ -251,16 +251,6 @@ export function useDealerDashboardData({
     });
   }, [orderSearch, ordersInDateRange]);
 
-  const fullLoopVolume = useMemo(
-    () => ordersInDateRange.filter((order) => order.full_loop).reduce((sum, order) => sum + (order.quantity?.delivered ?? 0), 0),
-    [ordersInDateRange]
-  );
-
-  const notFullLoopVolume = useMemo(
-    () => ordersInDateRange.filter((order) => !order.full_loop).reduce((sum, order) => sum + (order.quantity?.delivered ?? 0), 0),
-    [ordersInDateRange]
-  );
-
   return {
     activeRate,
     apiMessage,
@@ -272,9 +262,7 @@ export function useDealerDashboardData({
     filteredOrders,
     filteredSites,
     filteredUsageRows,
-    fullLoopVolume,
     groupsState,
-    notFullLoopVolume,
     ordersInDateRange,
     ordersState,
     ordersMessage,

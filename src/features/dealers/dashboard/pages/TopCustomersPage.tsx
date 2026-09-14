@@ -77,8 +77,6 @@ export function TopCustomersPage() {
     customerName: string;
     delivered: number;
     ordered: number;
-    fullLoopDelivered: number;
-    notFullLoopDelivered: number;
     sites: Set<string>;
     orders: EnrichedOrderItem[];
   } | null>(null);
@@ -153,8 +151,6 @@ export function TopCustomersPage() {
           customerName: string;
           delivered: number;
           ordered: number;
-          fullLoopDelivered: number;
-          notFullLoopDelivered: number;
           sites: Set<string>;
           orders: typeof filteredOrders;
         }
@@ -168,19 +164,12 @@ export function TopCustomersPage() {
           customerName: order.customerName,
           delivered: 0,
           ordered: 0,
-          fullLoopDelivered: 0,
-          notFullLoopDelivered: 0,
           sites: new Set<string>(),
           orders: []
         };
 
       current.delivered += order.delivered;
       current.ordered += order.ordered;
-      if (order.full_loop) {
-        current.fullLoopDelivered += order.delivered;
-      } else {
-        current.notFullLoopDelivered += order.delivered;
-      }
       if (order.siteKey) current.sites.add(order.siteKey);
       current.countSite = current.sites.size;
       current.orders.push(order);
@@ -199,8 +188,6 @@ export function TopCustomersPage() {
           monthKey: string;
           delivered: number;
           ordered: number;
-          fullLoopVolume: number;
-          notFullLoopVolume: number;
           customerMap: Map<
             string,
             {
@@ -217,18 +204,11 @@ export function TopCustomersPage() {
           monthKey: order.monthKey,
           delivered: 0,
           ordered: 0,
-          fullLoopVolume: 0,
-          notFullLoopVolume: 0,
           customerMap: new Map()
         };
 
       current.delivered += order.delivered;
       current.ordered += order.ordered;
-      if (order.full_loop) {
-        current.fullLoopVolume += order.delivered;
-      } else {
-        current.notFullLoopVolume += order.delivered;
-      }
 
       const customerKey = `${order.customerCode}::${order.customerName}`;
       const customerCurrent =
@@ -253,8 +233,6 @@ export function TopCustomersPage() {
         monthKey: row.monthKey,
         monthLabel: getMonthLabel(row.monthKey),
         ordered: row.ordered,
-        fullLoopVolume: row.fullLoopVolume,
-        notFullLoopVolume: row.notFullLoopVolume,
         topCustomers: Array.from(row.customerMap.values())
           .sort((a, b) => b.delivered - a.delivered)
           .slice(0, topN)
@@ -262,8 +240,6 @@ export function TopCustomersPage() {
   }, [filteredOrders, topN]);
 
   const totalVolume = filteredOrders.reduce((sum, order) => sum + order.delivered, 0);
-  const fullLoopVolume = filteredOrders.filter((order) => order.full_loop).reduce((sum, order) => sum + order.delivered, 0);
-  const notFullLoopVolume = filteredOrders.filter((order) => !order.full_loop).reduce((sum, order) => sum + order.delivered, 0);
   const totalSites = new Set(filteredOrders.map((order) => order.siteKey).filter(Boolean)).size;
   const totalCustomers = customerRows.length;
   const topDealer = customerRows[0];
@@ -306,22 +282,6 @@ export function TopCustomersPage() {
       render: (value) => <span className="inline-block min-w-[2.5rem] pr-6">{formatNumber(Number(value ?? 0))}</span>
     },
     {
-      title: <span className="inline-block pr-4 text-emerald-600">Full Loop ({volumeUnit})</span>,
-      key: "fullLoopDelivered",
-      dataIndex: "fullLoopDelivered",
-      align: "right",
-      width: 120,
-      render: (value) => <span className="inline-block min-w-[2.5rem] pr-4 text-emerald-700 font-semibold">{formatNumber(Number(value ?? 0))}</span>
-    },
-    {
-      title: <span className="inline-block pr-4 text-rose-600">ไม่ Full Loop ({volumeUnit})</span>,
-      key: "notFullLoopDelivered",
-      dataIndex: "notFullLoopDelivered",
-      align: "right",
-      width: 120,
-      render: (value) => <span className="inline-block min-w-[2.5rem] pr-4 text-rose-700 font-semibold">{formatNumber(Number(value ?? 0))}</span>
-    },
-    {
       title: "การจัดการ",
       key: "actions",
       width: 100,
@@ -345,22 +305,6 @@ export function TopCustomersPage() {
   const monthlyColumns: DataColumn<(typeof monthlyRows)[number]>[] = [
     { title: "Month", key: "month", dataIndex: "monthLabel", sortAccessor: (record) => record.monthKey, width: 120 },
     { title: `Delivered Volume (${volumeUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
-    {
-      title: `Full Loop (${volumeUnit})`,
-      key: "fullLoopVolume",
-      dataIndex: "fullLoopVolume",
-      align: "right",
-      width: 130,
-      render: (value) => <span className="font-semibold text-emerald-700">{formatNumber(Number(value ?? 0))}</span>
-    },
-    {
-      title: `ไม่ Full Loop (${volumeUnit})`,
-      key: "notFullLoopVolume",
-      dataIndex: "notFullLoopVolume",
-      align: "right",
-      width: 130,
-      render: (value) => <span className="font-semibold text-rose-700">{formatNumber(Number(value ?? 0))}</span>
-    },
     {
       title: "TopN Dealer",
       key: "topCustomers",
@@ -467,8 +411,6 @@ export function TopCustomersPage() {
         message="ผมจัดอันดับ Dealer จาก Delivered Volume ตามตัวกรองที่เลือก ใช้ TopN เพื่อดูผู้เล่นหลักของแต่ละเดือน"
         stats={[
           { label: "Top Dealer", value: topDealer?.customerName ?? "-" },
-          { label: "Full Loop", value: `${compactNumber(fullLoopVolume)} ${volumeUnit}` },
-          { label: "ไม่ Full Loop", value: `${compactNumber(notFullLoopVolume)} ${volumeUnit}` },
           { label: "TopN", value: formatNumber(topN) }
         ]}
         title="อันดับ Dealer ที่ควรโฟกัส"
@@ -496,28 +438,6 @@ export function TopCustomersPage() {
               value: (
                 <>
                   {compactNumber(totalVolume)}{" "}
-                  <span className="text-xs font-semibold text-slate-400">{volumeUnit}</span>
-                </>
-              )
-            },
-            {
-              detail: "ปริมาณ Full Loop จาก orders ที่ถูกกรอง",
-              icon: <PackageCheck size={14} />,
-              label: "Full Loop",
-              value: (
-                <>
-                  {compactNumber(fullLoopVolume)}{" "}
-                  <span className="text-xs font-semibold text-slate-400">{volumeUnit}</span>
-                </>
-              )
-            },
-            {
-              detail: "ปริมาณไม่ Full Loop จาก orders ที่ถูกกรอง",
-              icon: <PackageCheck size={14} />,
-              label: "ไม่ Full Loop",
-              value: (
-                <>
-                  {compactNumber(notFullLoopVolume)}{" "}
                   <span className="text-xs font-semibold text-slate-400">{volumeUnit}</span>
                 </>
               )
@@ -598,16 +518,15 @@ export function TopCustomersPage() {
             {/* Table Content */}
             <div className="flex-1 overflow-y-auto px-6 py-4 bg-slate-50/30 dark:bg-slate-900/10">
               <div className="overflow-x-auto rounded-lg border border-[#d9e3e6] bg-white dark:border-slate-850 dark:bg-slate-950">
-                <table className="w-full min-w-[960px] table-fixed border-collapse text-[13px]">
+                <table className="dealer-analysis-table w-full min-w-[960px] table-fixed border-collapse text-sm leading-5">
                   <thead>
                     <tr className="border-b border-[#d9e3e6] bg-[#f6f8f9] text-[12px] font-bold text-slate-500 dark:border-slate-850 dark:bg-slate-900">
-                      <th className="w-[28%] px-3 py-2 text-left border-r border-[#e5e9ec] dark:border-slate-850">Order No. (สินค้า)</th>
-                      <th className="w-[24%] px-3 py-2 text-left border-r border-[#e5e9ec] dark:border-slate-850">ไซต์งาน</th>
-                      <th className="w-[12%] px-3 py-2 text-center border-r border-[#e5e9ec] dark:border-slate-850">ลูปออเดอร์</th>
-                      <th className="w-[10%] px-3 py-2 text-right border-r border-[#e5e9ec] dark:border-slate-850">สั่ง (คิว)</th>
-                      <th className="w-[10%] px-3 py-2 text-right border-r border-[#e5e9ec] dark:border-slate-850">ส่งจริง (คิว)</th>
-                      <th className="w-[12%] px-3 py-2 text-left border-r border-[#e5e9ec] dark:border-slate-850">เวลาเท</th>
-                      <th className="w-[8%] px-3 py-2 text-center">สถานะ</th>
+                      <th className="w-[32%] border-r border-[#e5e9ec] px-4 py-4 text-left dark:border-slate-850">Order No. (สินค้า)</th>
+                      <th className="w-[28%] border-r border-[#e5e9ec] px-4 py-4 text-left dark:border-slate-850">ไซต์งาน</th>
+                      <th className="w-[12%] border-r border-[#e5e9ec] px-4 py-4 text-right dark:border-slate-850">สั่ง (คิว)</th>
+                      <th className="w-[12%] border-r border-[#e5e9ec] px-4 py-4 text-right dark:border-slate-850">ส่งจริง (คิว)</th>
+                      <th className="w-[12%] border-r border-[#e5e9ec] px-4 py-4 text-left dark:border-slate-850">เวลาเท</th>
+                      <th className="w-[8%] px-4 py-4 text-center">สถานะ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -622,7 +541,7 @@ export function TopCustomersPage() {
                         const rowKey = `${order.order?.order_no || idx}-${idx}`;
                         return (
                           <tr key={rowKey} className="border-b border-[#edf1f2] hover:bg-[#f3faf8] dark:border-slate-850 dark:hover:bg-slate-900/60 transition-colors last:border-b-0">
-                            <td className="px-3 py-2 border-r border-[#edf1f2] dark:border-slate-850 align-middle">
+                            <td className="border-r border-[#edf1f2] px-4 py-4 align-middle dark:border-slate-850">
                               <div className="min-w-0">
                                 <div className="truncate font-semibold text-slate-900 dark:text-slate-100" title={order.order?.product_sku}>
                                   {order.order?.product_sku || "-"}
@@ -635,7 +554,7 @@ export function TopCustomersPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 py-2 border-r border-[#edf1f2] dark:border-slate-850 align-middle">
+                            <td className="border-r border-[#edf1f2] px-4 py-4 align-middle dark:border-slate-850">
                               <div className="min-w-0">
                                 <div className="truncate text-xs font-semibold text-slate-600 dark:text-slate-400">
                                   {order.site?.site_code || "-"}
@@ -645,28 +564,18 @@ export function TopCustomersPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-3 py-2 border-r border-[#edf1f2] dark:border-slate-850 align-middle text-center">
-                              <span className={cn(
-                                "inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold ring-1",
-                                order.full_loop 
-                                  ? "bg-emerald-50 text-emerald-700 ring-emerald-200" 
-                                  : "bg-amber-50 text-amber-700 ring-amber-200"
-                              )}>
-                                {order.full_loop ? "Full Loop" : "ไม่ Full Loop"}
-                              </span>
-                            </td>
-                            <td className="px-3 py-2 border-r border-[#edf1f2] dark:border-slate-850 text-right font-semibold text-slate-800 dark:text-slate-100 align-middle">
+                            <td className="border-r border-[#edf1f2] px-4 py-4 text-right font-semibold text-slate-800 align-middle dark:border-slate-850 dark:text-slate-100">
                               {formatNumber(order.ordered ?? 0)}
                               <span className="ml-1 text-[10px] text-slate-400">{order.quantity?.unit ?? "คิว"}</span>
                             </td>
-                            <td className={cn("px-3 py-2 border-r border-[#edf1f2] dark:border-slate-850 text-right font-semibold align-middle", (order.delivered ?? 0) > 0 ? "text-slate-800 dark:text-slate-100" : "text-slate-400")}>
+                            <td className={cn("border-r border-[#edf1f2] px-4 py-4 text-right font-semibold align-middle dark:border-slate-850", (order.delivered ?? 0) > 0 ? "text-slate-800 dark:text-slate-100" : "text-slate-400")}>
                               {formatNumber(order.delivered ?? 0)}
                               <span className="ml-1 text-[10px] text-slate-400">{order.quantity?.unit ?? "คิว"}</span>
                             </td>
-                            <td className="px-3 py-2 border-r border-[#edf1f2] dark:border-slate-850 text-xs text-slate-600 dark:text-slate-400 align-middle">
+                            <td className="border-r border-[#edf1f2] px-4 py-4 text-xs text-slate-600 align-middle dark:border-slate-850 dark:text-slate-400">
                               <CompactDateTime value={getPourDateText(order)} />
                             </td>
-                            <td className="px-3 py-2 text-center align-middle">
+                            <td className="px-4 py-4 text-center align-middle">
                               <StatusBadge status={order.status?.order} />
                             </td>
                           </tr>

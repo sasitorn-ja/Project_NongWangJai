@@ -36,6 +36,7 @@ export function DataTable<T>({
   loading = false,
   minWidth = 900,
   pageSize,
+  compactPagination = false,
   rowKey
 }: {
   columns: Array<DataColumn<T>>;
@@ -43,6 +44,7 @@ export function DataTable<T>({
   loading?: boolean;
   minWidth?: number;
   pageSize?: number;
+  compactPagination?: boolean;
   rowKey: keyof T | ((record: T) => string | number);
 }) {
   const [page, setPage] = useState(1);
@@ -99,14 +101,14 @@ export function DataTable<T>({
   return (
     <>
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed border-collapse text-[13px]" style={{ minWidth }}>
+        <table className="dealer-analysis-table w-full table-fixed border-collapse text-sm" style={{ minWidth }}>
           <thead>
             <tr className="border-b border-[#d9e3e6] bg-[#f6f8f9] dark:border-slate-800 dark:bg-slate-900">
               {columns.map((column) => (
                 <th
                   key={column.key}
                   className={cn(
-                    "whitespace-nowrap border-r border-[#e5e9ec] px-3 py-2 text-[12px] font-semibold text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400",
+                    "whitespace-nowrap border-r border-[#e5e9ec] px-4 py-3 text-[13px] font-semibold leading-5 text-slate-500 last:border-r-0 dark:border-slate-800 dark:text-slate-400",
                     alignClass(column.align),
                     column.headerClassName
                   )}
@@ -130,14 +132,14 @@ export function DataTable<T>({
           <tbody>
             {loading && (
               <tr>
-                <td className="px-3 py-10 text-center text-sm font-semibold text-slate-500" colSpan={columns.length}>
+                <td className="px-4 py-14 text-center text-sm font-semibold text-slate-500" colSpan={columns.length}>
                   กำลังโหลดข้อมูล...
                 </td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
-                <td className="px-3 py-10 text-center text-sm font-semibold text-slate-500" colSpan={columns.length}>
+                <td className="px-4 py-14 text-center text-sm font-semibold text-slate-500" colSpan={columns.length}>
                   ไม่มีข้อมูล
                 </td>
               </tr>
@@ -154,7 +156,7 @@ export function DataTable<T>({
                       <td
                         key={column.key}
                         className={cn(
-                          "border-r border-[#edf1f2] px-3 py-2 align-middle text-slate-800 last:border-r-0 dark:border-slate-800 dark:text-slate-200",
+                          "border-r border-[#edf1f2] px-4 py-3.5 align-middle leading-5 text-slate-800 last:border-r-0 dark:border-slate-800 dark:text-slate-200",
                           alignClass(column.align)
                         )}
                       >
@@ -171,8 +173,8 @@ export function DataTable<T>({
                 className="border-b border-[#edf1f2] dark:border-slate-800"
               >
                 {columns.map((column) => (
-                  <td key={`${column.key}-filler-${index}`} className="border-r border-[#edf1f2] px-3 py-2 last:border-r-0 dark:border-slate-800">
-                    <div className="h-[34px]" />
+                  <td key={`${column.key}-filler-${index}`} className="border-r border-[#edf1f2] px-4 py-3.5 last:border-r-0 dark:border-slate-800">
+                    <div className="h-[38px]" />
                   </td>
                 ))}
               </tr>
@@ -186,6 +188,7 @@ export function DataTable<T>({
           pageSize={pageSize}
           totalItems={sortedData.length}
           totalPages={totalPages}
+          compact={compactPagination}
           onPageChange={setPage}
         />
       )}
@@ -198,24 +201,29 @@ export function ShadcnPagination({
   onPageChange,
   pageSize,
   totalItems,
-  totalPages
+  totalPages,
+  compact = false
 }: {
   currentPage: number;
   onPageChange: (page: number) => void;
   pageSize: number;
   totalItems: number;
   totalPages: number;
+  compact?: boolean;
 }) {
   const start = totalItems ? (currentPage - 1) * pageSize + 1 : 0;
   const end = Math.min(currentPage * pageSize, totalItems);
   const pages = buildPaginationItems(currentPage, totalPages);
 
   return (
-    <div className="flex flex-col gap-2 border-t border-[#d9e3e6] bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950 sm:flex-row sm:items-center sm:justify-between">
+    <div className={cn(
+      "flex border-t border-[#d9e3e6] bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-950",
+      compact ? "flex-col gap-2" : "flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
+    )}>
       <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
         แสดง {formatNumber(start)}-{formatNumber(end)} จาก {formatNumber(totalItems)} รายการ
       </div>
-      <Pagination className="mx-0 w-auto justify-start sm:justify-end">
+      <Pagination className={cn("mx-0 w-auto", compact ? "justify-end" : "justify-start sm:justify-end")}>
         <PaginationContent>
           <PaginationItem>
             <PaginationPrevious

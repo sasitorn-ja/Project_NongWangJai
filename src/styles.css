@@ -275,7 +275,7 @@ select {
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-.dashboard-card > div {
+.dashboard-card > div:not(.p-0) {
   padding-block: 0.75rem;
 }
 
@@ -362,17 +362,6 @@ main > .dashboard-card {
   max-width: 100%;
 }
 
-table thead tr,
-.dashboard-card thead tr {
-  background: #f7f9fc !important;
-}
-
-table th {
-  font-size: 12px !important;
-  color: #52627a !important;
-  font-weight: 600 !important;
-}
-
 table td {
   font-size: 13px;
   color: #13213a;
@@ -398,4 +387,53 @@ table td {
 
 .dark .spotlight-card {
   background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+}
+
+/* One header palette for every table, including grouped and nested headers.
+   Keep both rows and cells opaque so sticky headers use the same surface. */
+table.dealer-analysis-table {
+  --table-header-bg: #f8fafc;
+  --table-header-text: #52627a;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+table.dealer-analysis-table > thead,
+table.dealer-analysis-table > thead > tr,
+table.dealer-analysis-table > thead > tr > th {
+  background: var(--table-header-bg);
+  color: var(--table-header-text);
+}
+
+table.dealer-analysis-table > :is(thead, tbody) > tr {
+  border-width: 0;
+}
+
+table.dealer-analysis-table > :is(thead, tbody) > tr > :is(th, td) {
+  border: 0 solid #cbd5e1;
+  border-right-width: 1px;
+  border-bottom-width: 1px;
+}
+
+table.dealer-analysis-table > thead > tr > th {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+table.dealer-analysis-table > thead > tr:first-child > th:last-child,
+table.dealer-analysis-table > tbody > tr > td:last-child {
+  border-right-width: 0;
+}
+
+.dark table.dealer-analysis-table {
+  --table-header-bg: #0f172a;
+  --table-header-text: #94a3b8;
+}
+
+.dark table.dealer-analysis-table > thead > tr > th {
+  border-color: #334155;
+}
+
+.dark table.dealer-analysis-table > tbody > tr > td {
+  border-color: #1e293b;
 }

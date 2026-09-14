@@ -146,8 +146,6 @@ export function TopProductsPage() {
           productCode: string;
           productName: string;
           delivered: number;
-          fullLoopDelivered: number;
-          notFullLoopDelivered: number;
         }
       >
     >((acc, order) => {
@@ -160,18 +158,11 @@ export function TopProductsPage() {
           productCode: order.productCode,
           productName: order.productName,
           delivered: 0,
-          fullLoopDelivered: 0,
-          notFullLoopDelivered: 0
         };
 
       current.orderCount += 1;
       current.ordered += order.ordered;
       current.delivered += order.delivered;
-      if (order.full_loop) {
-        current.fullLoopDelivered += order.delivered;
-      } else {
-        current.notFullLoopDelivered += order.delivered;
-      }
 
       const pourDate = parseDateValue(order.pour_datetime);
       const currentPourDate = parseDateValue(current.latestPour);
@@ -247,8 +238,6 @@ export function TopProductsPage() {
   const totalProducts = productRows.length;
   const totalOrders = filteredOrders.length;
   const totalVolume = filteredOrders.reduce((sum, order) => sum + order.delivered, 0);
-  const fullLoopVolume = filteredOrders.filter((order) => order.full_loop).reduce((sum, order) => sum + order.delivered, 0);
-  const notFullLoopVolume = filteredOrders.filter((order) => !order.full_loop).reduce((sum, order) => sum + order.delivered, 0);
   const bestseller = productRows[0];
 
   const productColumns: DataColumn<(typeof productRows)[number]>[] = [
@@ -311,30 +300,6 @@ export function TopProductsPage() {
       width: 150,
       render: (value) => (
         <span>
-          {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
-        </span>
-      )
-    },
-    {
-      title: `Full Loop (${volumeUnit})`,
-      key: "fullLoopDelivered",
-      dataIndex: "fullLoopDelivered",
-      align: "right",
-      width: 130,
-      render: (value) => (
-        <span className="text-emerald-700 font-semibold">
-          {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
-        </span>
-      )
-    },
-    {
-      title: `ไม่ Full Loop (${volumeUnit})`,
-      key: "notFullLoopDelivered",
-      dataIndex: "notFullLoopDelivered",
-      align: "right",
-      width: 130,
-      render: (value) => (
-        <span className="text-rose-700 font-semibold">
           {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
         </span>
       )
@@ -472,30 +437,6 @@ export function TopProductsPage() {
               )
             },
             {
-              accent: "emerald",
-              detail: "ปริมาณ Full Loop ของสินค้าที่ถูกกรอง",
-              icon: <Truck size={18} />,
-              label: "Full Loop",
-              value: (
-                <>
-                  {compactNumber(fullLoopVolume)}{" "}
-                  <span className="text-xs font-semibold text-slate-400">{volumeUnit}</span>
-                </>
-              )
-            },
-            {
-              accent: "amber",
-              detail: "ปริมาณไม่ Full Loop ของสินค้าที่ถูกกรอง",
-              icon: <Truck size={18} />,
-              label: "ไม่ Full Loop",
-              value: (
-                <>
-                  {compactNumber(notFullLoopVolume)}{" "}
-                  <span className="text-xs font-semibold text-slate-400">{volumeUnit}</span>
-                </>
-              )
-            },
-            {
               accent: "violet",
               detail: bestseller?.productName ?? "ยังไม่มีข้อมูลสินค้า",
               icon: <Star size={18} />,
@@ -506,7 +447,7 @@ export function TopProductsPage() {
         />
       </section>
 
-      <section className="grid grid-cols-1 gap-2.5 xl:grid-cols-[270px_minmax(0,1fr)]">
+      <section className="grid grid-cols-1 gap-2.5 xl:grid-cols-[380px_minmax(0,1fr)]">
         <Card className="dashboard-card overflow-hidden">
           <CardHeader className="border-b border-[#d9e3e6]">
             <div className="flex items-start justify-between gap-3">
@@ -520,7 +461,7 @@ export function TopProductsPage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <DataTable columns={monthlyColumns} data={monthlyRows} loading={ordersState === "loading"} rowKey="monthKey" minWidth={0} pageSize={6} />
+            <DataTable columns={monthlyColumns} data={monthlyRows} loading={ordersState === "loading"} rowKey="monthKey" minWidth={0} pageSize={6} compactPagination />
           </CardContent>
         </Card>
 

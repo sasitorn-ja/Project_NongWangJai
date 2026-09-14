@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Database, PackageCheck, TrendingUp, Users } from "lucide-react";
+import { Database, TrendingUp, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
@@ -20,8 +20,6 @@ export function CustomerInsightsPage() {
   const {
     dealers,
     filteredOrders: orders,
-    fullLoopVolume,
-    notFullLoopVolume,
     ordersState,
     selectedDealer,
     selectedDealerId,
@@ -54,8 +52,6 @@ export function CustomerInsightsPage() {
           uniqueSites: Set<string>;
           ordered: number;
           delivered: number;
-          fullLoopDelivered: number;
-          notFullLoopDelivered: number;
           latestPour: string | null;
         }
       >
@@ -71,19 +67,12 @@ export function CustomerInsightsPage() {
           uniqueSites: new Set<string>(),
           ordered: 0,
           delivered: 0,
-          fullLoopDelivered: 0,
-          notFullLoopDelivered: 0,
           latestPour: null
         };
 
       current.orderCount += 1;
       current.ordered += row.quantity?.ordered ?? 0;
       current.delivered += row.quantity?.delivered ?? 0;
-      if (row.full_loop) {
-        current.fullLoopDelivered += row.quantity?.delivered ?? 0;
-      } else {
-        current.notFullLoopDelivered += row.quantity?.delivered ?? 0;
-      }
       if (row.site?.site_code) current.uniqueSites.add(row.site.site_code);
 
       const pourDate = parseDateValue(row.pour_datetime);
@@ -115,8 +104,6 @@ export function CustomerInsightsPage() {
           customerName: string;
           ordered: number;
           delivered: number;
-          fullLoopDelivered: number;
-          notFullLoopDelivered: number;
           latestPour: string | null;
         }
       >
@@ -133,18 +120,11 @@ export function CustomerInsightsPage() {
           customerName,
           ordered: 0,
           delivered: 0,
-          fullLoopDelivered: 0,
-          notFullLoopDelivered: 0,
           latestPour: null
         };
 
       current.ordered += row.quantity?.ordered ?? 0;
       current.delivered += row.quantity?.delivered ?? 0;
-      if (row.full_loop) {
-        current.fullLoopDelivered += row.quantity?.delivered ?? 0;
-      } else {
-        current.notFullLoopDelivered += row.quantity?.delivered ?? 0;
-      }
 
       const pourDate = parseDateValue(row.pour_datetime);
       const currentPourDate = parseDateValue(current.latestPour);
@@ -182,8 +162,6 @@ export function CustomerInsightsPage() {
     { title: "Order Count (ครั้ง)", key: "orderCount", dataIndex: "orderCount", align: "right", width: 130, render: formatNumber },
     { title: `Ordered Volume (${volumeUnit})`, key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
     { title: `Delivered Volume (${volumeUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
-    { title: `Full Loop (${volumeUnit})`, key: "fullLoopDelivered", dataIndex: "fullLoopDelivered", align: "right", width: 130, render: (value) => <span className="font-semibold text-emerald-700">{formatNumber(Number(value ?? 0))}</span> },
-    { title: `ไม่ Full Loop (${volumeUnit})`, key: "notFullLoopDelivered", dataIndex: "notFullLoopDelivered", align: "right", width: 130, render: (value) => <span className="font-semibold text-rose-700">{formatNumber(Number(value ?? 0))}</span> },
     { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
   ];
 
@@ -203,8 +181,6 @@ export function CustomerInsightsPage() {
     { title: "Dealer", key: "customerName", dataIndex: "customerName", width: 240 },
     { title: `Ordered Volume (${volumeUnit})`, key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
     { title: `Delivered Volume (${volumeUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
-    { title: `Full Loop (${volumeUnit})`, key: "fullLoopDelivered", dataIndex: "fullLoopDelivered", align: "right", width: 130, render: (value) => <span className="font-semibold text-emerald-700">{formatNumber(Number(value ?? 0))}</span> },
-    { title: `ไม่ Full Loop (${volumeUnit})`, key: "notFullLoopDelivered", dataIndex: "notFullLoopDelivered", align: "right", width: 130, render: (value) => <span className="font-semibold text-rose-700">{formatNumber(Number(value ?? 0))}</span> },
     { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
   ];
 
@@ -225,9 +201,7 @@ export function CustomerInsightsPage() {
         stats={[
           { label: "Scope", value: currentDealer?.dealer_name ?? "ทุก Dealer" },
           { label: "Customers", value: formatNumber(totalCustomers) },
-          { label: "Sites", value: formatNumber(totalSites) },
-          { label: "Full Loop", value: `${compactNumber(fullLoopVolume)} ${volumeUnit}` },
-          { label: "ไม่ Full Loop", value: `${compactNumber(notFullLoopVolume)} ${volumeUnit}` }
+          { label: "Sites", value: formatNumber(totalSites) }
         ]}
         title="มุมมองลูกค้าและไซต์สำคัญ"
       />
@@ -236,8 +210,6 @@ export function CustomerInsightsPage() {
         <MetricCard icon={<Users size={18} />} label="Customers" value={formatNumber(totalCustomers)} detail={currentDealer?.dealer_name ?? "จำนวนลูกค้าในข้อมูล orders ที่กรองอยู่"} />
         <MetricCard icon={<Database size={18} />} label="Sites" value={formatNumber(totalSites)} detail="นับจาก site code (site id) ที่ไม่ซ้ำ" tone="rose" />
         <MetricCard icon={<TrendingUp size={18} />} label="Ordered Volume" value={compactNumber(totalOrdered)} detail="ปริมาณที่สั่งรวมจาก orders ที่กรองอยู่" tone="amber" />
-        <MetricCard icon={<PackageCheck size={18} />} label="Full Loop Volume" value={compactNumber(fullLoopVolume)} detail="ปริมาณ Full Loop จาก orders ที่กรองอยู่" tone="green" />
-        <MetricCard icon={<PackageCheck size={18} />} label="ไม่ Full Loop Volume" value={compactNumber(notFullLoopVolume)} detail="ปริมาณไม่ Full Loop จาก orders ที่กรองอยู่" tone="rose" />
       </section>
 
       <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,.8fr)]">

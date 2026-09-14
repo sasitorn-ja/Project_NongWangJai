@@ -119,10 +119,9 @@ export type OrderItem = {
     delivered?: number;
     unit?: string;
   } | null;
-  full_loop?: boolean;
+  booking_channel?: "wangjai" | "other";
   booked_at?: string | null;
   memo?: string | null;
-  details?: string | null;
   pour_datetime: string | null;
   status?: {
     order?: string;

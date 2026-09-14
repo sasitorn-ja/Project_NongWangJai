@@ -58,7 +58,6 @@ export type SoOrderItem = {
   MaterialDescription?: string;
   CurrentStatus?: string;
   Memo?: string | null;
-  InternalNote?: string | null;
   created_at?: string | null;
   modify_at?: string | null;
   [key: string]: unknown;

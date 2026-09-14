@@ -115,8 +115,6 @@ function DealerProfileHero({
   orderCount,
   delivered,
   ordered,
-  fullLoopVolume,
-  notFullLoopVolume,
   unit
 }: {
   dealer: Dealer;
@@ -124,8 +122,6 @@ function DealerProfileHero({
   orderCount: number;
   delivered: number;
   ordered: number;
-  fullLoopVolume: number;
-  notFullLoopVolume: number;
   unit: string;
 }) {
   const statusKey = getDealerStatusKey(dealer.status);
@@ -139,7 +135,7 @@ function DealerProfileHero({
 
   return (
     <section className="overflow-hidden rounded-lg border border-sky-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
-      <div className="grid gap-3 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_132px_1px_120px_120px_120px_120px] xl:items-center">
+      <div className="grid gap-3 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_132px_1px_120px_120px] xl:items-center">
         <div className="flex items-start gap-3">
           <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-900/30 dark:text-sky-300">
             <Store size={28} strokeWidth={2.2} />
@@ -216,21 +212,6 @@ function DealerProfileHero({
           <div className="mt-1.5 text-[11px] font-medium text-slate-500">จาก {formatNumber(orderCount)} orders</div>
         </div>
 
-        <div>
-          <div className="text-[12px] font-medium text-emerald-600">Full Loop Volume</div>
-          <div className="mt-1.5 text-[24px] font-bold leading-none text-emerald-700">
-            {formatExactVolume(fullLoopVolume)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
-          </div>
-          <div className="mt-1.5 text-[11px] font-medium text-slate-500">จาก orders ที่ส่งจริง</div>
-        </div>
-
-        <div>
-          <div className="text-[12px] font-medium text-rose-600">ไม่ Full Loop Volume</div>
-          <div className="mt-1.5 text-[24px] font-bold leading-none text-rose-700">
-            {formatExactVolume(notFullLoopVolume)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
-          </div>
-          <div className="mt-1.5 text-[11px] font-medium text-slate-500">จาก orders ที่ส่งจริง</div>
-        </div>
       </div>
     </section>
   );
@@ -832,8 +813,7 @@ type CustomerAnalysisRow = {
   customerCode: string;
   priceChecks: number;
   siteClosures: number;
-  wangjaiOrdered: number;
-  otherOrdered: number;
+  ordered: number;
   delivered: number;
   status: "active" | "inactive";
   statusDetail: string;
@@ -919,8 +899,7 @@ function CustomerAnalysisTable({
         customerCode,
         priceChecks: customer?.price_concrete_count ?? 0,
         siteClosures: customer?.booking_create_count ?? 0,
-        wangjaiOrdered: 0,
-        otherOrdered: 0,
+        ordered: 0,
         delivered: 0,
         status: "active",
         statusDetail: "วันที่สร้างกลุ่ม"
@@ -929,8 +908,7 @@ function CustomerAnalysisTable({
       if (order) {
         const ordered = order.quantity?.ordered ?? 0;
         const delivered = order.quantity?.delivered ?? 0;
-        if (order.full_loop) current.wangjaiOrdered += ordered;
-        else current.otherOrdered += ordered;
+        current.ordered += ordered;
         current.delivered += delivered;
       }
 
@@ -961,7 +939,7 @@ function CustomerAnalysisTable({
       getOrCreateRow(key, usage, order);
     });
 
-    return [...customerMap.values()].sort((a, b) => b.delivered - a.delivered || b.wangjaiOrdered + b.otherOrdered - (a.wangjaiOrdered + a.otherOrdered));
+    return [...customerMap.values()].sort((a, b) => b.delivered - a.delivered || b.ordered - a.ordered);
   }, [customers, orders, selectedDealer, selectedDealerId]);
 
   const [page, setPage] = useState(1);
@@ -979,29 +957,25 @@ function CustomerAnalysisTable({
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1220px] border-separate border-spacing-0 text-[13px]" aria-label="Customer analysis">
+      <div className="overflow-x-auto [&_th]:px-4 [&_th]:py-4 [&_td]:px-4 [&_td]:py-4">
+        <table className="dealer-analysis-table w-full min-w-[1220px] border-separate border-spacing-0 text-sm leading-5" aria-label="Customer analysis">
         <thead>
           <tr className="text-center text-[15px] font-bold text-slate-900 dark:text-slate-100">
             <th className="w-[170px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>Dealer</th>
             <th className="w-[285px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>ชื่อกลุ่ม / ชื่อลูกค้า</th>
             <th className="w-[175px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>เช็คราคา (ครั้ง)</th>
             <th className="w-[190px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>ปิด Sitecode (ครั้ง)</th>
-            <th className="border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-3 dark:border-slate-700 dark:bg-slate-900" colSpan={2}>สั่งคอนกรีต (คิว)</th>
+            <th className="w-[170px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>สั่งคอนกรีต (คิว)</th>
             <th className="w-[170px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>ส่งจริง (คิว)</th>
             <th className="w-[250px] border-b border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>สถานะ</th>
-          </tr>
-          <tr className="text-center text-[15px] font-bold text-slate-900 dark:text-slate-100">
-            <th className="w-[145px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900">Wangjai</th>
-            <th className="w-[145px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-2.5 dark:border-slate-700 dark:bg-slate-900">ช่องทางอื่น</th>
           </tr>
         </thead>
         <tbody>
           {customersState === "loading" && (
-            <tr><td className="px-4 py-10 text-center font-semibold text-slate-500" colSpan={8}>กำลังโหลดข้อมูลลูกค้า...</td></tr>
+            <tr><td className="px-4 py-10 text-center font-semibold text-slate-500" colSpan={7}>กำลังโหลดข้อมูลลูกค้า...</td></tr>
           )}
           {customersState !== "loading" && rows.length === 0 && (
-            <tr><td className="px-4 py-10 text-center font-semibold text-slate-500" colSpan={8}>ไม่มีข้อมูลลูกค้า</td></tr>
+            <tr><td className="px-4 py-10 text-center font-semibold text-slate-500" colSpan={7}>ไม่มีข้อมูลลูกค้า</td></tr>
           )}
           {customersState !== "loading" && visibleRows.map((row) => (
             <tr key={row.key} className="border-b border-[#cbd5e1] bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900">
@@ -1012,8 +986,7 @@ function CustomerAnalysisTable({
               </td>
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top dark:border-slate-800">{formatNumber(row.priceChecks)}</td>
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top dark:border-slate-800">{formatNumber(row.siteClosures)}</td>
-              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-semibold text-emerald-700 dark:border-slate-800 dark:text-emerald-300">{formatNumber(row.wangjaiOrdered)}</td>
-              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-semibold text-sky-700 dark:border-slate-800 dark:text-sky-300">{formatNumber(row.otherOrdered)}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-semibold text-sky-700 dark:border-slate-800 dark:text-sky-300">{formatNumber(row.ordered)}</td>
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-bold text-slate-950 dark:border-slate-800 dark:text-slate-100">{formatNumber(row.delivered)}</td>
               <td className="border-b border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
                 <span className={cn("inline-flex rounded-md px-2.5 py-1 text-xs font-bold ring-1", row.status === "active" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-600 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700")}>
@@ -1069,8 +1042,8 @@ function SiteAnalysisTable({
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1040px] border-separate border-spacing-0 text-[13px]" aria-label="Site by customer analysis">
+      <div className="overflow-x-auto [&_th]:px-4 [&_th]:py-4 [&_td]:px-4 [&_td]:py-4">
+        <table className="dealer-analysis-table w-full min-w-[1040px] border-separate border-spacing-0 text-sm leading-5" aria-label="Site by customer analysis">
         <thead>
           <tr className="text-center text-[15px] font-bold text-slate-900 dark:text-slate-100">
             <th className="w-[300px] border-b border-r border-[#cbd5e1] bg-[#f8fafc] px-3 py-4 dark:border-slate-700 dark:bg-slate-900" rowSpan={2}>ชื่อกลุ่ม / ชื่อลูกค้า</th>
@@ -1294,8 +1267,6 @@ function DetailsPageContent(props: DetailsPageProps) {
           siteCode: string;
           siteName: string;
           source: string;
-          fullLoopDelivered: number;
-          notFullLoopDelivered: number;
         }
       >
     >((acc, row) => {
@@ -1314,18 +1285,11 @@ function DetailsPageContent(props: DetailsPageProps) {
           ordered: 0,
           siteCode,
           siteName,
-          source: "Order API",
-          fullLoopDelivered: 0,
-          notFullLoopDelivered: 0
+          source: "Order API"
         };
 
       current.ordered += row.quantity?.ordered ?? 0;
       current.delivered += row.quantity?.delivered ?? 0;
-      if (row.full_loop) {
-        current.fullLoopDelivered += row.quantity?.delivered ?? 0;
-      } else {
-        current.notFullLoopDelivered += row.quantity?.delivered ?? 0;
-      }
 
       const pourDate = parseDateValue(row.pour_datetime);
       const currentPourDate = parseDateValue(current.latestPour);
@@ -1366,9 +1330,7 @@ function DetailsPageContent(props: DetailsPageProps) {
           ordered: site.total_ordered,
           siteCode,
           siteName,
-          source: "Sites API",
-          fullLoopDelivered: existing?.fullLoopDelivered ?? 0,
-          notFullLoopDelivered: existing?.notFullLoopDelivered ?? 0
+          source: "Sites API"
         });
       });
 
@@ -1381,8 +1343,6 @@ function DetailsPageContent(props: DetailsPageProps) {
   const orderUnit = "คิว";
   const areaUnit = "คิว";
   const totalAreaDelivered = areaRows.reduce((sum, row) => sum + row.delivered, 0);
-  const fullLoopVolume = props.orders.filter((order) => order.full_loop).reduce((sum, order) => sum + (order.quantity?.delivered ?? 0), 0);
-  const notFullLoopVolume = props.orders.filter((order) => !order.full_loop).reduce((sum, order) => sum + (order.quantity?.delivered ?? 0), 0);
   const totalGroups = isAllDealers ? props.filteredDealers.reduce((sum, dealer) => sum + dealer.group_count, 0) : props.groups.length;
   const topDealerVolume = useMemo(() => {
     const totals = new Map<number, number>();
@@ -1397,8 +1357,6 @@ function DetailsPageContent(props: DetailsPageProps) {
   // Single-dealer order totals (used for the profile hero + KPI grid)
   const dealerOrderedTotal = useMemo(() => dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0), [dealerOrders]);
   const dealerDeliveredTotal = useMemo(() => dealerOrders.reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0), [dealerOrders]);
-  const dealerFullLoopVolume = useMemo(() => dealerOrders.filter((order) => order.full_loop).reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0), [dealerOrders]);
-  const dealerNotFullLoopVolume = useMemo(() => dealerOrders.filter((order) => !order.full_loop).reduce((sum, row) => sum + (row.quantity?.delivered ?? 0), 0), [dealerOrders]);
   const dealerFulfillmentRate = dealerOrderedTotal > 0 ? (dealerDeliveredTotal / dealerOrderedTotal) * 100 : 0;
 
   return (
@@ -1420,8 +1378,6 @@ function DetailsPageContent(props: DetailsPageProps) {
             stats={[
               { label: "Scope", value: "ทุก Dealer" },
               { label: "ส่งจริง", value: `${compactNumber(totalAreaDelivered)} ${areaUnit}` },
-              { label: "Full Loop", value: `${compactNumber(fullLoopVolume)} ${areaUnit}` },
-              { label: "ไม่ Full Loop", value: `${compactNumber(notFullLoopVolume)} ${areaUnit}` },
               { label: "Groups", value: formatNumber(totalGroups) }
             ]}
             title="เลือกมุมวิเคราะห์จากภาพรวม"
@@ -1528,8 +1484,6 @@ function DetailsPageContent(props: DetailsPageProps) {
               orderCount={dealerOrders.length}
               ordered={dealerOrderedTotal}
               fulfillmentRate={dealerFulfillmentRate}
-              fullLoopVolume={dealerFullLoopVolume}
-              notFullLoopVolume={dealerNotFullLoopVolume}
               unit={orderUnit}
             />
           ) : null}
