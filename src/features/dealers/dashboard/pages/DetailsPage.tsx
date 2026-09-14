@@ -811,7 +811,7 @@ type CustomerAnalysisRow = {
   dealerName: string;
   customerName: string;
   customerCode: string;
-  priceChecks: number;
+  priceChecks: number | null;
   siteCount: number;
   ordered: number;
   delivered: number;
@@ -899,7 +899,7 @@ function CustomerAnalysisTable({
         dealerName,
         customerName,
         customerCode,
-        priceChecks: customer?.price_concrete_count ?? 0,
+        priceChecks: customer?.price_concrete_count ?? null,
         siteCount: 0,
         ordered: 0,
         delivered: 0,
@@ -993,7 +993,7 @@ function CustomerAnalysisTable({
                 <div className="font-semibold text-slate-900 dark:text-slate-100">{row.customerName}</div>
                 <div className="mt-0.5 text-xs font-medium text-slate-500">{row.customerCode}</div>
               </td>
-              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top dark:border-slate-800">{formatNumber(row.priceChecks)}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top text-xs dark:border-slate-800">{row.priceChecks == null ? <span className="whitespace-nowrap text-slate-400">ไม่มีข้อมูลจาก API</span> : formatNumber(row.priceChecks)}</td>
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top dark:border-slate-800">{formatNumber(row.siteCount)}</td>
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-semibold text-sky-700 dark:border-slate-800 dark:text-sky-300">{formatNumber(row.ordered)}</td>
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-bold text-slate-950 dark:border-slate-800 dark:text-slate-100">{formatNumber(row.delivered)}</td>
