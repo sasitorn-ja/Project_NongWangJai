@@ -111,6 +111,15 @@ export function useDealerDashboardData({
     setGroupsState(results.length === 0 ? "live" : anyLive ? "live" : "error");
   }, []);
 
+  const loadAllCustomerUsage = useCallback(async (allDealers: Dealer[]) => {
+    setCustomersState("loading");
+    const results = await Promise.all(allDealers.map((dealer) => fetchCustomerUsage(dealer.dealer_id)));
+    const rows = results.flatMap((result) => result.rows);
+    const anyLive = results.some((result) => result.state === "live");
+    setCustomers(rows);
+    setCustomersState(results.length === 0 ? "live" : anyLive ? "live" : "error");
+  }, []);
+
   useEffect(() => {
     const requestId = window.setTimeout(() => {
       void loadDealers();
@@ -139,13 +148,14 @@ export function useDealerDashboardData({
       const requestId = window.setTimeout(() => {
         setCustomers([]);
         setSites([]);
-        setCustomersState("live");
+        setCustomersState("loading");
         setSitesState("live");
         if (scopedDealers.length === 0) {
           setGroups([]);
           setGroupsState("live");
         } else {
           void loadAllGroups(scopedDealers);
+          void loadAllCustomerUsage(scopedDealers);
         }
       }, 0);
       return () => window.clearTimeout(requestId);
@@ -158,7 +168,7 @@ export function useDealerDashboardData({
     }, 0);
 
     return () => window.clearTimeout(requestId);
-  }, [loadAllGroups, loadDealerChildren, scopedDealers, selectedDealerId]);
+  }, [loadAllCustomerUsage, loadAllGroups, loadDealerChildren, scopedDealers, selectedDealerId]);
 
   const selectedDealer = useMemo(
     () => (selectedDealerId == null ? undefined : scopedDealers.find((dealer) => dealer.dealer_id === selectedDealerId)),
