@@ -69,11 +69,15 @@ npm run start
 
 ## CPAC Sync Data Baseline
 
-`npm run sync:db` can insert records returned by CPAC, but it preserves every existing record whose local `row_created_at` is before `2026-07-24 09:44:00` (reference tables use `created_at`). This protects the verified data baseline from being overwritten by a later CPAC API response. The cutoff defaults to that timestamp and is configured as `SYNC_LOCK_BEFORE` in `.env.example`.
+`npm run sync:db` can insert records returned by CPAC, but it preserves every existing record whose local `row_created_at` is before `2026-07-24 09:44:00` (reference tables use `created_at`). This protects the verified data baseline from being overwritten by a later CPAC API response. The cutoff defaults to that timestamp and can be overridden with `SYNC_LOCK_BEFORE` in the local or production environment file.
 
 The production Docker stack runs a separate `nong-wang-jai-sync` service. It syncs once when the container starts, then waits one hour between completed runs. This service shares the production environment file with the app, so it uses the same CPAC and MySQL configuration without exposing those values in the image.
 
 SO Orders are synced from `SYNC_START_DATE` (default `2025-06-01`) through the current date in Thailand (`Asia/Bangkok`) on every run. There is no fixed sync end date.
+
+SO Orders are fetched across all API pages (500 records per request). To refresh all resources, including existing baseline records, for a single run, use `SYNC_LOCK_BEFORE='1000-01-01 00:00:00' SYNC_RESOURCES='' npm run sync:db`. This override does not change the scheduled job's baseline lock. Sync inserts and updates returned records; it does not delete local records absent from the API.
+
+Customer usage sync reads dealer identity from the response's top-level `dealer`, with fallbacks to the item and the local dealer record. Apply `database/migrations/006_backfill_customer_usage_dealer_identity.sql` to repair missing dealer names/codes in existing rows. The customer usage API also falls back to the dealer master by `dealer_id` when a stored name/code is blank.
 
 ## RMC SSO
 

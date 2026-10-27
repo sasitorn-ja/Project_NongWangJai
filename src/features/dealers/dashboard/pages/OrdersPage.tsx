@@ -11,6 +11,7 @@ import { getOrderStatusKey, orderStatusText } from "../lib/status";
 import { SummaryKpiStrip } from "../ui/SummaryKpiStrip";
 import { ShadcnPagination } from "../table/DataTable";
 import type { DataColumn } from "../table/types";
+import { buildOrderGroups, type OrderGroup } from "../lib/order-groups";
 
 const MOBILE_PAGE_SIZE = 8;
 const DESKTOP_PAGE_SIZE = 15;
@@ -110,25 +111,6 @@ function OrderStatusFilterSelect({
   );
 }
 
-type CustomerGroup = {
-  customerCode: string;
-  customerCodeLabel: string;
-  customerKey: string;
-  customerName: string;
-  dealerCode: string;
-  dealerName: string;
-  latestPour: string | null;
-  openOrderCount: number;
-  orderCount: number;
-  orders: OrderItem[];
-  totalDelivered: number;
-  totalOrdered: number;
-  unit: string;
-  wangjaiBooked: number;
-  otherBooked: number;
-  uniqueSiteCount: number;
-};
-
 type CustomerSiteRow = {
   key: string;
   customerCode: string;
@@ -142,10 +124,6 @@ type CustomerSiteRow = {
   totalOrdered: number;
   latestPour: string | null;
 };
-
-function getOrderDateValue(order: OrderItem) {
-  return parseDateValue(order.pour_datetime ?? order.updated_at ?? order.created_at);
-}
 
 function getPourDateText(order: OrderItem) {
   if (getOrderStatusKey(order.status?.order) === "cancelled") return null;
@@ -275,80 +253,6 @@ function CustomerSiteCard({ row }: { row: CustomerSiteRow }) {
   );
 }
 
-function buildCustomerGroups(orders: OrderItem[]): CustomerGroup[] {
-  const map = new Map<string, CustomerGroup>();
-  orders.forEach((order) => {
-    const customerCode = order.customer?.code?.trim() || order.customer?.id?.toString() || "-";
-    const customerCodeLabel = order.customer?.code?.trim() ? "รหัสลูกค้า" : order.customer?.id != null ? "Customer ID" : "รหัสลูกค้า";
-    const customerName = order.customer?.name?.trim() || "ไม่ระบุลูกค้า";
-    const dealerCode = order.dealer_code?.trim() || String(order.dealer_id);
-    const dealerName = order.dealer_name?.trim() || "ไม่ระบุ Dealer";
-    const key = `${order.dealer_id}::${customerCode}::${customerName}`;
-    let group = map.get(key);
-    if (!group) {
-      group = {
-        customerCode,
-        customerCodeLabel,
-        customerKey: key,
-        customerName,
-        dealerCode,
-        dealerName,
-        latestPour: null,
-        openOrderCount: 0,
-        orderCount: 0,
-        orders: [],
-        totalDelivered: 0,
-        totalOrdered: 0,
-        unit: "คิว",
-        wangjaiBooked: 0,
-        otherBooked: 0,
-        uniqueSiteCount: 0
-      };
-      map.set(key, group);
-    }
-    group.orders.push(order);
-    group.orderCount += 1;
-    const ordered = order.quantity?.ordered ?? 0;
-    group.totalOrdered += ordered;
-    if (order.booking_channel === "wangjai") group.wangjaiBooked += ordered;
-    else group.otherBooked += ordered;
-    group.totalDelivered += order.quantity?.delivered ?? 0;
-    const statusKey = getOrderStatusKey(order.status?.order);
-    if (statusKey === "confirmed" || statusKey === "pending") group.openOrderCount += 1;
-
-    const candidate = parseDateValue(getPourDateText(order));
-    const current = parseDateValue(group.latestPour);
-    if (candidate && (!current || candidate > current)) {
-      group.latestPour = getPourDateText(order);
-    }
-  });
-
-  // Compute unique sites per group + keep the newest order first inside each expanded group.
-  const groups = [...map.values()];
-  groups.forEach((group) => {
-    const sites = new Set<string>();
-    group.orders.forEach((order) => {
-      const siteKey = order.site?.site_code?.trim() || order.site?.site_id?.toString();
-      if (!siteKey) return;
-      sites.add(siteKey);
-    });
-    group.uniqueSiteCount = sites.size;
-    group.orders.sort((a, b) => {
-      const da = getOrderDateValue(a);
-      const db = getOrderDateValue(b);
-      return (db?.getTime() ?? 0) - (da?.getTime() ?? 0);
-    });
-  });
-
-  return groups.sort((a, b) => {
-    const latestDiff = (parseDateValue(b.latestPour)?.getTime() ?? 0) - (parseDateValue(a.latestPour)?.getTime() ?? 0);
-    if (latestDiff !== 0) return latestDiff;
-    if (b.totalOrdered !== a.totalOrdered) return b.totalOrdered - a.totalOrdered;
-    if (b.orderCount !== a.orderCount) return b.orderCount - a.orderCount;
-    return a.customerName.localeCompare(b.customerName, "th");
-  });
-}
-
 function buildCustomerSiteRows(orders: OrderItem[]): CustomerSiteRow[] {
   const map = new Map<string, CustomerSiteRow>();
 
@@ -412,6 +316,7 @@ function SiteLocation({ order }: { order: OrderItem }) {
 function OrderDetailsTable({ orders }: { orders: OrderItem[] }) {
   const columns: DataColumn<OrderItem>[] = [
     { key: "orderNo", title: "Order No.", width: 110, render: (_, row) => <strong>{row.order?.order_no || "-"}</strong> },
+    { key: "customer", title: "ลูกค้า / รหัส", width: 220, render: (_, row) => <><div className="font-semibold">{row.customer?.name || "ไม่ระบุลูกค้า"}</div><div className="mt-1 text-xs text-slate-500">{row.customer?.code || row.customer?.id || "-"}</div></> },
     { key: "product", title: "Product รหัส / ชื่อ", width: 200, render: (_, row) => <><div className="font-semibold">{row.order?.product_sku || "-"}</div><div className="mt-1 text-slate-500">{row.order?.product_name || "-"}</div></> },
     { key: "site", title: "Site ชื่อ / code", width: 220, render: (_, row) => <><div>{row.site?.site_name || "-"}</div><div className="mt-1 text-xs text-slate-500">{row.site?.site_code || "-"}</div></> },
     { key: "ordered", title: "ยอดจอง (คิว)", width: 100, align: "right", render: (_, row) => formatNumber(row.quantity?.ordered ?? 0) },
@@ -446,7 +351,7 @@ function OrderDetailsTable({ orders }: { orders: OrderItem[] }) {
   );
 }
 
-function CustomerAccordionRow({ expanded, group, onToggle }: { expanded: boolean; group: CustomerGroup; onToggle: () => void }) {
+function DealerAccordionRow({ expanded, group, onToggle }: { expanded: boolean; group: OrderGroup; onToggle: () => void }) {
   return (
     <>
       <tr className={cn("hover:bg-slate-50", expanded && "bg-sky-50/60")}>
@@ -456,9 +361,8 @@ function CustomerAccordionRow({ expanded, group, onToggle }: { expanded: boolean
               <ChevronDown size={16} className={expanded ? "" : "-rotate-90"} />
             </span>
             <span className="min-w-0">
-              <span className="block font-semibold text-slate-950">{group.customerName}</span>
-              <span className="mt-1 block text-xs text-sky-700">Dealer: {group.dealerName}</span>
-              <span className="mt-1 block text-xs text-slate-500">{group.customerCodeLabel} {group.customerCode} · {formatNumber(group.uniqueSiteCount)} ไซต์</span>
+              <span className="block font-semibold text-slate-950">{group.name}</span>
+              <span className="mt-1 block text-xs text-slate-500">{group.codeLabel} {group.code} · {formatNumber(group.uniqueCustomerCount)} ลูกค้า · {formatNumber(group.uniqueSiteCount)} ไซต์</span>
             </span>
           </button>
         </td>
@@ -477,28 +381,25 @@ function CustomerAccordionRow({ expanded, group, onToggle }: { expanded: boolean
   );
 }
 
-function MobileCustomerCard({
+function MobileDealerCard({
   expanded,
   group,
   onToggle
 }: {
   expanded: boolean;
-  group: CustomerGroup;
+  group: OrderGroup;
   onToggle: () => void;
 }) {
   return (
     <div className="border-b border-[#edf1f2] last:border-b-0">
-      <button type="button" onClick={onToggle} className="flex w-full items-start gap-3 px-4 py-3 text-left">
+      <button type="button" onClick={onToggle} aria-expanded={expanded} className="flex w-full items-start gap-3 px-4 py-3 text-left">
         <span className={cn("mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors", expanded ? "bg-sky-500 text-white" : "bg-slate-100 text-slate-500")}>
           <ChevronDown size={14} className={cn("transition-transform", expanded ? "rotate-0" : "-rotate-90")} />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-bold text-slate-950" title={group.customerName}>{group.customerName}</div>
+          <div className="truncate text-sm font-bold text-slate-950" title={group.name}>{group.name}</div>
           <div className="mt-0.5 text-[11px] font-medium text-slate-500">
-            {group.customerCodeLabel} {group.customerCode} · {formatNumber(group.uniqueSiteCount)} ไซต์
-          </div>
-          <div className="mt-1 truncate text-[11px] font-bold text-sky-700" title={`${group.dealerName} (${group.dealerCode})`}>
-            Dealer: {group.dealerName}
+            {group.codeLabel} {group.code} · {formatNumber(group.uniqueCustomerCount)} ลูกค้า · {formatNumber(group.uniqueSiteCount)} ไซต์
           </div>
           <div className="mt-2 grid grid-cols-2 gap-2 border-t border-slate-100 pt-2 text-xs">
             <div>
@@ -539,7 +440,8 @@ export function OrdersPage() {
   const { data, filters } = useDashboardOutletContext();
   const {
     filteredOrders: orders,
-    ordersState
+    ordersState,
+    dealers
   } = data;
   const { orderSearch, setOrderSearch } = filters;
   const [orderedFilter, setOrderedFilter] = useState<QuantityFilter>("positive");
@@ -550,7 +452,7 @@ export function OrdersPage() {
   const [dealerDesktopPage, setDealerDesktopPage] = useState(1);
   const [customerMobilePage, setCustomerMobilePage] = useState(1);
   const [customerDesktopPage, setCustomerDesktopPage] = useState(1);
-  const [expandedCustomers, setExpandedCustomers] = useState<Set<string>>(new Set());
+  const [expandedDealers, setExpandedDealers] = useState<Set<string>>(new Set());
 
   const dealerOrders = useMemo(
     () =>
@@ -567,7 +469,7 @@ export function OrdersPage() {
     [orders]
   );
 
-  const customerGroups = useMemo(() => buildCustomerGroups(dealerOrders), [dealerOrders]);
+  const dealerGroups = useMemo(() => buildOrderGroups(dealerOrders, "dealer", dealers), [dealerOrders, dealers]);
   const customerSiteRows = useMemo(() => buildCustomerSiteRows(dealerOrders), [dealerOrders]);
 
   const totalOrdered = dealerOrders.reduce((sum, row) => sum + (row.quantity?.ordered ?? 0), 0);
@@ -598,19 +500,19 @@ export function OrdersPage() {
     setCustomerDesktopPage(1);
   }
 
-  const toggleCustomer = (key: string) => {
-    setExpandedCustomers((prev) => {
+  const toggleDealer = (key: string) => {
+    setExpandedDealers((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
       return next;
     });
   };
-  const expandAll = () => setExpandedCustomers(new Set(customerGroups.map((g) => g.customerKey)));
-  const collapseAll = () => setExpandedCustomers(new Set());
+  const expandAll = () => setExpandedDealers(new Set(dealerGroups.map((g) => g.key)));
+  const collapseAll = () => setExpandedDealers(new Set());
 
-  const dealerDesktopTotalPages = Math.max(Math.ceil(customerGroups.length / DESKTOP_PAGE_SIZE), 1);
-  const dealerMobileTotalPages = Math.max(Math.ceil(customerGroups.length / MOBILE_PAGE_SIZE), 1);
+  const dealerDesktopTotalPages = Math.max(Math.ceil(dealerGroups.length / DESKTOP_PAGE_SIZE), 1);
+  const dealerMobileTotalPages = Math.max(Math.ceil(dealerGroups.length / MOBILE_PAGE_SIZE), 1);
   const customerDesktopTotalPages = Math.max(Math.ceil(customerSiteRows.length / DESKTOP_PAGE_SIZE), 1);
   const customerMobileTotalPages = Math.max(Math.ceil(customerSiteRows.length / MOBILE_PAGE_SIZE), 1);
   const currentDealerDesktopPage = Math.min(dealerDesktopPage, dealerDesktopTotalPages);
@@ -618,12 +520,12 @@ export function OrdersPage() {
   const currentCustomerDesktopPage = Math.min(customerDesktopPage, customerDesktopTotalPages);
   const currentCustomerMobilePage = Math.min(customerMobilePage, customerMobileTotalPages);
 
-  const dealerDesktopRows = customerGroups.slice((currentDealerDesktopPage - 1) * DESKTOP_PAGE_SIZE, currentDealerDesktopPage * DESKTOP_PAGE_SIZE);
-  const dealerMobileRows = customerGroups.slice((currentDealerMobilePage - 1) * MOBILE_PAGE_SIZE, currentDealerMobilePage * MOBILE_PAGE_SIZE);
+  const dealerDesktopRows = dealerGroups.slice((currentDealerDesktopPage - 1) * DESKTOP_PAGE_SIZE, currentDealerDesktopPage * DESKTOP_PAGE_SIZE);
+  const dealerMobileRows = dealerGroups.slice((currentDealerMobilePage - 1) * MOBILE_PAGE_SIZE, currentDealerMobilePage * MOBILE_PAGE_SIZE);
   const customerDesktopRows = customerSiteRows.slice((currentCustomerDesktopPage - 1) * DESKTOP_PAGE_SIZE, currentCustomerDesktopPage * DESKTOP_PAGE_SIZE);
   const customerMobileRows = customerSiteRows.slice((currentCustomerMobilePage - 1) * MOBILE_PAGE_SIZE, currentCustomerMobilePage * MOBILE_PAGE_SIZE);
-  const activeListTotal = viewMode === "dealer" ? customerGroups.length : customerSiteRows.length;
-  const activeListLabel = viewMode === "dealer" ? "ลูกค้า" : "รายการลูกค้า / ไซต์";
+  const activeListTotal = viewMode === "dealer" ? dealerGroups.length : customerSiteRows.length;
+  const activeListLabel = viewMode === "dealer" ? "Dealer" : "รายการลูกค้า / ไซต์";
 
   return (
     <div className="space-y-4">
@@ -659,10 +561,10 @@ export function OrdersPage() {
         items={[
           {
             accent: "violet",
-            detail: "ลูกค้าทั้งหมดที่กรองอยู่",
+            detail: "Dealer ทั้งหมดที่กรองอยู่",
             icon: <Users size={15} />,
-            label: "จำนวนลูกค้า",
-            value: formatNumber(customerGroups.length)
+            label: "จำนวน Dealer",
+            value: formatNumber(dealerGroups.length)
           },
           {
             accent: "sky",
@@ -705,13 +607,17 @@ export function OrdersPage() {
 
           <div className="grid gap-2 lg:grid-cols-[minmax(220px,1fr)_minmax(200px,280px)_150px_150px_160px] lg:items-center 2xl:flex 2xl:shrink-0 2xl:items-center">
             <div className="2xl:w-[300px]">
-              <OrderListTabs value={viewMode} onChange={setViewMode} />
+              <OrderListTabs value={viewMode} onChange={(value) => {
+                setViewMode(value);
+                resetPagination();
+                setExpandedDealers(new Set());
+              }} />
             </div>
             <label className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/70 px-3 transition-colors focus-within:border-sky-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-sky-100 2xl:w-[280px]">
               <Search size={16} className="shrink-0 text-slate-400" />
               <input
                 className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none placeholder:text-slate-400"
-                placeholder="ค้นหา customer, site หรือ product"
+                placeholder="ค้นหา Dealer, customer, site หรือ product"
                 value={orderSearch}
                 onChange={(event) => handleOrderSearchChange(event.target.value)}
               />
@@ -734,12 +640,12 @@ export function OrdersPage() {
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/60 px-4 py-3 text-xs sm:px-6">
           <span className="font-semibold text-slate-500">
             แสดง <strong className="text-slate-900">{formatNumber(activeListTotal)}</strong> {activeListLabel} · <strong className="text-slate-900">{formatNumber(dealerOrders.length)}</strong> ออเดอร์
-            {viewMode === "dealer" && expandedCustomers.size > 0 && <span className="ml-2 text-sky-700">· เปิด {expandedCustomers.size} ราย</span>}
+            {viewMode === "dealer" && expandedDealers.size > 0 && <span className="ml-2 text-sky-700">· เปิด {expandedDealers.size} ราย</span>}
           </span>
           {viewMode === "dealer" && (
             <div className="flex gap-2">
               <button type="button" onClick={expandAll} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 shadow-sm transition-colors hover:border-sky-300 hover:text-sky-700">กางทั้งหมด</button>
-              <button type="button" onClick={collapseAll} disabled={expandedCustomers.size === 0} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 shadow-sm transition-colors hover:border-sky-300 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-40">ย่อทั้งหมด</button>
+              <button type="button" onClick={collapseAll} disabled={expandedDealers.size === 0} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 font-semibold text-slate-600 shadow-sm transition-colors hover:border-sky-300 hover:text-sky-700 disabled:cursor-not-allowed disabled:opacity-40">ย่อทั้งหมด</button>
             </div>
           )}
         </div>
@@ -748,7 +654,7 @@ export function OrdersPage() {
           <div className="xl:hidden">
             {ordersState === "loading" && <div className="px-4 py-12 text-center text-sm font-semibold text-slate-500">กำลังโหลดข้อมูล...</div>}
             {ordersState !== "loading" && activeListTotal === 0 && <div className="px-4 py-12 text-center text-sm font-semibold text-slate-500">ไม่มีข้อมูล</div>}
-            {ordersState !== "loading" && viewMode === "dealer" && dealerMobileRows.map((group) => <MobileCustomerCard key={group.customerKey} expanded={expandedCustomers.has(group.customerKey)} group={group} onToggle={() => toggleCustomer(group.customerKey)} />)}
+            {ordersState !== "loading" && viewMode === "dealer" && dealerMobileRows.map((group) => <MobileDealerCard key={group.key} expanded={expandedDealers.has(group.key)} group={group} onToggle={() => toggleDealer(group.key)} />)}
             {ordersState !== "loading" && viewMode === "customer" && customerMobileRows.map((row) => <CustomerSiteCard key={row.key} row={row} />)}
           </div>
           <div className="hidden xl:block">
@@ -760,7 +666,7 @@ export function OrdersPage() {
                   <colgroup><col style={{ width: "36%" }} /><col style={{ width: "12%" }} /><col style={{ width: "13%" }} /><col style={{ width: "13%" }} /><col style={{ width: "12%" }} /><col style={{ width: "14%" }} /></colgroup>
                   <thead>
                     <tr>
-                      <th rowSpan={2} className="px-4 py-4 text-center font-bold">ลูกค้า</th>
+                      <th rowSpan={2} className="px-4 py-4 text-center font-bold">Dealer</th>
                       <th rowSpan={2} className="px-4 py-4 text-center font-bold">จำนวนออเดอร์</th>
                       <th colSpan={2} className="px-4 py-3 text-center font-bold">จำนวนที่จอง ({orderUnit})</th>
                       <th rowSpan={2} className="px-4 py-4 text-center font-bold">ส่งจริง ({orderUnit})</th>
@@ -771,7 +677,7 @@ export function OrdersPage() {
                       <th className="px-4 py-3 text-center font-bold">จองผ่านช่องทางอื่น</th>
                     </tr>
                   </thead>
-                  <tbody>{ordersState !== "loading" && dealerDesktopRows.map((group) => <CustomerAccordionRow key={group.customerKey} expanded={expandedCustomers.has(group.customerKey)} group={group} onToggle={() => toggleCustomer(group.customerKey)} />)}</tbody>
+                  <tbody>{ordersState !== "loading" && dealerDesktopRows.map((group) => <DealerAccordionRow key={group.key} expanded={expandedDealers.has(group.key)} group={group} onToggle={() => toggleDealer(group.key)} />)}</tbody>
                 </table>
               </div>
             )}

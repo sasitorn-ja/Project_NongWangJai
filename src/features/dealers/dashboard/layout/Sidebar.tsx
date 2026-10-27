@@ -51,7 +51,7 @@ export function Sidebar({
       </div>
 
       <div className={compact ? "px-1.5 pb-2" : "px-3 pb-2"}>
-        <div role="group" aria-label="เลือกกลุ่มข้อมูล Dealer">
+        <div data-dealer-mode-toggle role="group" aria-label="เลือกกลุ่มข้อมูล Dealer">
           <div className={`flex min-w-0 rounded-lg bg-slate-100 ${compact ? "gap-0.5 p-0.5" : "p-1"} dark:bg-slate-800`}>
             <button
               aria-pressed={dealerMode === "dealer"}

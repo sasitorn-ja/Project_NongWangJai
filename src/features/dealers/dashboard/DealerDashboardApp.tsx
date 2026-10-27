@@ -52,6 +52,27 @@ function DealerDashboardApp({ onLogout, user }: { onLogout: () => void; user: Au
     return () => window.clearTimeout(timer);
   }, [dealerMode, switchingTo]);
 
+  useEffect(() => {
+    if (dealerMode !== "osr") return undefined;
+
+    const root = document.querySelector(".app-shell");
+    if (!root) return undefined;
+    const replaceDealerTerminology = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE && !node.parentElement?.closest("[data-dealer-mode-toggle]") && node.parentElement?.tagName !== "SCRIPT" && node.parentElement?.tagName !== "STYLE") {
+        node.textContent = node.textContent?.replace(/\bdealers?\b/gi, "OSR") ?? "";
+        return;
+      }
+      node.childNodes.forEach(replaceDealerTerminology);
+    };
+    replaceDealerTerminology(root);
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => mutation.addedNodes.forEach(replaceDealerTerminology));
+    });
+    observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [dealerMode]);
+
   const context = useMemo<DashboardOutletContext>(
     () => ({
       data,
@@ -68,6 +89,7 @@ function DealerDashboardApp({ onLogout, user }: { onLogout: () => void; user: Au
 
   return (
     <DashboardLayout
+      key={dealerMode}
       dateFrom={filters.dateFrom}
       datePreset={filters.datePreset}
       dateTo={filters.dateTo}

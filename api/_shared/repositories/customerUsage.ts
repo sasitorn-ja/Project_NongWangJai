@@ -19,19 +19,20 @@ export async function findCustomerUsageByDealerId(dealerId: number): Promise<DbC
     (DbCustomerUsage & RowDataPacket)[]
   >(`
     SELECT
-      customer_usage_id,
-      dealer_id,
-      dealer_code,
-      dealer_name,
-      customer_id,
-      customer_code,
-      customer_name,
-      price_concrete_count,
-      booking_create_count,
-      api_updated_at
-    FROM customer_usage
-    WHERE dealer_id = ?
-    ORDER BY customer_id
+      c.customer_usage_id,
+      c.dealer_id,
+      COALESCE(NULLIF(TRIM(c.dealer_code), ''), d.dealer_code) AS dealer_code,
+      COALESCE(NULLIF(TRIM(c.dealer_name), ''), d.dealer_name) AS dealer_name,
+      c.customer_id,
+      c.customer_code,
+      c.customer_name,
+      c.price_concrete_count,
+      c.booking_create_count,
+      c.api_updated_at
+    FROM customer_usage c
+    LEFT JOIN dealers d ON d.dealer_id = c.dealer_id
+    WHERE c.dealer_id = ?
+    ORDER BY c.customer_id
   `, [dealerId]);
 
   return rows;

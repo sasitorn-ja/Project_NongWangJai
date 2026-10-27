@@ -1,6 +1,8 @@
 import "dotenv/config";
 import process from "node:process";
 import mysql from "mysql2/promise";
+import { fetchCpacPages } from "./lib/cpac-pagination.js";
+import { resolveCustomerDealer } from "./lib/customer-dealer.js";
 
 // Records already present before this point are the verified baseline.  The
 // CPAC API must be able to add new records, but it must never overwrite that
@@ -387,8 +389,12 @@ async function syncDealerSites(pool: mysql.Pool) {
 // ---------------------------------------------------------------------------
 async function syncCustomerUsage(pool: mysql.Pool) {
   console.log("Syncing customer usage...");
-  const [dealerRows] = await pool.query<mysql.RowDataPacket[]>(
-    "SELECT dealer_id FROM dealers ORDER BY dealer_id"
+  const [dealerRows] = await pool.query<(mysql.RowDataPacket & {
+    dealer_id: number;
+    dealer_code: string;
+    dealer_name: string;
+  })[]>(
+    "SELECT dealer_id, dealer_code, dealer_name FROM dealers ORDER BY dealer_id"
   );
 
   const connection = await pool.getConnection();
@@ -411,13 +417,17 @@ async function syncCustomerUsage(pool: mysql.Pool) {
       const dealerId = Number(dealerRow.dealer_id);
       const payload = await fetchUpstream(`/api/ai-wangjai/dealers/${dealerId}/customers/usage`);
       const rows = Array.isArray(payload) ? payload : (payload as { items?: unknown[] }).items ?? [];
+      const responseDealer = Array.isArray(payload)
+        ? undefined
+        : (payload as { dealer?: { dealer_code?: unknown; dealer_name?: unknown } }).dealer;
 
       for (const row of rows) {
         const r = row as Record<string, unknown>;
+        const dealer = resolveCustomerDealer(r, responseDealer, dealerRow);
         await connection.execute(sql, [
           dealerId,
-          toStringOrNull(r.dealer_code),
-          toStringOrNull(r.dealer_name),
+          dealer.dealer_code,
+          dealer.dealer_name,
           toNumber(r.customer_id),
           String(r.customer_code ?? ""),
           String(r.customer_name ?? ""),
@@ -444,12 +454,10 @@ async function syncSoOrders(pool: mysql.Pool) {
   const startDate = process.env.SYNC_START_DATE ?? "2025-06-01";
   const endDate = getThailandDate();
 
-  const payload = await fetchUpstream("/api/ai-wangjai/so-orders", {
+  const pages = fetchCpacPages((page, limit) => fetchUpstream("/api/ai-wangjai/so-orders", {
     method: "POST",
-    body: { start_date: startDate, end_date: endDate, limit: 1000, page: 1 }
-  });
-
-  const rows = (payload as { items?: unknown[] }).items ?? [];
+    body: { start_date: startDate, end_date: endDate, limit, page }
+  }));
 
   const connection = await pool.getConnection();
   try {
@@ -490,67 +498,72 @@ async function syncSoOrders(pool: mysql.Pool) {
         ])}
     `;
 
-    for (const row of rows) {
-      const r = row as Record<string, unknown>;
-      await connection.execute(sql, [
-        toNumber(r.so_id),
-        toNumber(r.project_id),
-        toNumber(r.qo_id),
-        toNumber(r.truck_queue_id),
-        toStringOrNull(r.SaleOrderID),
-        toStringOrNull(r.TempSaleOrderID),
-        toNumber(r.SaleOrderNum),
-        toStringOrNull(r.DispatchCode),
-        toStringOrNull(r.ShipToCompCode),
-        String(r.ShipToCode ?? ""),
-        toStringOrNull(r.ShipToName),
-        toNumber(r.ShipToLat),
-        toNumber(r.ShipToLng),
-        toStringOrNull(r.SoldToCode),
-        toStringOrNull(r.SoldToName),
-        toStringOrNull(r.SoldToMobile),
-        toStringOrNull(r.SoldToTelephone),
-        toStringOrNull(r.SoldToSaleType),
-        toStringOrNull(r.SubSoldToCode),
-        toStringOrNull(r.SubSoldToName),
-        toStringOrNull(r.SubSoldToMobile),
-        toStringOrNull(r.SubSoldToTelephone),
-        toNumber(r.InitialOrderQuantity),
-        toNumber(r.CurrentOrderQuantity),
-        toNumber(r.ApproveOrderQuantity),
-        toStringOrNull(r.CurrentStatus),
-        toStringOrNull(r.BookByName),
-        toStringOrNull(r.BookByPhoneNumber),
-        normalizeDate(r.DocumentDate),
-        normalizeDate(r.DeliveryDateTime),
-        toStringOrNull(r.TruckType),
-        toStringOrNull(r.TruckService),
-        toStringOrNull(r.UnloadID),
-        toStringOrNull(r.UnloadMethod),
-        toStringOrNull(r.UnloadTimeDurationPerTruck),
-        toStringOrNull(r.Memo),
-        toStringOrNull(r.InternalNote),
-        toNumber(r.TransportRateQuantity),
-        toNumber(r.TransportRateTime),
-        toStringOrNull(r.RequestQcSamplingConcrete),
-        toStringOrNull(r.RequestQcServiceOnSite),
-        toStringOrNull(r.QcPersonNumber),
-        toStringOrNull(r.FranchiseeCode),
-        toStringOrNull(r.MaterialCode),
-        toStringOrNull(r.MaterialDescription),
-        toStringOrNull(r.CompGroup),
-        toStringOrNull(r.SaleOrderType),
-        toStringOrNull(r.StructureID),
-        toStringOrNull(r.StructureName),
-        toNumber(r.groupline_id),
-        r.create_form_wangjai === 1 ? 1 : 0,
-        toStringOrNull(r.create_form),
-        normalizeDate(r.created_at),
-        normalizeDate(r.modify_at)
-      ]);
+    let total = 0;
+    for await (const rows of pages) {
+      for (const row of rows) {
+        const r = row as Record<string, unknown>;
+        await connection.execute(sql, [
+          toNumber(r.so_id),
+          toNumber(r.project_id),
+          toNumber(r.qo_id),
+          toNumber(r.truck_queue_id),
+          toStringOrNull(r.SaleOrderID),
+          toStringOrNull(r.TempSaleOrderID),
+          toNumber(r.SaleOrderNum),
+          toStringOrNull(r.DispatchCode),
+          toStringOrNull(r.ShipToCompCode),
+          String(r.ShipToCode ?? ""),
+          toStringOrNull(r.ShipToName),
+          toNumber(r.ShipToLat),
+          toNumber(r.ShipToLng),
+          toStringOrNull(r.SoldToCode),
+          toStringOrNull(r.SoldToName),
+          toStringOrNull(r.SoldToMobile),
+          toStringOrNull(r.SoldToTelephone),
+          toStringOrNull(r.SoldToSaleType),
+          toStringOrNull(r.SubSoldToCode),
+          toStringOrNull(r.SubSoldToName),
+          toStringOrNull(r.SubSoldToMobile),
+          toStringOrNull(r.SubSoldToTelephone),
+          toNumber(r.InitialOrderQuantity),
+          toNumber(r.CurrentOrderQuantity),
+          toNumber(r.ApproveOrderQuantity),
+          toStringOrNull(r.CurrentStatus),
+          toStringOrNull(r.BookByName),
+          toStringOrNull(r.BookByPhoneNumber),
+          normalizeDate(r.DocumentDate),
+          normalizeDate(r.DeliveryDateTime),
+          toStringOrNull(r.TruckType),
+          toStringOrNull(r.TruckService),
+          toStringOrNull(r.UnloadID),
+          toStringOrNull(r.UnloadMethod),
+          toStringOrNull(r.UnloadTimeDurationPerTruck),
+          toStringOrNull(r.Memo),
+          toStringOrNull(r.InternalNote),
+          toNumber(r.TransportRateQuantity),
+          toNumber(r.TransportRateTime),
+          toStringOrNull(r.RequestQcSamplingConcrete),
+          toStringOrNull(r.RequestQcServiceOnSite),
+          toStringOrNull(r.QcPersonNumber),
+          toStringOrNull(r.FranchiseeCode),
+          toStringOrNull(r.MaterialCode),
+          toStringOrNull(r.MaterialDescription),
+          toStringOrNull(r.CompGroup),
+          toStringOrNull(r.SaleOrderType),
+          toStringOrNull(r.StructureID),
+          toStringOrNull(r.StructureName),
+          toNumber(r.groupline_id),
+          r.create_form_wangjai === 1 ? 1 : 0,
+          toStringOrNull(r.create_form),
+          normalizeDate(r.created_at),
+          normalizeDate(r.modify_at)
+        ]);
+      }
+      total += rows.length;
+      console.log(`  Synced ${total} SO orders so far`);
     }
 
-    console.log(`  Inserted ${rows.length} SO orders`);
+    console.log(`  Synced ${total} SO orders`);
   } finally {
     connection.release();
   }
