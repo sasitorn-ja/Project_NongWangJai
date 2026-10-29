@@ -3,6 +3,7 @@ import process from "node:process";
 import mysql from "mysql2/promise";
 import { fetchCpacPages } from "./lib/cpac-pagination.js";
 import { resolveCustomerDealer } from "./lib/customer-dealer.js";
+import { CANCEL_TEST_SO_ORDERS_SQL, COMPLETE_SO_ORDERS_SQL, getSoOrderCompletionCutoff, MARK_WANGJAI_ORDERS_SQL } from "./lib/so-order-rules.js";
 
 // Records already present before this point are the verified baseline.  The
 // CPAC API must be able to add new records, but it must never overwrite that
@@ -487,7 +488,7 @@ async function syncSoOrders(pool: mysql.Pool) {
           "ship_to_lat", "ship_to_lng", "sold_to_code", "sold_to_name", "sold_to_mobile",
           "sold_to_telephone", "sold_to_sale_type", "sub_sold_to_code", "sub_sold_to_name",
           "sub_sold_to_mobile", "sub_sold_to_telephone", "initial_order_quantity",
-          "current_order_quantity", "approve_order_quantity", "current_status", "book_by_name",
+          "current_order_quantity", "approve_order_quantity", "book_by_name",
           "book_by_phone_number", "document_date", "delivery_date_time", "truck_type",
           "truck_service", "unload_id", "unload_method", "unload_time_duration_per_truck", "memo",
           "internal_note", "transport_rate_quantity", "transport_rate_time",
@@ -495,7 +496,12 @@ async function syncSoOrders(pool: mysql.Pool) {
           "franchisee_code", "material_code", "material_description", "comp_group", "sale_order_type",
           "structure_id", "structure_name", "groupline_id", "create_form_wangjai", "create_form",
           "api_created_at", "api_modified_at"
-        ])}
+        ])},
+        current_status = IF(
+          current_status = 'C' OR row_created_at < '${SYNC_LOCK_BEFORE}',
+          current_status,
+          VALUES(current_status)
+        )
     `;
 
     let total = 0;
@@ -563,6 +569,12 @@ async function syncSoOrders(pool: mysql.Pool) {
       console.log(`  Synced ${total} SO orders so far`);
     }
 
+    // Apply local rules after all API pages, so upstream values cannot undo them.
+    const [wangjaiResult] = await connection.execute<mysql.ResultSetHeader>(MARK_WANGJAI_ORDERS_SQL);
+    const [cancelledResult] = await connection.execute<mysql.ResultSetHeader>(CANCEL_TEST_SO_ORDERS_SQL);
+    const completionCutoff = getSoOrderCompletionCutoff(getThailandDate());
+    const [completedResult] = await connection.execute<mysql.ResultSetHeader>(COMPLETE_SO_ORDERS_SQL, [completionCutoff]);
+    console.log(`  Applied SO rules: ${wangjaiResult.affectedRows} site-matched orders; ${cancelledResult.affectedRows} test orders cancelled; ${completedResult.affectedRows} completed orders (delivery before ${completionCutoff})`);
     console.log(`  Synced ${total} SO orders`);
   } finally {
     connection.release();

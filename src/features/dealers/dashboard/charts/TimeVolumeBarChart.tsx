@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/cn";
-import { compactNumber, formatNumber } from "@/lib/number";
+import { formatVolume } from "@/lib/number";
 import type { Dealer, OrderItem } from "@/features/dealers/types";
 import { DropdownSelect } from "../filters/DropdownSelect";
 import { parseDateValue } from "../lib/dates";
@@ -247,7 +247,7 @@ function Donut({
     ].join(" ");
     return (
       <path key={idx} d={d} fill={seg.color} {...commonProps}>
-        <title>{`${seg.label}: ${compactNumber(seg.value)} (${Math.round((seg.value / total) * 100)}%)`}</title>
+        <title>{`${seg.label}: ${formatVolume(seg.value)} (${Math.round((seg.value / total) * 100)}%)`}</title>
       </path>
     );
   });
@@ -429,15 +429,18 @@ export function TimeVolumeBarChart({
             </h4>
             <p className="text-[11px] text-slate-400">แสดงแนวโน้มของทุกภูมิภาคเปรียบเทียบกันตามสัดส่วนการส่งมอบ</p>
           </div>
-          <div className="grid min-w-[420px] grid-cols-[40px_minmax(0,1fr)] gap-2">
-            <div className="relative" style={{ height: CHART_H }}>
+          <div
+            className="grid min-w-[420px] grid-cols-[auto_minmax(0,1fr)] gap-2"
+            style={{ minWidth: Math.max(420, buckets.length * Math.max(48, ...buckets.map((bucket) => formatVolume(bucket.value).length * 6 + 8)) + 96) }}
+          >
+            <div className="relative" style={{ height: CHART_H, width: Math.max(...ticks.map((tick) => formatVolume(tick).length)) * 6 + 8 }}>
               {ticks.map((tick, i) => (
                 <div
                   key={i}
                   className="absolute right-1 text-right text-[10px] font-semibold text-slate-400"
                   style={{ top: `${(i / TICK_COUNT) * 100}%`, transform: "translateY(-50%)" }}
                 >
-                  {compactNumber(tick)}
+                  {formatVolume(tick)}
                 </div>
               ))}
             </div>
@@ -455,13 +458,13 @@ export function TimeVolumeBarChart({
                       key={bucket.key}
                       aria-pressed={isActive}
                       className="group relative flex h-full flex-col justify-end outline-none"
-                      title={`${bucket.periodLabel}: ${formatNumber(bucket.value)} ${unit}`}
+                      title={`${bucket.periodLabel}: ${formatVolume(bucket.value)} ${unit}`}
                       type="button"
                       onClick={() => setActiveKey(bucket.key)}
                       onMouseEnter={() => setActiveKey(bucket.key)}
                     >
                       <div className="relative mb-1 text-center text-[9px] font-bold leading-none text-slate-500 dark:text-slate-300">
-                        {bucket.value > 0 ? compactNumber(bucket.value) : ""}
+                        {bucket.value > 0 ? formatVolume(bucket.value) : ""}
                       </div>
                       <div
                         className={cn(
@@ -558,7 +561,7 @@ export function TimeVolumeBarChart({
                           {region.name}
                         </span>
                         <span className="shrink-0 font-bold text-slate-800 dark:text-slate-100">
-	                          {compactNumber(region.value)} <span className="text-[11px] font-medium text-slate-400">{unit} · {Math.round(pct)}%</span>
+	                          {formatVolume(region.value)} <span className="text-[11px] font-medium text-slate-400">{unit} · {Math.round(pct)}%</span>
                         </span>
                       </div>
                       <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
@@ -592,7 +595,7 @@ export function TimeVolumeBarChart({
                   {hoveredDonutIdx !== null && donutSegments[hoveredDonutIdx] ? (
                     <>
 	                      <span className="max-w-[90px] truncate text-[10px] font-semibold text-slate-500">{donutSegments[hoveredDonutIdx].label}</span>
-	                      <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{compactNumber(donutSegments[hoveredDonutIdx].value)}</span>
+	                      <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{formatVolume(donutSegments[hoveredDonutIdx].value)}</span>
                       <span className="text-[10px] font-bold" style={{ color: donutSegments[hoveredDonutIdx].color }}>
                         {Math.round((donutSegments[hoveredDonutIdx].value / comparisonTotal) * 100)}%
                       </span>
@@ -600,7 +603,7 @@ export function TimeVolumeBarChart({
                   ) : (
                     <>
 	                      <span className="text-[10px] font-semibold text-slate-400">Total</span>
-	                      <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{compactNumber(comparisonTotal)}</span>
+	                      <span className="text-lg font-bold text-slate-900 dark:text-slate-100">{formatVolume(comparisonTotal)}</span>
 	                      <span className="text-[10px] font-semibold text-slate-400">{unit}</span>
                     </>
                   )}
@@ -678,7 +681,7 @@ export function TimeVolumeBarChart({
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-	                          <p className="text-[13px] font-bold text-slate-900 dark:text-slate-100">{compactNumber(dealer.volume)}</p>
+	                          <p className="text-[13px] font-bold text-slate-900 dark:text-slate-100">{formatVolume(dealer.volume)}</p>
 	                          <p className="text-[10px] font-semibold text-slate-400">{unit}</p>
                         </div>
                       </div>

@@ -1,4 +1,4 @@
-import { formatNumber } from "@/lib/number";
+import { formatNumber, formatVolume } from "@/lib/number";
 import type { DealerGroup } from "@/features/dealers/types";
 
 const DELIVERED_COLOR = "#14b8a6";
@@ -40,11 +40,11 @@ export function GroupVolumeInsights({
         <div className="flex items-center gap-4 text-[12px] font-semibold">
           <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
             <i className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: DELIVERED_COLOR }} />
-            ส่งมอบจริง {formatNumber(totalDelivered)} {unit}
+            ส่งมอบจริง {formatVolume(totalDelivered)} {unit}
           </span>
           <span className="inline-flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
             <i className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: BOOKED_COLOR }} />
-            ยอดจอง {formatNumber(totalBooked)} {unit}
+            ยอดจอง {formatVolume(totalBooked)} {unit}
           </span>
         </div>
         <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
@@ -78,7 +78,7 @@ export function GroupVolumeInsights({
                     />
                   </div>
                   <span className="w-24 shrink-0 text-right text-[12px] font-semibold text-slate-700 dark:text-slate-200">
-                    {formatNumber(group.delivered_volume)} <span className="text-[10px] text-slate-400">{groupUnit}</span>
+                    {formatVolume(group.delivered_volume)} <span className="text-[10px] text-slate-400">{groupUnit}</span>
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -89,7 +89,7 @@ export function GroupVolumeInsights({
                     />
                   </div>
                   <span className="w-24 shrink-0 text-right text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                    {formatNumber(group.booked_volume)} <span className="text-[10px] text-slate-400">{groupUnit}</span>
+                    {formatVolume(group.booked_volume)} <span className="text-[10px] text-slate-400">{groupUnit}</span>
                   </span>
                 </div>
               </div>

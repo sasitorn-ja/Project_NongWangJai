@@ -3,7 +3,7 @@ import { Database, PackageCheck, Users, X, Search } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
-import { compactNumber, formatNumber } from "@/lib/number";
+import { formatNumber, formatVolume } from "@/lib/number";
 import { useDashboardOutletContext } from "../DealerDashboardApp";
 import { dateText, getMonthKey, getMonthLabel } from "../lib/dates";
 import { getOrderStatusKey, orderStatusText } from "../lib/status";
@@ -279,7 +279,7 @@ export function TopCustomersPage() {
       dataIndex: "delivered",
       align: "right",
       width: 128,
-      render: (value) => <span className="inline-block min-w-[2.5rem] pr-6">{formatNumber(Number(value ?? 0))}</span>
+      render: (value) => <span className="inline-block min-w-[2.5rem] pr-6">{formatVolume(Number(value ?? 0))}</span>
     },
     {
       title: "การจัดการ",
@@ -304,7 +304,7 @@ export function TopCustomersPage() {
 
   const monthlyColumns: DataColumn<(typeof monthlyRows)[number]>[] = [
     { title: "Month", key: "month", dataIndex: "monthLabel", sortAccessor: (record) => record.monthKey, width: 120 },
-    { title: `Delivered Volume (${volumeUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
+    { title: `Delivered Volume (${volumeUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatVolume },
     {
       title: "TopN Dealer",
       key: "topCustomers",
@@ -313,7 +313,7 @@ export function TopCustomersPage() {
         <div className="space-y-1">
           {record.topCustomers.map((customer, customerIndex) => (
             <div key={`${record.monthKey}-${customer.customerName}-${customerIndex}`} className="line-clamp-2 text-sm text-slate-800">
-              {customer.customerName} #{formatNumber(customer.sites.size)} site, {formatNumber(customer.delivered)} {volumeUnit}
+              {customer.customerName} #{formatNumber(customer.sites.size)} site, {formatVolume(customer.delivered)} {volumeUnit}
             </div>
           ))}
         </div>
@@ -437,7 +437,7 @@ export function TopCustomersPage() {
               label: "Delivered Volume",
               value: (
                 <>
-                  {compactNumber(totalVolume)}{" "}
+                  {formatVolume(totalVolume)}{" "}
                   <span className="text-xs font-semibold text-slate-400">{volumeUnit}</span>
                 </>
               )
@@ -484,7 +484,7 @@ export function TopCustomersPage() {
                   รายการ SO Order ของ {selectedDealerRow.customerName}
                 </h3>
                 <p className="mt-1 text-xs font-semibold text-slate-500">
-                  รหัส Dealer: {selectedDealerRow.customerCode} · ทั้งหมด {formatNumber(selectedDealerRow.orders.length)} ออเดอร์ · ปริมาณคิวส่งจริงรวม {formatNumber(selectedDealerRow.delivered)} {volumeUnit}
+                  รหัส Dealer: {selectedDealerRow.customerCode} · ทั้งหมด {formatNumber(selectedDealerRow.orders.length)} ออเดอร์ · ปริมาณคิวส่งจริงรวม {formatVolume(selectedDealerRow.delivered)} {volumeUnit}
                 </p>
               </div>
               <button
@@ -565,11 +565,11 @@ export function TopCustomersPage() {
                               </div>
                             </td>
                             <td className="border-r border-[#edf1f2] px-4 py-4 text-right font-semibold text-slate-800 align-middle dark:border-slate-850 dark:text-slate-100">
-                              {formatNumber(order.ordered ?? 0)}
+                              {formatVolume(order.ordered ?? 0)}
                               <span className="ml-1 text-[10px] text-slate-400">{order.quantity?.unit ?? "คิว"}</span>
                             </td>
                             <td className={cn("border-r border-[#edf1f2] px-4 py-4 text-right font-semibold align-middle dark:border-slate-850", (order.delivered ?? 0) > 0 ? "text-slate-800 dark:text-slate-100" : "text-slate-400")}>
-                              {formatNumber(order.delivered ?? 0)}
+                              {formatVolume(order.delivered ?? 0)}
                               <span className="ml-1 text-[10px] text-slate-400">{order.quantity?.unit ?? "คิว"}</span>
                             </td>
                             <td className="border-r border-[#edf1f2] px-4 py-4 text-xs text-slate-600 align-middle dark:border-slate-850 dark:text-slate-400">

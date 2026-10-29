@@ -3,7 +3,7 @@ import { ClipboardList, ChevronDown, PackageCheck, Search, TrendingUp, Users } f
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
-import { compactNumber, formatNumber } from "@/lib/number";
+import { formatNumber, formatVolume } from "@/lib/number";
 import type { OrderItem } from "@/features/dealers/types";
 import { useDashboardOutletContext } from "../DealerDashboardApp";
 import { dateText, parseDateValue } from "../lib/dates";
@@ -217,8 +217,8 @@ function CustomerSiteTable({ rows }: { rows: CustomerSiteRow[] }) {
               <td className="border-r border-slate-100 px-4 py-4"><div className="font-semibold">{row.customerName}</div><div className="text-xs text-slate-500">รหัสลูกค้า {row.customerCode}</div></td>
               <td className="border-r border-slate-100 px-4 py-4"><div className="font-semibold">รหัส Site: {row.siteCode}</div><div className="max-w-[300px] truncate text-xs text-slate-500">{row.siteName}</div></td>
               <td className="border-r border-slate-100 px-4 py-4 text-right font-semibold">{formatNumber(row.orderCount)}</td>
-              <td className="border-r border-slate-100 px-4 py-4 text-right font-semibold">{formatNumber(row.totalOrdered)}</td>
-              <td className="border-r border-slate-100 px-4 py-4 text-right font-semibold">{formatNumber(row.totalDelivered)}</td>
+              <td className="border-r border-slate-100 px-4 py-4 text-right font-semibold">{formatVolume(row.totalOrdered)}</td>
+              <td className="border-r border-slate-100 px-4 py-4 text-right font-semibold">{formatVolume(row.totalDelivered)}</td>
               <td className="border-r border-slate-100 px-4 py-4"><div className="font-semibold">{row.dealerName}</div><div className="text-xs text-slate-500">{row.dealerCode}</div></td>
               <td className="px-4 py-4 text-xs"><CompactDateTime value={row.latestPour} /></td>
             </tr>
@@ -246,8 +246,8 @@ function CustomerSiteCard({ row }: { row: CustomerSiteRow }) {
       <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
         <div><div className="text-slate-400">Dealer</div><div className="truncate font-semibold text-slate-700">{row.dealerName}</div></div>
         <div><div className="text-slate-400">ข้อมูลล่าสุด</div><div className="font-medium text-slate-700"><CompactDateTime value={row.latestPour} /></div></div>
-        <div><div className="text-slate-400">สั่ง (คิว)</div><div className="font-bold text-slate-800">{formatNumber(row.totalOrdered)}</div></div>
-        <div><div className="text-slate-400">ส่งจริง (คิว)</div><div className="font-bold text-slate-800">{formatNumber(row.totalDelivered)}</div></div>
+        <div><div className="text-slate-400">สั่ง (คิว)</div><div className="font-bold text-slate-800">{formatVolume(row.totalOrdered)}</div></div>
+        <div><div className="text-slate-400">ส่งจริง (คิว)</div><div className="font-bold text-slate-800">{formatVolume(row.totalDelivered)}</div></div>
       </div>
     </div>
   );
@@ -319,9 +319,9 @@ function OrderDetailsTable({ orders }: { orders: OrderItem[] }) {
     { key: "customer", title: "ลูกค้า / รหัส", width: 220, render: (_, row) => <><div className="font-semibold">{row.customer?.name || "ไม่ระบุลูกค้า"}</div><div className="mt-1 text-xs text-slate-500">{row.customer?.code || row.customer?.id || "-"}</div></> },
     { key: "product", title: "Product รหัส / ชื่อ", width: 200, render: (_, row) => <><div className="font-semibold">{row.order?.product_sku || "-"}</div><div className="mt-1 text-slate-500">{row.order?.product_name || "-"}</div></> },
     { key: "site", title: "Site ชื่อ / code", width: 220, render: (_, row) => <><div>{row.site?.site_name || "-"}</div><div className="mt-1 text-xs text-slate-500">{row.site?.site_code || "-"}</div></> },
-    { key: "ordered", title: "ยอดจอง (คิว)", width: 100, align: "right", render: (_, row) => formatNumber(row.quantity?.ordered ?? 0) },
+    { key: "ordered", title: "ยอดจอง (คิว)", width: 100, align: "right", render: (_, row) => formatVolume(row.quantity?.ordered ?? 0) },
     { key: "booked", title: "เวลาจอง", width: 140, render: (_, row) => <CompactDateTime value={row.booked_at} /> },
-    { key: "delivered", title: "ยอดเท (คิว)", width: 100, align: "right", render: (_, row) => formatNumber(row.quantity?.delivered ?? 0) },
+    { key: "delivered", title: "ยอดเท (คิว)", width: 100, align: "right", render: (_, row) => formatVolume(row.quantity?.delivered ?? 0) },
     { key: "memo", title: "หมายเหตุ", width: 190, render: (_, row) => <span className="whitespace-pre-wrap break-words">{row.memo || "-"}</span> },
     { key: "timestamps", title: "สร้าง / อัปเดต", width: 155, render: (_, row) => <div className="space-y-1"><CompactLabeledDateTime label="สร้าง" value={getOrderCreatedDateText(row)} /><CompactLabeledDateTime label="อัปเดต" value={getOrderUpdateDateText(row)} /></div> },
     { key: "status", title: "สถานะการเท", width: 105, render: (_, row) => <StatusBadge status={row.status?.order} /> },
@@ -367,9 +367,9 @@ function DealerAccordionRow({ expanded, group, onToggle }: { expanded: boolean; 
           </button>
         </td>
         <td className="px-4 py-4 text-right align-middle font-semibold">{formatNumber(group.orderCount)}</td>
-        <td className="px-4 py-4 text-right align-middle font-semibold"><span className="text-sky-700">{compactNumber(group.wangjaiBooked)}</span></td>
-        <td className="px-4 py-4 text-right align-middle font-semibold">{compactNumber(group.otherBooked)}</td>
-        <td className="px-4 py-4 text-right align-middle font-semibold">{compactNumber(group.totalDelivered)}</td>
+        <td className="px-4 py-4 text-right align-middle font-semibold"><span className="text-sky-700">{formatVolume(group.wangjaiBooked)}</span></td>
+        <td className="px-4 py-4 text-right align-middle font-semibold">{formatVolume(group.otherBooked)}</td>
+        <td className="px-4 py-4 text-right align-middle font-semibold">{formatVolume(group.totalDelivered)}</td>
         <td className="px-4 py-4 align-middle"><CompactDateTime value={group.latestPour} /></td>
       </tr>
       {expanded && (
@@ -408,20 +408,20 @@ function MobileDealerCard({
             </div>
             <div>
               <div className="text-[10px] font-semibold text-slate-400">จองผ่านน้องวางใจ</div>
-              <div className="font-bold text-sky-700">{compactNumber(group.wangjaiBooked)} <span className="text-[9px] text-slate-400">{group.unit}</span></div>
+              <div className="font-bold text-sky-700">{formatVolume(group.wangjaiBooked)} <span className="text-[9px] text-slate-400">{group.unit}</span></div>
             </div>
             <div>
               <div className="text-[10px] font-semibold text-slate-400">จองผ่านช่องทางอื่น</div>
-              <div className="font-bold text-slate-800">{compactNumber(group.otherBooked)} <span className="text-[9px] text-slate-400">{group.unit}</span></div>
+              <div className="font-bold text-slate-800">{formatVolume(group.otherBooked)} <span className="text-[9px] text-slate-400">{group.unit}</span></div>
             </div>
             <div>
               <div className="text-[10px] font-semibold text-slate-400">สั่งใน Orders ({group.unit})</div>
-              <div className="font-bold text-slate-800">{compactNumber(group.totalOrdered)} <span className="text-[9px] text-slate-400">{group.unit}</span></div>
+              <div className="font-bold text-slate-800">{formatVolume(group.totalOrdered)} <span className="text-[9px] text-slate-400">{group.unit}</span></div>
             </div>
             <div>
               <div className="text-[10px] font-semibold text-slate-400">ส่งจริงใน Orders ({group.unit})</div>
               <div className={cn("font-bold", group.totalDelivered > 0 ? "text-slate-800" : "text-slate-400")}>
-                {compactNumber(group.totalDelivered)} <span className="text-[9px] text-slate-400">{group.unit}</span>
+                {formatVolume(group.totalDelivered)} <span className="text-[9px] text-slate-400">{group.unit}</span>
               </div>
             </div>
           </div>
@@ -578,14 +578,14 @@ export function OrdersPage() {
             detail: "รวม quantity.ordered จากรายการ Order",
             icon: <TrendingUp size={15} />,
             label: "ปริมาณที่สั่ง",
-            value: <>{compactNumber(totalOrdered)} <span className="text-xs font-semibold text-slate-400">{orderUnit}</span></>
+            value: <>{formatVolume(totalOrdered)} <span className="text-xs font-semibold text-slate-400">{orderUnit}</span></>
           },
           {
             accent: "emerald",
             detail: `จาก ${formatNumber(deliveredOrders.length)} order ที่มีการส่งจริง`,
             icon: <PackageCheck size={15} />,
             label: "ปริมาณส่งจริง",
-            value: <>{compactNumber(totalDelivered)} <span className="text-xs font-semibold text-slate-400">{orderUnit}</span></>
+            value: <>{formatVolume(totalDelivered)} <span className="text-xs font-semibold text-slate-400">{orderUnit}</span></>
           }
         ]}
       />

@@ -1,4 +1,4 @@
-import { formatNumber } from "@/lib/number";
+import { formatVolume } from "@/lib/number";
 
 function TinyProgress({ percent }: { percent: number }) {
   return (
@@ -32,7 +32,7 @@ export function ProgressList({ rows }: { rows: Array<{ label: string; sublabel?:
                 {row.sublabel ? <span className="mt-0.5 block truncate text-[10px] font-semibold text-sky-700" title={row.sublabel}>{row.sublabel}</span> : null}
               </span>
               <span className="shrink-0 text-right font-bold text-slate-950">
-                {formatNumber(row.value)} <span className="text-[10px] font-semibold text-slate-400">{row.unit}</span>
+                {formatVolume(row.value)} <span className="text-[10px] font-semibold text-slate-400">{row.unit}</span>
               </span>
             </div>
             <TinyProgress percent={percent} />

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Activity, BarChart3, Boxes, CalendarCheck, ChevronDown, Clock3, ListChecks, MapPin, ShoppingCart, Store, Trophy, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { compactNumber, formatNumber } from "@/lib/number";
+import { formatNumber, formatVolume } from "@/lib/number";
 import { cn } from "@/lib/cn";
 import type { ApiState, CustomerUsage, Dealer, DealerGroup, DealerSite, DealerUsage, OrderItem } from "@/features/dealers/types";
 import { useDashboardOutletContext } from "../DealerDashboardApp";
@@ -39,12 +39,6 @@ function formatPercent(value: number) {
   return `${new Intl.NumberFormat("th-TH", {
     maximumFractionDigits: 0
   }).format(Number.isFinite(value) ? value : 0)}%`;
-}
-
-function formatExactVolume(value: number) {
-  return new Intl.NumberFormat("th-TH", {
-    maximumFractionDigits: 4
-  }).format(Number.isFinite(value) ? value : 0);
 }
 
 type DetailsPageProps = {
@@ -85,7 +79,7 @@ function AllDealersStatStrip({
   unit: string;
 }) {
   const stats = [
-    { label: "ส่งจริงรวม", value: compactNumber(delivered), suffix: unit },
+    { label: "ส่งจริงรวม", value: formatVolume(delivered), suffix: unit },
     { label: "จำนวนกลุ่ม", value: formatNumber(groups) },
     { label: "เช็คราคา", value: formatNumber(priceChecks) },
     { label: "ลูกค้า", value: formatNumber(customerCount) }
@@ -199,7 +193,7 @@ function DealerProfileHero({
         <div>
           <div className="text-[12px] font-medium text-slate-500">Ordered Volume</div>
           <div className="mt-1.5 text-[24px] font-bold leading-none text-slate-950">
-            {formatExactVolume(ordered)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
+            {formatVolume(ordered)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
           </div>
           <div className="mt-1.5 text-[11px] font-medium text-slate-500">จำนวน {formatNumber(orderCount)} orders</div>
         </div>
@@ -207,7 +201,7 @@ function DealerProfileHero({
         <div>
           <div className="text-[12px] font-medium text-slate-500">Delivered Volume</div>
           <div className="mt-1.5 text-[24px] font-bold leading-none text-slate-950">
-            {formatExactVolume(delivered)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
+            {formatVolume(delivered)} <span className="text-[13px] font-semibold text-slate-500">{unit}</span>
           </div>
           <div className="mt-1.5 text-[11px] font-medium text-slate-500">จาก {formatNumber(orderCount)} orders</div>
         </div>
@@ -373,7 +367,7 @@ function RecentActivityCard({ orders, unit }: { orders: OrderItem[]; unit: strin
               <div className="flex items-center justify-between gap-2 text-[11px] font-medium text-slate-400">
                 <span className="truncate" title={site}>{site}</span>
                 <span className={cn("shrink-0 font-bold", meta.text)}>
-                  {compactNumber(delivered)} {unit}
+                  {formatVolume(delivered)} {unit}
                 </span>
               </div>
             </div>
@@ -449,13 +443,13 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
             <div>
               <div className="text-[11px] font-medium text-slate-400">ส่งจริง</div>
               <div className="text-xl font-bold text-emerald-600">
-                {compactNumber(totalDelivered)} <span className="text-sm font-semibold text-slate-400">{unit}</span>
+                {formatVolume(totalDelivered)} <span className="text-sm font-semibold text-slate-400">{unit}</span>
               </div>
             </div>
             <div className="border-l border-slate-200 pl-6">
               <div className="text-[11px] font-medium text-slate-400">สั่งทั้งหมด</div>
               <div className="text-xl font-bold text-slate-900">
-                {compactNumber(totalOrdered)} <span className="text-sm font-semibold text-slate-400">{unit}</span>
+                {formatVolume(totalOrdered)} <span className="text-sm font-semibold text-slate-400">{unit}</span>
               </div>
             </div>
           </div>
@@ -501,7 +495,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
                   <div className="text-right text-sm font-bold text-slate-950">
-                    {compactNumber(row.delivered)} {unit}
+                    {formatVolume(row.delivered)} {unit}
                   </div>
                   {canExpand ? (
                     <button
@@ -522,7 +516,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
               <div className="mt-3 grid gap-1.5">
                 <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
                   <span>ส่งจริง</span>
-                  <span>{formatNumber(row.delivered)} {unit}</span>
+                  <span>{formatVolume(row.delivered)} {unit}</span>
                 </div>
                 <div className="h-2.5 rounded-full bg-slate-100">
                   <div
@@ -537,7 +531,7 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                   <>
                     <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
                       <span>สั่งทั้งหมด</span>
-                      <span>{formatNumber(row.ordered)} {unit}</span>
+                      <span>{formatVolume(row.ordered)} {unit}</span>
                     </div>
                     <div className="h-2.5 rounded-full bg-slate-100">
                       <div
@@ -571,10 +565,10 @@ function SalesAreaChart({ loading, rows, unit }: { loading: boolean; rows: AreaR
                         </span>
                         <span className="text-right text-slate-500">{formatNumber(child.count)}</span>
                         <span className="text-right font-semibold text-slate-800">
-                          {formatNumber(child.delivered)}
+                          {formatVolume(child.delivered)}
                         </span>
                         <span className="text-right font-semibold text-slate-800">
-                          {formatNumber(child.ordered)}
+                          {formatVolume(child.ordered)}
                         </span>
                       </div>
                     ))}
@@ -680,7 +674,7 @@ function SitesDonut({
     ].join(" ");
     return (
       <path key={idx} d={d} fill={seg.color}>
-        <title>{`${seg.label}: ${compactNumber(seg.value)} ${unit} (${Math.round((seg.value / total) * 100)}%)`}</title>
+        <title>{`${seg.label}: ${formatVolume(seg.value)} ${unit} (${Math.round((seg.value / total) * 100)}%)`}</title>
       </path>
     );
   });
@@ -691,7 +685,7 @@ function SitesDonut({
         <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>{paths}</svg>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
           <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">รวม</span>
-          <span className="text-xl font-bold text-slate-900 dark:text-slate-100">{compactNumber(total)}</span>
+          <span className="text-xl font-bold text-slate-900 dark:text-slate-100">{formatVolume(total)}</span>
           <span className="text-[10px] font-semibold text-slate-400">{unit}</span>
         </div>
       </div>
@@ -706,7 +700,7 @@ function SitesDonut({
                 {seg.sublabel && <div className="text-[10px] text-slate-400">{seg.sublabel}</div>}
               </div>
               <span className="shrink-0 font-bold text-slate-800 dark:text-slate-200">
-                {compactNumber(seg.value)} <span className="text-[10px] text-slate-400">{unit}</span>
+                {formatVolume(seg.value)} <span className="text-[10px] text-slate-400">{unit}</span>
               </span>
               <span className="w-10 shrink-0 text-right text-[10px] font-bold text-slate-500">{Math.round(pct)}%</span>
             </div>
@@ -790,7 +784,7 @@ function TopCustomersList({
             </div>
             <div className="text-right">
               <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                {compactNumber(customer.delivered)}
+                {formatVolume(customer.delivered)}
               </p>
               <p className="text-[10px] font-semibold text-slate-400">{unit}</p>
             </div>
@@ -995,8 +989,8 @@ function CustomerAnalysisTable({
               </td>
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top text-xs dark:border-slate-800">{row.priceChecks == null ? <span className="whitespace-nowrap text-slate-400">ไม่มีข้อมูลจาก API</span> : formatNumber(row.priceChecks)}</td>
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top dark:border-slate-800">{formatNumber(row.siteCount)}</td>
-              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-semibold text-sky-700 dark:border-slate-800 dark:text-sky-300">{formatNumber(row.ordered)}</td>
-              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-bold text-slate-950 dark:border-slate-800 dark:text-slate-100">{formatNumber(row.delivered)}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-semibold text-sky-700 dark:border-slate-800 dark:text-sky-300">{formatVolume(row.ordered)}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-bold text-slate-950 dark:border-slate-800 dark:text-slate-100">{formatVolume(row.delivered)}</td>
               <td className="border-b border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
                 <span className={cn("inline-flex rounded-md px-2.5 py-1 text-xs font-bold ring-1", row.status === "active" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-600 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700")}>
                   {row.status === "active" ? "Active" : "No Active"}
@@ -1082,8 +1076,8 @@ function SiteAnalysisTable({
                 <div className="font-semibold text-slate-900 dark:text-slate-100">{row.siteCode}</div>
                 <div className="mt-0.5 line-clamp-2 text-xs font-medium text-slate-500" title={row.siteName}>{row.siteName}</div>
               </td>
-              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-semibold text-slate-800 dark:border-slate-800 dark:text-slate-200">{formatNumber(row.ordered)}</td>
-              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-bold text-slate-950 dark:border-slate-800 dark:text-slate-100">{formatNumber(row.delivered)}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-semibold text-slate-800 dark:border-slate-800 dark:text-slate-200">{formatVolume(row.ordered)}</td>
+              <td className="border-b border-r border-[#cbd5e1] px-3 py-3 text-right align-top font-bold text-slate-950 dark:border-slate-800 dark:text-slate-100">{formatVolume(row.delivered)}</td>
               <td className="border-b border-r border-[#cbd5e1] px-3 py-3 align-top text-slate-800 dark:border-slate-800 dark:text-slate-200">{dateText(row.latestPour)}</td>
               <td className="border-b border-[#cbd5e1] px-3 py-3 align-top dark:border-slate-800">
                 <span className={cn("inline-flex rounded-md px-2.5 py-1 text-xs font-bold ring-1", row.status === "active" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" : "bg-slate-100 text-slate-600 ring-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700")}>
@@ -1386,7 +1380,7 @@ function DetailsPageContent(props: DetailsPageProps) {
             message="เริ่มจากภาพรวมทุก Dealer ก่อน แล้วเลือก Dealer เพื่อเจาะลึกพื้นที่ขาย กลุ่ม ลูกค้า และไซต์ โดยยอดสั่งและส่งจริงในมุมนี้อ้างอิงจากรายการ Order"
             stats={[
               { label: "Scope", value: "ทุก Dealer" },
-              { label: "ส่งจริง", value: `${compactNumber(totalAreaDelivered)} ${areaUnit}` },
+              { label: "ส่งจริง", value: `${formatVolume(totalAreaDelivered)} ${areaUnit}` },
               { label: "Groups", value: formatNumber(totalGroups) }
             ]}
             title="เลือกมุมวิเคราะห์จากภาพรวม"

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Layers3, PackageCheck, Search, TrendingUp } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { compactNumber, formatNumber } from "@/lib/number";
+import { formatNumber, formatVolume } from "@/lib/number";
 import type { DealerGroup } from "@/features/dealers/types";
 import { useDashboardOutletContext } from "../DealerDashboardApp";
 import { dateText } from "../lib/dates";
@@ -57,8 +57,8 @@ export function GroupsPage() {
       )
     },
     { title: "จำนวนเช็คราคา (ครั้ง)", dataIndex: "price_check_count", key: "price_check_count", align: "right", width: 140, render: formatNumber },
-    { title: "จำนวนที่จอง (คิว)", dataIndex: "booked_volume", key: "booked_volume", align: "right", width: 180, render: formatNumber },
-    { title: "จำนวนที่ส่งจริง (คิว)", dataIndex: "delivered_volume", key: "delivered_volume", align: "right", width: 190, render: formatNumber },
+    { title: "จำนวนที่จอง (คิว)", dataIndex: "booked_volume", key: "booked_volume", align: "right", width: 180, render: formatVolume },
+    { title: "จำนวนที่ส่งจริง (คิว)", dataIndex: "delivered_volume", key: "delivered_volume", align: "right", width: 190, render: formatVolume },
     { title: "จำนวนการเปิด Site (ครั้ง)", dataIndex: "booking_count", key: "booking_count", align: "right", width: 190, render: formatNumber },
     { title: "วันที่สร้าง", dataIndex: "created_at", key: "created_at", width: 190, render: dateText },
     statusColumn<DealerGroup>()
@@ -74,14 +74,14 @@ export function GroupsPage() {
         stats={[
           { label: "Dealer", value: selectedDealer?.dealer_name ?? "ยังไม่ได้เลือก" },
           { label: "Groups", value: formatNumber(groups.length) },
-          { label: "Delivered", value: `${compactNumber(totalDelivered)} ${volumeUnit}` }
+          { label: "Delivered", value: `${formatVolume(totalDelivered)} ${volumeUnit}` }
         ]}
         title="เจาะกลุ่มของ Dealer"
       />
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard icon={<Layers3 size={18} />} label="Groups" value={formatNumber(groups.length)} detail={selectedDealer?.dealer_name ?? "Select dealer"} />
-        <MetricCard icon={<PackageCheck size={18} />} label="Delivered Volume" value={`${compactNumber(totalDelivered)} ${volumeUnit}`} detail="ปริมาณคอนกรีตส่งจริงของกลุ่ม" tone="green" />
-        <MetricCard icon={<TrendingUp size={18} />} label="Booked Volume" value={`${compactNumber(totalBooked)} ${volumeUnit}`} detail="ปริมาณคอนกรีตที่มีการจอง" tone="amber" />
+        <MetricCard icon={<PackageCheck size={18} />} label="Delivered Volume" value={`${formatVolume(totalDelivered)} ${volumeUnit}`} detail="ปริมาณคอนกรีตส่งจริงของกลุ่ม" tone="green" />
+        <MetricCard icon={<TrendingUp size={18} />} label="Booked Volume" value={`${formatVolume(totalBooked)} ${volumeUnit}`} detail="ปริมาณคอนกรีตที่มีการจอง" tone="amber" />
         <MetricCard icon={<Search size={18} />} label="Price (Booking)" value={`${formatNumber(totalPriceChecks)} (${formatNumber(totalBookings)})`} detail="จำนวนเช็คราคาและจองคิว" tone="rose" />
       </section>
 

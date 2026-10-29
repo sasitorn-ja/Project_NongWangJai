@@ -4,7 +4,7 @@ import { ClipboardList, Cuboid, Star, TrendingUp, Truck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import productImage from "@/assets/top-products-cpac-truck-transparent.png";
 import { cn } from "@/lib/cn";
-import { compactNumber, formatNumber } from "@/lib/number";
+import { formatNumber, formatVolume } from "@/lib/number";
 import { useDashboardOutletContext } from "../DealerDashboardApp";
 import { dateText, getMonthKey, getMonthLabel, parseDateValue } from "../lib/dates";
 import { FIXED_DIVISIONS } from "../lib/regions";
@@ -288,7 +288,7 @@ export function TopProductsPage() {
       width: 140,
       render: (value) => (
         <span>
-          {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
+          {formatVolume(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
         </span>
       )
     },
@@ -300,7 +300,7 @@ export function TopProductsPage() {
       width: 150,
       render: (value) => (
         <span>
-          {formatNumber(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
+          {formatVolume(Number(value ?? 0))} <span className="text-[10px] font-medium text-slate-400">{volumeUnit}</span>
         </span>
       )
     },
@@ -322,7 +322,7 @@ export function TopProductsPage() {
       align: "right",
       headerClassName: "whitespace-normal leading-tight",
       width: 92,
-      render: formatNumber
+      render: formatVolume
     },
     {
       title: "TopN Product",
@@ -431,7 +431,7 @@ export function TopProductsPage() {
               label: "ปริมาณส่งจริง",
               value: (
                 <>
-                  {compactNumber(totalVolume)}{" "}
+                  {formatVolume(totalVolume)}{" "}
                   <span className="text-xs font-semibold text-slate-400">{volumeUnit}</span>
                 </>
               )

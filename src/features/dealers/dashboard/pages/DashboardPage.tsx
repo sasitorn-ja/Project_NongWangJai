@@ -3,7 +3,7 @@ import { Layers3, MapPin, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
-import { compactNumber, formatNumber } from "@/lib/number";
+import { formatNumber, formatVolume } from "@/lib/number";
 import type { ApiState, Dealer, OrderItem } from "@/features/dealers/types";
 import { useDashboardOutletContext } from "../DealerDashboardApp";
 import { parseDateValue } from "../lib/dates";
@@ -181,7 +181,7 @@ function DashboardPageContent(props: DashboardPageProps) {
   );
   const deliveredOrderTotal = [...regionTotalVolumes.values()].reduce((sum, volume) => sum + volume, 0);
   const selectedRegionPercent = deliveredOrderTotal > 0 ? (selectedRegionVolume / deliveredOrderTotal) * 100 : 0;
-  const regionSummaryText = `เลือกภูมิภาค · ${selectedRegionCount} จาก ${allRegions.length} · ${compactNumber(selectedRegionVolume)} ${volumeUnit} (${Math.round(selectedRegionPercent)}%)`;
+  const regionSummaryText = `เลือกภูมิภาค · ${selectedRegionCount} จาก ${allRegions.length} · ${formatVolume(selectedRegionVolume)} ${volumeUnit} (${Math.round(selectedRegionPercent)}%)`;
 
   const chartDates = useMemo(
     () =>
@@ -243,7 +243,7 @@ function DashboardPageContent(props: DashboardPageProps) {
       sortAccessor: (record) => orderTotalsByDealer.get(record.dealer_id)?.ordered ?? 0,
       render: (_, record) => (
         <span className="font-semibold text-slate-700 dark:text-slate-200">
-          {formatNumber(orderTotalsByDealer.get(record.dealer_id)?.ordered ?? 0)} <span className="text-[11px] font-medium text-slate-400">คิว</span>
+          {formatVolume(orderTotalsByDealer.get(record.dealer_id)?.ordered ?? 0)} <span className="text-[11px] font-medium text-slate-400">คิว</span>
         </span>
       )
     },
@@ -253,7 +253,7 @@ function DashboardPageContent(props: DashboardPageProps) {
       align: "right",
       width: 175,
       sortAccessor: (record) => orderTotalsByDealer.get(record.dealer_id)?.delivered ?? 0,
-      render: (_, record) => <span className="font-bold text-slate-950">{formatNumber(orderTotalsByDealer.get(record.dealer_id)?.delivered ?? 0)} <span className="text-[11px] font-medium text-slate-400">คิว</span></span>
+      render: (_, record) => <span className="font-bold text-slate-950">{formatVolume(orderTotalsByDealer.get(record.dealer_id)?.delivered ?? 0)} <span className="text-[11px] font-medium text-slate-400">คิว</span></span>
     },
     {
       title: "อัตราส่งจริงใน Orders (%)",

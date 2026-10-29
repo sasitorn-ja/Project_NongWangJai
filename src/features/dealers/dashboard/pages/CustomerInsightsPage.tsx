@@ -3,7 +3,7 @@ import { Database, TrendingUp, Users } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
-import { compactNumber, formatNumber } from "@/lib/number";
+import { formatNumber, formatVolume } from "@/lib/number";
 import type { OrderItem } from "@/features/dealers/types";
 import { useDashboardOutletContext } from "../DealerDashboardApp";
 import { dateText, parseDateValue } from "../lib/dates";
@@ -160,8 +160,8 @@ export function CustomerInsightsPage() {
     },
     { title: "จำนวน Site", key: "siteCount", dataIndex: "siteCount", align: "right", width: 110, render: formatNumber },
     { title: "Order Count (ครั้ง)", key: "orderCount", dataIndex: "orderCount", align: "right", width: 130, render: formatNumber },
-    { title: `Ordered Volume (${volumeUnit})`, key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
-    { title: `Delivered Volume (${volumeUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
+    { title: `Ordered Volume (${volumeUnit})`, key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatVolume },
+    { title: `Delivered Volume (${volumeUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatVolume },
     { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
   ];
 
@@ -179,8 +179,8 @@ export function CustomerInsightsPage() {
       )
     },
     { title: "Dealer", key: "customerName", dataIndex: "customerName", width: 240 },
-    { title: `Ordered Volume (${volumeUnit})`, key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatNumber },
-    { title: `Delivered Volume (${volumeUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatNumber },
+    { title: `Ordered Volume (${volumeUnit})`, key: "ordered", dataIndex: "ordered", align: "right", width: 160, render: formatVolume },
+    { title: `Delivered Volume (${volumeUnit})`, key: "delivered", dataIndex: "delivered", align: "right", width: 160, render: formatVolume },
     { title: "เวลาเทล่าสุด", key: "latestPour", dataIndex: "latestPour", width: 190, render: dateText }
   ];
 
@@ -209,7 +209,7 @@ export function CustomerInsightsPage() {
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
         <MetricCard icon={<Users size={18} />} label="Customers" value={formatNumber(totalCustomers)} detail={currentDealer?.dealer_name ?? "จำนวนลูกค้าในข้อมูล orders ที่กรองอยู่"} />
         <MetricCard icon={<Database size={18} />} label="Sites" value={formatNumber(totalSites)} detail="นับจาก site code (site id) ที่ไม่ซ้ำ" tone="rose" />
-        <MetricCard icon={<TrendingUp size={18} />} label="Ordered Volume" value={compactNumber(totalOrdered)} detail="ปริมาณที่สั่งรวมจาก orders ที่กรองอยู่" tone="amber" />
+        <MetricCard icon={<TrendingUp size={18} />} label="Ordered Volume" value={formatVolume(totalOrdered)} detail="ปริมาณที่สั่งรวมจาก orders ที่กรองอยู่" tone="amber" />
       </section>
 
       <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(340px,.8fr)]">
@@ -265,7 +265,7 @@ export function CustomerInsightsPage() {
                     <div className="text-xs font-medium text-slate-500">{customer.customerCode}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-bold text-slate-950">{formatNumber(customer.delivered)}</div>
+                    <div className="text-lg font-bold text-slate-950">{formatVolume(customer.delivered)}</div>
                     <div className="text-xs font-medium text-slate-500">delivered</div>
                   </div>
                 </div>
@@ -280,7 +280,7 @@ export function CustomerInsightsPage() {
                   </div>
                   <div className="rounded-xl bg-slate-50 px-2.5 py-2">
                     <div className="text-[11px] uppercase tracking-wide">Ordered Volume</div>
-                    <div className="mt-1 text-sm font-semibold text-slate-900">{formatNumber(customer.ordered)}</div>
+                    <div className="mt-1 text-sm font-semibold text-slate-900">{formatVolume(customer.ordered)}</div>
                   </div>
                 </div>
               </div>

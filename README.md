@@ -77,6 +77,8 @@ SO Orders are synced from `SYNC_START_DATE` (default `2025-06-01`) through the c
 
 SO Orders are fetched across all API pages (500 records per request). To refresh all resources, including existing baseline records, for a single run, use `SYNC_LOCK_BEFORE='1000-01-01 00:00:00' SYNC_RESOURCES='' npm run sync:db`. This override does not change the scheduled job's baseline lock. Sync inserts and updates returned records; it does not delete local records absent from the API.
 
+After every completed SO Orders sync, local rules apply to all stored SO Orders, including baseline records: a `ship_to_code` matching any `dealer_sites.site_code` sets `create_form = 'Wang Jai'` and `create_form_wangjai = 1`. Orders whose `ship_to_name` contains `test` (case-insensitive) or `ทดสอบ` become status `C` before completion rules run, regardless of their delivery date or previous status. Orders whose `delivery_date_time` falls on two calendar days before today in Thailand or any earlier date become status `E`, except status `C`. Existing status `C` is also preserved during API upserts. These rules only override the baseline lock for the two Wang Jai fields and the completion status; other baseline fields remain protected. The rules run as part of the hourly sync, rather than at midnight independently.
+
 Customer usage sync reads dealer identity from the response's top-level `dealer`, with fallbacks to the item and the local dealer record. Apply `database/migrations/006_backfill_customer_usage_dealer_identity.sql` to repair missing dealer names/codes in existing rows. The customer usage API also falls back to the dealer master by `dealer_id` when a stored name/code is blank.
 
 ## RMC SSO

@@ -4,7 +4,7 @@ import { Layers, PackagePlus, ShoppingCart, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import mascotImage from "@/assets/mascot/nong-wangjai.png";
 import { cn } from "@/lib/cn";
-import { compactNumber, formatNumber } from "@/lib/number";
+import { formatNumber, formatVolume } from "@/lib/number";
 import type { Dealer } from "@/features/dealers/types";
 import { useDashboardOutletContext } from "../DealerDashboardApp";
 import { dateText } from "../lib/dates";
@@ -59,11 +59,11 @@ function DealerNetworkCard({
         </div>
         <div>
           <div className="font-medium text-slate-400">ยอดส่งจริง</div>
-          <div className="mt-0.5 font-semibold text-sky-700">{compactNumber(dealer.volume)}</div>
+          <div className="mt-0.5 font-semibold text-sky-700">{formatVolume(dealer.volume)}</div>
         </div>
         <div>
           <div className="font-medium text-slate-400">ยอดรวมที่สั่งจอง</div>
-          <div className="mt-0.5 font-semibold text-amber-700">{compactNumber(dealer.bookedVolume)}</div>
+          <div className="mt-0.5 font-semibold text-amber-700">{formatVolume(dealer.bookedVolume)}</div>
         </div>
         <div>
           <div className="font-medium text-slate-400">Province</div>
@@ -137,8 +137,8 @@ function RegionNetworkColumn({
         <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[11px] font-medium text-slate-500">
           <span>{formatNumber(region.dealerCount)} dealers</span>
           <span>{formatNumber(region.totalGroups)} groups</span>
-          <span className="text-amber-600">จอง {compactNumber(region.totalBookedVolume)} {region.unit}</span>
-          <span>{compactNumber(region.totalVolume)} {region.unit}</span>
+          <span className="text-amber-600">จอง {formatVolume(region.totalBookedVolume)} {region.unit}</span>
+          <span>{formatVolume(region.totalVolume)} {region.unit}</span>
         </div>
       </div>
 
@@ -377,7 +377,7 @@ export function NetworkPage() {
                   </div>
                   <div className="min-w-0 text-left">
                     <div className="text-[22px] font-extrabold leading-none text-[#d97706]">
-                      {compactNumber(totalBookedVolume)} <span className="text-[12px] font-bold text-[#d97706]/80">คิว</span>
+                      {formatVolume(totalBookedVolume)} <span className="text-[12px] font-bold text-[#d97706]/80">คิว</span>
                     </div>
                     <div className="mt-1 text-[11px] font-bold text-slate-400 tracking-wide">ยอดรวมที่สั่งจอง</div>
                   </div>
@@ -390,7 +390,7 @@ export function NetworkPage() {
                   </div>
                   <div className="min-w-0 text-left">
                     <div className="text-[22px] font-extrabold leading-none text-[#006bf0]">
-                      {compactNumber(totalVolume)} <span className="text-[12px] font-bold text-[#006bf0]/80">คิว</span>
+                      {formatVolume(totalVolume)} <span className="text-[12px] font-bold text-[#006bf0]/80">คิว</span>
                     </div>
                     <div className="mt-1 text-[11px] font-bold text-slate-400 tracking-wide">ยอดรวมที่มีส่งจริง</div>
                   </div>

@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
-import { formatNumber } from "@/lib/number";
+import { formatVolume } from "@/lib/number";
 import type { Dealer } from "@/features/dealers/types";
 import { getRegionColor } from "../lib/regions";
 import { getDealerStatusKey, statusText } from "../lib/status";
@@ -65,7 +65,7 @@ export function VolumeCell({ max, unit, value }: { max: number; unit: string; va
   return (
     <div>
       <div className="font-semibold text-slate-950">
-        {formatNumber(value)} {unit}
+        {formatVolume(value)} {unit}
       </div>
       <TinyProgress percent={Math.round((value / max) * 100)} />
     </div>

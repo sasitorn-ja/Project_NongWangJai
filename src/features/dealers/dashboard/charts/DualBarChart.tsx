@@ -1,4 +1,4 @@
-import { formatNumber } from "@/lib/number";
+import { formatVolume } from "@/lib/number";
 
 function formatPercent(value: number) {
   return `${new Intl.NumberFormat("th-TH", { maximumFractionDigits: 0 }).format(Number.isFinite(value) ? value : 0)}%`;
@@ -51,19 +51,19 @@ export function DualBarChart({
             </span>
           </div>
           <div className="grid gap-1.5">
-            <div className="grid grid-cols-[56px_minmax(0,1fr)_72px] items-center gap-2 text-[11px] font-semibold text-slate-500">
+            <div className="grid grid-cols-[56px_minmax(0,1fr)_max-content] items-center gap-2 text-[11px] font-semibold text-slate-500">
               <span>{primaryLabel}</span>
               <div className="h-2.5 rounded-full bg-slate-100">
                 <div className="h-2.5 rounded-full" style={{ width: `${Math.max((item.primary / max) * 100, item.primary > 0 ? 2 : 0)}%`, backgroundColor: primaryColor }} />
               </div>
-              <span className="text-right text-slate-800">{formatNumber(item.primary)}</span>
+              <span className="text-right text-slate-800">{formatVolume(item.primary)}</span>
             </div>
-            <div className="grid grid-cols-[56px_minmax(0,1fr)_72px] items-center gap-2 text-[11px] font-semibold text-slate-500">
+            <div className="grid grid-cols-[56px_minmax(0,1fr)_max-content] items-center gap-2 text-[11px] font-semibold text-slate-500">
               <span>{secondaryLabel}</span>
               <div className="h-2.5 rounded-full bg-slate-100">
                 <div className="h-2.5 rounded-full" style={{ width: `${Math.max((item.secondary / max) * 100, item.secondary > 0 ? 2 : 0)}%`, backgroundColor: secondaryColor }} />
               </div>
-              <span className="text-right text-slate-800">{formatNumber(item.secondary)}</span>
+              <span className="text-right text-slate-800">{formatVolume(item.secondary)}</span>
             </div>
           </div>
         </div>
